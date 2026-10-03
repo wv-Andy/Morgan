@@ -303,8 +303,12 @@ class TestBaseDeDatos:
         with pytest.raises(MemoryStorageError):
             sobre_sqlite(objetivo).recall()
 
-    def test_escrituras_concurrentes(self, temp_db):
-        storage = sobre_sqlite(database=temp_db)
+    def test_escrituras_concurrentes(self, tmp_path):
+        # Con 60 s de espera y no los 10 de serie (4.19), como la de test_persistence: en la
+        # integración continua, con el disco atascado, falló tras esperar los 10 s enteros.
+        from src.memory.db import Database
+
+        storage = sobre_sqlite(database=Database(tmp_path / "concurrentes.db", timeout=60))
         errores: list[Exception] = []
 
         def escribir(i: int):
