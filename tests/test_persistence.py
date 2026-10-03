@@ -291,7 +291,13 @@ class TestErroresDeBaseDeDatos:
     def test_health_reporta_correctamente(self, repos):
         assert repos.health() == (True, None)
 
-    def test_escrituras_concurrentes(self, repos):
+    def test_escrituras_concurrentes(self, tmp_path):
+        """Lo que se prueba es que las escrituras a la vez **esperan su turno** en vez de
+        fallar. Con 60 s y no los 10 de serie (4.19): en la integración continua, 1 de 20
+        ejecuciones falló tras esperar los 10 s enteros, en una máquina con el disco tan
+        lento que crear una base vacía para otra prueba tardó 4,5 s. Sin espera (timeout=0)
+        esta prueba falla: medido."""
+        repos = SQLiteRepositoryFactory(Database(tmp_path / "concurrentes.db", timeout=60))
         errores: list[Exception] = []
 
         def escribir(i: int):

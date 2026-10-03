@@ -19,6 +19,7 @@ la 3.0-B:
 
 import asyncio
 import json
+import re
 import socket
 import threading
 import time
@@ -858,6 +859,15 @@ class TestConUnProxyQueSeComeLosCodigos:
         assert conexiones[1] - conexiones[0] < 2
 
 
+def _pausas(detalles: list[str]) -> list[float]:
+    """Las pausas que el agente decidió antes de cada reconexión («…; vuelve en 0.3 s»).
+
+    Se mide la decisión y no el tiempo entre conexiones (4.19): en la integración continua,
+    con la máquina cargada, conectar llegó a sumar 0,8 s a cada hueco y las pruebas fallaban
+    sin que la espera hubiera crecido."""
+    return [float(m.group(1)) for d in detalles if (m := re.search(r"vuelve en ([\d.]+) s", d))]
+
+
 class TestReconexionMedidaEnLa305:
     """Lo que enseñó el registro de mi agente en producción (3.0.5)."""
 
@@ -894,10 +904,10 @@ class TestReconexionMedidaEnLa305:
             await ws.send(json.dumps({"tipo": "bienvenida", "agent_id": "agt-1", "latido": 5}))
             ws.transport.abort()          # un corte sin código, como los de Render
 
-        self._correr(atender, lambda: len(conexiones) >= 5)
-        huecos = [b - a for a, b in zip(conexiones, conexiones[1:])]
+        detalles = self._correr(atender, lambda: len(conexiones) >= 5)
+        pausas = _pausas(detalles)
         # Espera mínima 0,3 s (+ hasta la mitad de jitter). Creciendo: 0,3, 0,6, 1,2, 2,4…
-        assert max(huecos) < 0.6, huecos
+        assert len(pausas) >= 4 and max(pausas) <= 0.5, pausas
 
     def test_si_nunca_llega_a_conectar_la_espera_si_crece(self):
         conexiones = []
@@ -906,9 +916,10 @@ class TestReconexionMedidaEnLa305:
             conexiones.append(time.monotonic())
             ws.transport.abort()          # ni saludo: no llega a READY
 
-        self._correr(atender, lambda: len(conexiones) >= 4, espera_minima=0.2)
-        huecos = [b - a for a, b in zip(conexiones, conexiones[1:])]
-        assert huecos[-1] > 2 * huecos[0], huecos
+        detalles = self._correr(atender, lambda: len(conexiones) >= 4, espera_minima=0.2)
+        pausas = _pausas(detalles)
+        # 0,2-0,3 → 0,4-0,6 → 0,8-1,2: la tercera, siempre más del doble que la primera.
+        assert len(pausas) >= 3 and pausas[2] > 2 * pausas[0], pausas
 
     def test_el_registro_dice_por_que_se_corto(self):
         """«cierre None» sin más no dejaba saber si fue la red, la nube o un despliegue."""
@@ -982,6 +993,16 @@ class TestRecuperarTrasUnCorte:
     """3.4: tras un corte con la orden en vuelo, la nube **pregunta** en vez de decir «no
     se sabe si llegó a hacerse». Contra un servidor de verdad (su bucle sigue vivo tras
     el corte, como en Render), con un agente simulado que se corta y vuelve."""
+
+    @pytest.fixture(autouse=True)
+    def _latido_largo(self, monkeypatch):
+        """El agente simulado no contesta a los latidos: la nube lo echaría a los 15 s
+        (tres latidos de 5). En tu PC estas pruebas tardan 0,5 s; en la integración continua,
+        con la máquina atascada, una tardó 25 s y la nube la echó (4.19). Aquí se prueba qué
+        pasa con la orden tras un corte; lo de los latidos tiene sus propias pruebas."""
+        from src.api.routes import agentes
+
+        monkeypatch.setattr(agentes, "LATIDO", 60.0)
 
     def _agente(self, servidor, credencial, protocolo=PROTOCOLO_ACTUAL):
         from websockets.sync.client import connect
