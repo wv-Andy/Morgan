@@ -1029,9 +1029,20 @@ class TestRecuperarTrasUnCorte:
         primero = self._agente(servidor, credencial)
         hilo, resultado = _enviar_en_hilo(user_id, plazo=20)
         orden = self._siguiente(primero, "orden")
+        t0 = time.monotonic()
         primero.close()
+        t1 = time.monotonic()
         segundo = self._agente(servidor, credencial)
-        consulta = self._siguiente(segundo, "consultar")
+        t2 = time.monotonic()
+        try:
+            consulta = self._siguiente(segundo, "consultar")
+        except TimeoutError:
+            # 4.19: 1 de 20 ejecuciones de la integración continua se quedó aquí y no se
+            # reproduce en local (ni con la CPU saturada). Que la próxima diga por qué.
+            raise AssertionError(
+                f"la consulta no llegó: cerrar {t1 - t0:.2f} s, volver {t2 - t1:.2f} s; "
+                f"conectado ahora: {REGISTRO.de(user_id) is not None}; "
+                f"el despacho: {resultado or 'sigue esperando'}") from None
         assert consulta["command_id"] == orden["command_id"]
         return segundo, orden["command_id"], hilo, resultado
 
