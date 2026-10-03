@@ -995,14 +995,21 @@ class TestRecuperarTrasUnCorte:
     el corte, como en Render), con un agente simulado que se corta y vuelve."""
 
     @pytest.fixture(autouse=True)
-    def _latido_largo(self, monkeypatch):
-        """El agente simulado no contesta a los latidos: la nube lo echaría a los 15 s
-        (tres latidos de 5). En tu PC estas pruebas tardan 0,5 s; en la integración continua,
-        con la máquina atascada, una tardó 25 s y la nube la echó (4.19). Aquí se prueba qué
-        pasa con la orden tras un corte; lo de los latidos tiene sus propias pruebas."""
+    def _tiempos_reales(self, nube, monkeypatch):
+        """Lo que se prueba es qué pasa con la orden tras un corte, no los tiempos (4.19).
+
+        - El agente simulado no contesta a los latidos: la nube lo echaría a los 15 s (tres
+          latidos de 5). En la integración continua, con la máquina atascada, una tardó 25 s
+          y la nube la echó. Latido largo.
+        - `nube` deja en 0,5 s lo que la nube espera a que el PC vuelva (en producción, 15):
+          allí volver tardó 2-5 s (la anotación de la conexión en la base, lenta) y la nube
+          ya había dejado de esperar. Reproducido en local haciendo lenta esa anotación, con
+          el mismo mensaje. Aquí, 10 s.
+        """
         from src.api.routes import agentes
 
         monkeypatch.setattr(agentes, "LATIDO", 60.0)
+        monkeypatch.setattr(despacho, "ESPERA_REAPARICION", 10.0)
 
     def _agente(self, servidor, credencial, protocolo=PROTOCOLO_ACTUAL):
         from websockets.sync.client import connect
@@ -1092,8 +1099,9 @@ class TestRecuperarTrasUnCorte:
         _, _, user_id, _, credencial = _cuenta(nube)
         ws, cid, hilo, resultado = self._cortar_y_volver(servidor, credencial, user_id)
         ws.close()                                  # se corta otra vez sin contestar
-        inicio = time.monotonic()
         tercero = self._agente(servidor, credencial)
+        # Desde que vuelve (4.19): lo que tarde en volver depende de la máquina, no de esto.
+        inicio = time.monotonic()
         assert self._siguiente(tercero, "consultar")["command_id"] == cid
         tercero.send(json.dumps({"tipo": "consulta", "command_id": cid, "estado": "COMPLETED",
                                  "respuesta": self._resultado(cid, a_la_tercera=True)}))
@@ -1102,7 +1110,8 @@ class TestRecuperarTrasUnCorte:
         assert resultado["valor"]["resultado"]["data"] == {"a_la_tercera": True}
         assert time.monotonic() - inicio < 5        # no esperó los 10 s de la consulta
 
-    def test_si_no_vuelve_se_dice_que_se_desconecto(self, nube, servidor):
+    def test_si_no_vuelve_se_dice_que_se_desconecto(self, nube, servidor, monkeypatch):
+        monkeypatch.setattr(despacho, "ESPERA_REAPARICION", 0.5)   # no va a volver: no esperar 10 s
         _, _, user_id, _, credencial = _cuenta(nube)
         primero = self._agente(servidor, credencial)
         hilo, resultado = _enviar_en_hilo(user_id, plazo=20)
