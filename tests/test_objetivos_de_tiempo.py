@@ -18,6 +18,7 @@ apartado 5) y viven en `src/observabilidad.py`. Lo que se fija aquí:
 
 import json
 import logging
+import statistics
 import time
 
 import pytest
@@ -124,6 +125,12 @@ class TestConectadaALaRuta:
             tiempos.append(time.perf_counter() - inicio)
             assert r.status_code == 200
 
-        assert max(tiempos) < OBJETIVOS_TURNO["simple"] / 3, (
-            f"Morgan solo ya tarda {max(tiempos):.2f} s en un turno simple"
+        # La mediana, no el máximo (4.19): en la integración continua, 1 de 20 ejecuciones
+        # falló con un turno de 1,80 s y los otros en lo normal (en mi PC, 45 ms cada uno).
+        # Era una pausa de la máquina compartida, no de Morgan: si Morgan se vuelve lento,
+        # lo son los cinco turnos y la mediana lo ve igual.
+        mediana = statistics.median(tiempos)
+        assert mediana < OBJETIVOS_TURNO["simple"] / 3, (
+            f"Morgan solo ya tarda {mediana:.2f} s en un turno simple (los cinco: "
+            f"{', '.join(f'{t:.2f}' for t in tiempos)})"
         )
