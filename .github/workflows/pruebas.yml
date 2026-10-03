@@ -18,7 +18,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: pruebas-${{ github.ref }}
+  # Un push nuevo cancela el anterior de la misma rama. Las lanzadas a mano no se cancelan
+  # entre sí: sirven para repetir la suite muchas veces a la vez y ver si alguna prueba es
+  # intermitente (la 4.19 pide 20 seguidas en verde).
+  group: pruebas-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || 'push' }}
   cancel-in-progress: true
 
 jobs:
