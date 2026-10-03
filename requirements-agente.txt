@@ -1,0 +1,17 @@
+# Lo que necesita el agente local, y nada más (3.8). Va dentro del paquete firmado: un
+# PC que instala o actualiza el agente crea un entorno virtual solo con esto, no con
+# todo Morgan (FastAPI, Groq, Gemini…).
+#
+# Versiones fijas: las que se probaron. Cambiarlas es publicar otra versión del agente.
+httpx==0.28.1
+websockets==16.1.1
+psutil==7.2.2
+# Comprobar la firma de las actualizaciones (Ed25519).
+cryptography==50.0.1
+# La notificación con dos botones: confirmar en el PC (3.3) y avisar de una
+# actualización (3.8).
+winrt-runtime==3.2.1; sys_platform == "win32"
+winrt-Windows.Foundation==3.2.1; sys_platform == "win32"
+winrt-Windows.Foundation.Collections==3.2.1; sys_platform == "win32"
+winrt-Windows.Data.Xml.Dom==3.2.1; sys_platform == "win32"
+winrt-Windows.UI.Notifications==3.2.1; sys_platform == "win32"

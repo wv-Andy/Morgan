@@ -1,0 +1,40 @@
+# Qué NO se sube a Vercel.
+#
+# En Vercel solo se publica la interfaz web (web/). El backend de Morgan es una
+# aplicación local que ejecuta comandos en TU equipo: no tiene sentido ni es
+# seguro desplegarlo. Excluirlo aquí evita además que Vercel lo autodetecte como
+# proyecto de Python y falle buscando una app FastAPI en src/main.py.
+
+# --- Secretos: nunca deben salir del equipo ---
+.env
+.env.*
+!.env.example
+
+# --- Backend de Python ---
+# Anclados con '/' inicial: sin la barra, 'src/' tambien casaria con 'web/src/'
+# y Vercel borraria el codigo del frontend (error TS18003: no inputs found).
+/src/
+/tests/
+/requirements.txt
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# --- Datos locales y registros ---
+/data/
+/logs/
+*.db
+*.db-wal
+*.db-shm
+*.log
+
+# --- Documentación y varios ---
+/docs/
+.vscode/
+.idea/
+
+# --- Artefactos del frontend (Vercel los reconstruye) ---
+web/node_modules/
+web/dist/

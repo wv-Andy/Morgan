@@ -1,0 +1,50 @@
+# Las dependencias de Morgan en producción, **fijadas a la versión probada** (4.19). Con `>=`,
+# cada despliegue en Render podía instalar una versión que nadie había probado; ahora se
+# cambian a propósito, con la suite pasando. Las de las pruebas, en requirements-dev.txt.
+google-genai==2.22.0
+groq==1.7.0
+rich==15.0.0
+psutil==7.2.2
+python-dotenv==1.2.3
+
+fastapi==0.141.1
+uvicorn==0.52.4
+# WebSocket en el servidor (sonda del canal de la 3.0-B y, si la medición lo elige,
+# el canal del agente local). Ya venía instalado, pero solo porque lo arrastra
+# google-genai: si esa librería lo soltara, uvicorn dejaría de aceptar sockets sin
+# ningún aviso. Declarado aquí, no depende de eso.
+websockets==16.1.1
+
+# Cliente HTTP para el proveedor remoto (Supabase/PostgREST).
+# Se usa httpx en lugar del SDK completo de supabase-py: aqui solo hacen falta
+# cuatro operaciones sobre tres tablas, y el SDK arrastraria auth, realtime y
+# storage, que Morgan no usa.
+httpx==0.28.1
+
+# Extraccion de texto de PDF (V1.4). Puro Python y sin dependencias nativas, que
+# es lo que permite instalarlo igual en Windows que en el contenedor de Render.
+pypdf==6.19.0
+
+# FastAPI lo exige para recibir archivos por multipart/form-data (V1.4). Sin el,
+# la app ni siquiera arranca: falla al registrar la ruta de subida.
+python-multipart==0.0.32
+
+# Las zonas horarias IANA (V2.0.17). Google Calendar trabaja en la zona del
+# calendario —«mañana a las 10» es en la tuya, no en UTC— y `zoneinfo` las lee
+# del sistema. En Linux las hay; en Windows NO: medido el 2026-09-16,
+# ZoneInfo('America/Guatemala') daba ZoneInfoNotFoundError en el Morgan local.
+# Es el paquete oficial de Python para eso: datos en Python puro, sin binarios.
+tzdata==2026.4
+
+# Comprobar la firma de las actualizaciones del agente local (3.8, Ed25519). Ya venía
+# instalada, pero solo porque la arrastra google-auth.
+cryptography==50.0.1
+
+# La notificación de Windows con «Permitir» y «Rechazar» del agente local (3.3): lo que
+# pide confirmación en el PC. Solo la usa el agente, que corre en Windows; el servidor
+# (Linux, en Render) no la instala. Sin ella, lo que exige confirmación se deniega.
+winrt-runtime==3.2.1; sys_platform == "win32"
+winrt-Windows.Foundation==3.2.1; sys_platform == "win32"
+winrt-Windows.Foundation.Collections==3.2.1; sys_platform == "win32"
+winrt-Windows.Data.Xml.Dom==3.2.1; sys_platform == "win32"
+winrt-Windows.UI.Notifications==3.2.1; sys_platform == "win32"

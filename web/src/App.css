@@ -1,0 +1,3735 @@
+/* Morgan Web UI — Estilos de componentes (V1.2) */
+
+/* ── Estructura ───────────────────────────────────────────────────────────── */
+
+.app-shell {
+  display: flex;
+  /* 100vh miente en el movil: cuenta con la barra de direcciones retraida, asi
+     que la aplicacion sale mas alta que lo que se ve. Con overflow:hidden, lo
+     que sobra no se puede alcanzar de ninguna manera — y lo que sobra es
+     justamente el compositor, abajo. `dvh` mide lo visible ahora mismo.
+     El 100vh se queda como respaldo para los navegadores que no lo entiendan. */
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg-app);
+}
+
+/* ── Barra lateral ────────────────────────────────────────────────────────── */
+
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  height: 100%;
+  background: var(--bg-sidebar);
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  z-index: 10;
+}
+
+.sidebar-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 8px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  color: var(--text-primary);
+}
+
+.brand-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--text-primary);
+  color: var(--bg-app);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.nav-item:hover { background: var(--bg-raised); }
+.nav-item.active { background: var(--bg-active); }
+
+.nav-item .nav-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.nav-item.active .nav-icon { color: var(--text-primary); }
+
+.nav-item .nav-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sidebar-section {
+  margin-top: 18px;
+  padding: 0 10px;
+}
+
+.sidebar-section-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+
+.sidebar-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 6px 0;
+  line-height: 1.5;
+}
+
+/* Lo que fallo al renombrar, archivar o eliminar. Antes esto no se veia: la
+   operacion fallaba y la lista se quedaba igual, sin decir nada. */
+.sidebar-note--error {
+  color: var(--status-error);
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 8px 10px 4px;
+}
+
+.sidebar-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 6px 0;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-muted);
+}
+
+.status-dot.normal { background: var(--status-success); }
+.status-dot.degraded { background: var(--status-degraded); }
+.status-dot.offline { background: var(--status-error); }
+.status-dot.loading { background: var(--status-info); animation: pulse-soft 1.2s ease infinite; }
+
+/* ── Área principal ───────────────────────────────────────────────────────── */
+
+.main-content {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* El encabezado comparte el ancho maximo del cuerpo para que titulo y contenido
+   queden alineados en la misma columna. */
+.view-header {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  width: 100%;
+  max-width: calc(900px + 48px);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.view-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.view-header .counter {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.header-action {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 5px 11px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.header-action:hover { background: var(--bg-raised); color: var(--text-primary); border-color: var(--border-normal); }
+
+/* ── Chat ─────────────────────────────────────────────────────────────────── */
+
+.chat-view {
+  display: flex;
+  flex-direction: column;
+  /* `flex: 1` y no `height: 100%`, y la diferencia importa cuando hay algo mas
+     dentro de `.main-content`.
+     `height: 100%` se resuelve contra la altura del contenedor ENTERO, no
+     contra lo que queda libre. Con el aviso de confirmar el correo arriba —166px
+     en un movil— el chat seguia pidiendo los 664 de la ventana y empezaba en el
+     174: terminaba en 838, y el compositor acababa en 809. Fuera de la pantalla.
+     Medido en produccion con una cuenta recien creada, que es justo el estado en
+     el que entra todo el mundo la primera vez.
+     `flex: 1` reparte lo que hay. `min-height: 0` es lo que permite que la lista
+     de mensajes de dentro se encoja en lugar de empujar. */
+  flex: 1;
+  min-height: 0;
+}
+
+/* Estado inicial: saludo centrado con el compositor debajo */
+.chat-hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  gap: 26px;
+}
+
+.chat-hero h1 {
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: -0.4px;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.chat-hero .composer-wrapper { width: 100%; }
+
+.hero-hint {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 460px;
+  line-height: 1.6;
+}
+
+.messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.messages-inner {
+  width: 100%;
+  max-width: var(--composer-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding-bottom: 16px;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn var(--transition-normal) forwards;
+}
+
+.message.user { align-items: flex-end; }
+.message.assistant { align-items: flex-start; }
+
+.message-content {
+  font-size: 14.5px;
+  line-height: 1.7;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.message.user .message-content {
+  background: var(--bg-input);
+  padding: 10px 16px;
+  border-radius: var(--radius-lg);
+  border-bottom-right-radius: 6px;
+  max-width: 78%;
+}
+
+.message.assistant .message-content {
+  color: var(--text-primary);
+  padding: 0;
+}
+
+.message.error .message-content {
+  color: var(--risk-critical);
+}
+
+.message-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 0;
+}
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: typing-dot 1.4s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.16s; }
+.typing-dot:nth-child(3) { animation-delay: 0.32s; }
+
+/* Lo que está haciendo Morgan, con /chat/stream (V2.0.14). */
+.typing-progreso {
+  margin-left: 8px;
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+/* ── Compositor ───────────────────────────────────────────────────────────── */
+
+.composer-area {
+  padding: 12px 24px 20px;
+  flex-shrink: 0;
+}
+
+.composer-wrapper {
+  max-width: var(--composer-max);
+  margin: 0 auto;
+}
+
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background: var(--bg-input);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  padding: 8px 8px 8px 12px;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.composer:focus-within {
+  background: var(--bg-input-hover);
+  border-color: var(--border-normal);
+}
+
+.composer-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.composer-btn:hover:not(:disabled) { background: var(--accent-soft); color: var(--text-primary); }
+.composer-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.composer-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14.5px;
+  line-height: 1.5;
+  resize: none;
+  max-height: 180px;
+  min-height: 22px;
+  padding: 5px 0;
+}
+
+.composer-input::placeholder { color: var(--text-muted); }
+
+.send-button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--action-bg);
+  color: var(--action-fg);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.send-button:hover:not(:disabled) { transform: scale(1.05); }
+.send-button:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+.composer-footnote {
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 9px;
+}
+
+/* ── Contenido de las vistas ──────────────────────────────────────────────── */
+
+.view-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 24px 28px;
+}
+
+.view-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.filter-chips {
+  display: flex;
+  gap: 6px;
+  padding: 4px 0 16px;
+  overflow-x: auto;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+  background: none;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.chip:hover { background: var(--bg-raised); color: var(--text-primary); }
+.chip.active { background: var(--bg-active); color: var(--text-primary); border-color: var(--border-normal); }
+
+/* Herramientas */
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.tool-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  transition: all var(--transition-fast);
+  animation: fadeIn var(--transition-normal) forwards;
+}
+
+.tool-item:hover { border-color: var(--border-normal); background: var(--bg-raised); }
+
+.tool-item-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.tool-item-name {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.risk-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  flex-shrink: 0;
+  border: 1px solid currentColor;
+}
+
+.risk-badge.safe, .risk-badge.low_risk { color: var(--risk-safe); }
+.risk-badge.moderate { color: var(--risk-moderate); }
+.risk-badge.high_risk { color: var(--risk-high); }
+.risk-badge.critical, .risk-badge.sensitive { color: var(--risk-critical); }
+
+.tool-item-desc {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.tool-item-footer {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.domain-tag {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+/* Memoria */
+.memory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.memory-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: fadeIn var(--transition-normal) forwards;
+  transition: all var(--transition-fast);
+}
+
+.memory-item:hover { border-color: var(--border-normal); background: var(--bg-raised); }
+
+.memory-cat {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  flex-shrink: 0;
+  min-width: 74px;
+}
+
+.memory-key { font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); min-width: 130px; }
+.memory-value { font-size: 13px; color: var(--text-secondary); flex: 1; }
+.memory-date { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+
+.memory-delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  transition: all var(--transition-fast);
+}
+
+.memory-delete-btn:hover { color: var(--risk-critical); background: rgba(248, 113, 113, 0.1); }
+
+/* Estado */
+.mode-banner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.mode-banner.normal { border-color: rgba(74, 222, 128, 0.25); }
+.mode-banner.degraded { border-color: rgba(251, 146, 60, 0.25); }
+.mode-banner.offline { border-color: rgba(248, 113, 113, 0.25); }
+
+.mode-banner .mode-meta { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+.status-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  animation: fadeIn var(--transition-normal) forwards;
+}
+
+.status-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.status-card-title { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+
+.status-card-icon { color: var(--text-secondary); display: flex; }
+
+.status-indicator {
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.status-indicator.ok { background: var(--status-success); }
+.status-indicator.error { background: var(--status-error); }
+.status-indicator.unavailable { background: var(--status-degraded); }
+
+.status-card-detail {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* Auditoría */
+.audit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.audit-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 9px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  animation: fadeIn var(--transition-fast) forwards;
+}
+
+.audit-time { color: var(--text-muted); font-family: var(--font-mono); flex-shrink: 0; }
+.audit-tool { font-family: var(--font-mono); color: var(--text-primary); min-width: 145px; }
+.audit-result { margin-left: auto; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
+.audit-result.allowed { color: var(--status-success); }
+.audit-result.denied { color: var(--status-error); }
+
+/* ── Estados de carga, vacío y error ──────────────────────────────────────── */
+
+.loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-normal);
+  border-top-color: var(--text-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.error-banner {
+  padding: 11px 14px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--risk-critical);
+  font-size: 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-muted);
+  padding: 70px 20px;
+  text-align: center;
+}
+
+.empty-state p { font-size: 13.5px; max-width: 330px; line-height: 1.6; }
+
+/* ── Superposición de conexión ────────────────────────────────────────────── */
+
+.connection-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(6px);
+  padding: 20px;
+}
+
+.connection-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  text-align: center;
+  max-width: 400px;
+}
+
+.connection-card h2 { font-size: 17px; font-weight: 500; margin-bottom: 8px; }
+.connection-card p { color: var(--text-secondary); font-size: 13px; line-height: 1.6; margin-bottom: 16px; }
+
+/* Nota secundaria del aviso de desconexion: explica sin competir con el mensaje. */
+.connection-card .overlay-nota {
+  font-size: 12px;
+  color: var(--text-tertiary, var(--text-secondary));
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+.connection-card code {
+  display: block;
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  margin-bottom: 18px;
+}
+
+.btn-primary {
+  background: var(--action-bg);
+  color: var(--action-fg);
+  border: none;
+  padding: 9px 22px;
+  border-radius: var(--radius-pill);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+  width: 100%;
+}
+
+.btn-primary:hover { opacity: 0.88; }
+
+/* Código en línea dentro de los mensajes */
+.inline-code {
+  display: inline;
+  font-family: var(--font-mono);
+  background: var(--accent-soft);
+  padding: 1.5px 5px;
+  border-radius: 4px;
+  font-size: 12.5px;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 820px) {
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    transform: translateX(-100%);
+    transition: transform var(--transition-normal);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.7);
+  }
+
+  .sidebar.open { transform: translateX(0); }
+
+  /* El `display: flex` del boton de menu estaba AQUI y no servia de nada.
+     La regla base `.sidebar-toggle { display: none }` esta mas abajo en el
+     fichero, tiene la misma especificidad, y en CSS gana la ultima: el boton
+     quedaba oculto a todos los anchos. Ahora vive al final, con el resto de
+     lo movil, donde ninguna regla posterior lo puede tapar. */
+
+  .view-header { padding-left: 56px; }
+  .chat-hero { padding-top: 40px; }
+  .memory-item { flex-wrap: wrap; gap: 6px 12px; }
+  .memory-key { min-width: 0; }
+  .audit-tool { min-width: 0; }
+}
+
+/* Botón de menú: flotante y solo en pantallas estrechas, para que el lienzo del
+   chat quede limpio en escritorio, como en la referencia de diseño. */
+.sidebar-toggle {
+  display: none;
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 8;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.sidebar-toggle:hover { background: var(--bg-raised); color: var(--text-primary); }
+
+/* ── Cuenta, arriba a la derecha ──────────────────────────────────────────── */
+
+/* En posicion absoluta como .sidebar-toggle, y por el mismo motivo: no entra en
+   el flujo de ninguna vista, asi que las siete que ya existen no cambian. */
+.barra-cuenta {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.barra-cuenta__chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 200px;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.barra-cuenta__chip:hover { background: var(--bg-active); color: var(--text-primary); }
+
+.barra-cuenta__avatar {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--action-bg);
+  color: var(--action-fg);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.barra-cuenta__nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barra-cuenta__enlace,
+.barra-cuenta__principal {
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.barra-cuenta__enlace {
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+}
+.barra-cuenta__enlace:hover { background: var(--bg-raised); color: var(--text-primary); }
+.barra-cuenta__principal {
+  border: none;
+  background: var(--action-bg);
+  color: var(--action-fg);
+  font-weight: 500;
+}
+.barra-cuenta__principal:hover { opacity: 0.88; }
+
+.barra-cuenta__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 210px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.barra-cuenta__quien {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.barra-cuenta__quien strong { color: var(--text-primary); font-size: 13px; }
+.barra-cuenta__quien span { overflow: hidden; text-overflow: ellipsis; }
+
+.barra-cuenta__menu button {
+  text-align: left;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.barra-cuenta__menu button:hover { background: var(--bg-active); color: var(--text-primary); }
+.barra-cuenta__menu button.danger { color: var(--status-error); }
+
+/* En pantallas estrechas el nombre sobra: el avatar ya identifica la cuenta y
+   el ancho hace falta para el titulo de la vista. */
+@media (max-width: 620px) {
+  .barra-cuenta__nombre { display: none; }
+  .barra-cuenta__chip { padding: 4px; }
+}
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 9;
+}
+
+@media (max-width: 820px) {
+  .sidebar-backdrop.visible { display: block; }
+}
+
+/* Campo para introducir el token de la API */
+.token-input {
+  width: 100%;
+  background: var(--bg-app);
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  margin-bottom: 14px;
+  outline: none;
+}
+
+.token-input:focus { border-color: var(--border-strong); }
+
+/* Lista de conversaciones guardadas */
+.session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px -4px 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.session-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.session-item:hover { background: var(--bg-raised); color: var(--text-primary); }
+.session-item.active { background: var(--bg-active); color: var(--text-primary); }
+
+.session-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Barrera de errores de render */
+.render-error {
+  max-width: 520px;
+  margin: 60px auto;
+  padding: 24px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.render-error h2 { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
+.render-error p { font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; }
+
+.render-error-detail {
+  display: block;
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--risk-critical);
+  margin-bottom: 16px;
+  word-break: break-word;
+}
+
+.render-error-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.render-error-actions .btn-primary { width: auto; }
+.render-error-actions .header-action { margin-left: 0; }
+
+/* Estado por servicio y capacidades (V1.3) */
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 18px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.env-tag {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-pill);
+  padding: 1px 7px;
+}
+
+.service-list, .capability-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.service-row, .capability-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+}
+
+.service-name { font-family: var(--font-mono); color: var(--text-primary); min-width: 130px; }
+.service-detail { color: var(--text-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.service-state {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.service-state.available { color: var(--status-success); }
+.service-state.degraded { color: var(--status-degraded); }
+.service-state.unavailable { color: var(--status-error); }
+.service-state.unknown { color: var(--text-muted); }
+
+.status-dot.available { background: var(--status-success); }
+.status-dot.unavailable { background: var(--status-error); }
+.status-dot.unknown { background: var(--text-muted); }
+
+.capability-mark { font-weight: 700; width: 14px; text-align: center; }
+.capability-mark.yes { color: var(--status-success); }
+.capability-mark.no { color: var(--text-muted); }
+.capability-name { color: var(--text-primary); flex: 1; }
+.capability-reason { color: var(--text-muted); font-size: 12px; }
+
+.sidebar-status .env-tag { margin-left: auto; }
+
+/* Estado de la sincronizacion con la nube */
+.sync-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+}
+
+.sync-counts {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Markdown en las respuestas de Morgan --- */
+.md { display: flex; flex-direction: column; gap: 10px; }
+.md > *:first-child { margin-top: 0; }
+.md > *:last-child { margin-bottom: 0; }
+
+.md-p { white-space: pre-wrap; }
+
+.md-h { font-weight: 600; color: var(--text-primary); margin-top: 4px; }
+.md-h1 { font-size: 17px; }
+.md-h2 { font-size: 15.5px; }
+.md-h3 { font-size: 14.5px; }
+.md-h4 { font-size: 14px; color: var(--text-secondary); }
+
+.md-list { padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.md-list li { line-height: 1.6; }
+
+.md-code {
+  position: relative;
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.md-code-lang {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+/* La descarga de una copia del PC (3.1-E): el único enlace que el chat convierte en
+   botón, porque es una ruta propia de Morgan y no una dirección que escriba el modelo */
+.md-descarga {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2, transparent);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.md-descarga::before { content: "⬇"; opacity: 0.7; }
+
+.md-descarga:hover { border-color: var(--accent); color: var(--accent); }
+
+/* La tabla se desplaza dentro de su caja: una tabla ancha no debe romper el chat */
+.md-table-wrap { overflow-x: auto; }
+
+.md-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 100%;
+}
+
+.md-table th, .md-table td {
+  border: 1px solid var(--border-subtle);
+  padding: 7px 11px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.md-table th {
+  background: var(--bg-raised);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.md-table td { color: var(--text-secondary); }
+
+/* ── Gestion del historial (V1.4) ─────────────────────────────────────────── */
+
+.sidebar-section-label { display: flex; align-items: center; justify-content: space-between; }
+
+.section-action {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm, 4px);
+}
+.section-action:hover { color: var(--text-primary); background: var(--bg-hover, rgba(255,255,255,.06)); }
+
+.session-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  margin: 6px 0 8px;
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+}
+.session-search input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+}
+.session-search input::placeholder { color: var(--text-secondary); }
+
+/* La fila es el ancla del menu desplegable. */
+.session-row { position: relative; display: flex; align-items: center; }
+.session-row .session-item { flex: 1; min-width: 0; }
+.session-row.active .session-item { background: var(--bg-hover, rgba(255,255,255,.06)); }
+
+.session-pin { color: var(--accent, #6ea8fe); margin-right: 4px; }
+.session-group {
+  font-size: 10px;
+  padding: 1px 5px;
+  margin-left: 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.session-rename {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-app);
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 8px;
+}
+
+.session-menu-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm, 4px);
+  line-height: 1;
+}
+.session-menu-btn:hover { color: var(--text-primary); background: var(--bg-hover, rgba(255,255,255,.06)); }
+
+.session-menu {
+  /* Fija, no absoluta: .session-list tiene overflow para poder desplazarse, y
+     eso recortaba el desplegable. Las coordenadas las calcula el componente a
+     partir del boton. */
+  position: fixed;
+  transform: translateX(-100%);
+  z-index: 300;
+  min-width: 150px;
+  padding: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+}
+.session-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+}
+.session-menu button:hover { background: var(--bg-hover, rgba(255,255,255,.06)); }
+.session-menu button.danger { color: var(--risk-critical); }
+
+/* El aviso de chat temporal: discreto pero imposible de no ver. */
+.temporal-badge,
+.temporal-bar {
+  font-size: 12px;
+  color: var(--text-secondary);
+  border: 1px dashed var(--border-normal);
+  border-radius: 999px;
+  padding: 5px 12px;
+}
+.temporal-badge { display: inline-block; margin-bottom: 14px; }
+.temporal-bar {
+  align-self: center;
+  margin: 10px auto 0;
+  border-radius: var(--radius-md);
+}
+
+/* ── Ajustes (Etapa B) ────────────────────────────────────────────────────── */
+
+.ajustes-grupo { max-width: 620px; margin-bottom: 32px; }
+.ajustes-grupo h3 {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.ajustes-nota {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 8px 0 14px;
+}
+
+.ajuste { display: block; margin-bottom: 18px; }
+.ajuste-etiqueta {
+  display: block;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.ajuste input,
+.ajuste textarea {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  padding: 9px 12px;
+  outline: none;
+  resize: vertical;
+}
+.ajuste input:focus,
+.ajuste textarea:focus { border-color: var(--border-strong); }
+.ajuste-ayuda {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+
+.ajustes-aviso {
+  font-size: 12.5px;
+  color: var(--status-success);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  margin-bottom: 16px;
+}
+
+.tema-opciones { display: flex; gap: 8px; flex-wrap: wrap; }
+.tema-opcion {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.tema-opcion:hover { background: var(--bg-input-hover); color: var(--text-primary); }
+.tema-opcion.activa {
+  background: var(--action-bg);
+  color: var(--action-fg);
+  border-color: transparent;
+}
+/* El nombre arriba y en que consiste debajo. Con dos temas oscuros, "Lima" y
+   "Negro" a secas obligan a probarlos para saber cual es cual. */
+.tema-opcion { display: flex; flex-direction: column; gap: 1px; text-align: left; }
+.tema-opcion__nombre { font-weight: 500; }
+.tema-opcion__detalle { font-size: 11px; opacity: 0.72; }
+
+/* ── Adjuntos y grabacion (V1.4) ──────────────────────────────────────────── */
+
+/* El boton de grabar late mientras graba: sin senal visible es facil dejar el
+   microfono abierto sin darse cuenta. */
+.composer-btn.grabando {
+  color: var(--risk-critical);
+  animation: latido 1.4s ease-in-out infinite;
+}
+
+@keyframes latido {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composer-btn.grabando { animation: none; }
+}
+
+.adjunto-estado {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  align-self: center;
+  padding: 0 6px;
+}
+
+.adjunto-estado.error { color: var(--risk-critical); white-space: normal; }
+
+/* ── Pantallas pequenas: lo anadido en la V1.4 ────────────────────────────── */
+
+@media (max-width: 520px) {
+  /* El menu se posiciona en fijo desde el borde derecho del boton. En una
+     pantalla estrecha eso lo empujaba fuera por la izquierda. */
+  .session-menu {
+    left: 8px !important;
+    right: 8px;
+    transform: none;
+    min-width: 0;
+    width: auto;
+  }
+
+  /* El compositor tiene ya cuatro botones ademas del campo de texto. Sin esto,
+     en 360px el area de escritura se quedaba en una franja inservible. */
+  .composer { flex-wrap: wrap; }
+  .composer-input { min-width: 0; flex: 1 1 100%; order: -1; }
+
+  /* El aviso de subida ocupaba una linea entera empujando los botones. */
+  .adjunto-estado {
+    white-space: normal;
+    flex-basis: 100%;
+    text-align: center;
+    padding-top: 4px;
+  }
+
+  /* Los grupos de ajustes ya son estrechos; lo que sobra es el margen. */
+  .view-body { padding-left: 14px; padding-right: 14px; }
+  .tema-opciones .tema-opcion { flex: 1 1 auto; }
+}
+
+/* ── Tareas (V1.5) ────────────────────────────────────────────────────────── */
+
+.tarea-lista { display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
+
+.tarea {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  background: var(--bg-card);
+}
+
+.tarea-cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.tarea-objetivo { font-size: 13.5px; color: var(--text-primary); }
+
+.tarea-estado {
+  font-size: 11px;
+  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+/* El color aqui es informacion, no adorno: dice si algo salio bien o no. */
+.tarea-estado.completed { color: var(--status-success); }
+.tarea-estado.failed    { color: var(--status-error); }
+.tarea-estado.running   { color: var(--status-info); }
+.tarea-estado.waiting   { color: var(--status-degraded); }
+
+.tarea-barra {
+  position: relative;
+  height: 6px;
+  margin: 10px 0 6px;
+  background: var(--bg-input);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.tarea-barra-relleno {
+  height: 100%;
+  background: var(--text-secondary);
+  transition: width var(--transition-normal);
+}
+.tarea-barra.completed .tarea-barra-relleno { background: var(--status-success); }
+.tarea-barra.failed .tarea-barra-relleno    { background: var(--status-error); }
+.tarea-barra.running .tarea-barra-relleno   { background: var(--status-info); }
+
+/* La cifra se lee con lector de pantalla via aria-valuenow; visualmente basta
+   la barra, asi que se oculta para no recargar la fila. */
+.tarea-barra-cifra { position: absolute; left: -9999px; }
+
+.tarea-actual { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+.tarea-pasos { list-style: none; margin: 12px 0 0; padding: 0; }
+.tarea-paso { display: flex; gap: 8px; font-size: 12.5px; padding: 4px 0; }
+.tarea-paso-marca { width: 14px; color: var(--text-muted); flex-shrink: 0; }
+.tarea-paso.completed .tarea-paso-marca { color: var(--status-success); }
+.tarea-paso.failed .tarea-paso-marca    { color: var(--status-error); }
+.tarea-paso.running .tarea-paso-marca   { color: var(--status-info); }
+.tarea-paso-texto { color: var(--text-secondary); min-width: 0; }
+
+.tarea-paso-tool {
+  display: inline-block;
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.tarea-paso-error {
+  display: block;
+  font-size: 11.5px;
+  color: var(--status-error);
+  margin-top: 2px;
+}
+
+.tarea-resultado,
+.tarea-error {
+  font-size: 12.5px;
+  line-height: 1.6;
+  margin-top: 12px;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+}
+.tarea-error { color: var(--status-error); }
+
+.tarea-acciones { display: flex; gap: 8px; margin-top: 12px; }
+
+/* Las automatizaciones y su bandeja (4.14): las tarjetas de las tareas, y poco más. */
+.auto-titulo { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin: 8px 0 0; }
+.auto-aviso.sin-leer { border-color: var(--status-info); }
+.nav-item .nav-count--aviso { color: var(--status-info); font-weight: 600; }
+.auto-texto { font-size: 13px; margin-top: 8px; overflow-wrap: anywhere; }
+.para-copiar { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; margin: 6px 0; }
+.para-copiar .ajustes-orden { flex: 1 1 260px; }
+.token-ejemplos { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.token-ejemplos .ajustes-orden { white-space: pre-wrap; }
+.pasos-equipo { margin: 8px 0; padding-left: 20px; font-size: 13px; line-height: 1.6; }
+.pasos-equipo li { margin-bottom: 6px; }
+.auto-pasos { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; overflow-wrap: anywhere; }
+
+/* ── Adjuntos pendientes y sus estados ────────────────────────────────────── */
+
+.adjuntos-pendientes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-basis: 100%;
+  margin-bottom: 8px;
+}
+
+.adjunto-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 4px 6px 4px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.adjunto-nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.adjunto-peso { color: var(--text-muted); flex-shrink: 0; }
+
+.adjunto-quitar {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+.adjunto-quitar:hover { color: var(--risk-critical); }
+
+/* El estado de la subida. El color solo aparece cuando dice algo: verde al
+   terminar, rojo al fallar; el resto en gris para no distraer. */
+.adjunto-estado.listo { color: var(--status-success); }
+.adjunto-estado.fallido { color: var(--status-error); }
+.adjunto-estado.transcribiendo,
+.adjunto-estado.subiendo { color: var(--text-secondary); }
+
+/* ── Vista de archivos ────────────────────────────────────────────────────── */
+
+.archivo-lista { display: flex; flex-direction: column; gap: 8px; max-width: 760px; }
+
+.archivo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.archivo-datos { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+
+.archivo-nombre {
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archivo-meta { font-size: 11.5px; color: var(--text-muted); }
+
+.header-action.danger { color: var(--risk-critical); }
+
+@media (max-width: 520px) {
+  .archivo { flex-direction: column; align-items: stretch; }
+}
+
+/* --- Acceso y cuentas (V1.6) ------------------------------------------- */
+
+.acceso {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--bg-app);
+}
+
+/* Superpuesta: se abre desde el boton de la esquina sin desmontar Morgan. */
+.acceso--superpuesto {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+/* Las dos puertas de entrada, arriba a la derecha. Se marca cual esta abierta:
+   sin eso, dos botones que no cambian de aspecto al pulsarlos parecen rotos. */
+.acceso__barra {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.acceso__barra-boton {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.acceso__barra-boton:hover { background: var(--bg-raised); color: var(--text-primary); }
+.acceso__barra-boton.principal {
+  border-color: transparent;
+  background: var(--action-bg);
+  color: var(--action-fg);
+  font-weight: 500;
+}
+.acceso__barra-boton.principal:hover { opacity: 0.88; }
+.acceso__barra-boton.activo {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+.acceso__barra-boton.principal.activo { border-color: transparent; }
+
+@media (max-width: 480px) {
+  .acceso__barra { top: 12px; right: 12px; gap: 6px; }
+  .acceso__barra-boton { padding: 5px 10px; font-size: 12px; }
+}
+
+.acceso__caja {
+  width: 100%;
+  max-width: 380px;
+}
+
+.acceso__marca {
+  margin: 0 0 32px;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.acceso__titulo {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.acceso__ayuda {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.acceso__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.acceso__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.acceso__campo > span {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.acceso__campo input {
+  padding: 11px 13px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.acceso__campo input:focus {
+  outline: none;
+  background: var(--bg-input-hover);
+  border-color: var(--border-strong);
+}
+
+.acceso__pista {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.acceso__boton {
+  margin-top: 4px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--action-fg);
+  background: var(--action-bg);
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.acceso__boton:hover:not(:disabled) { opacity: 0.88; }
+.acceso__boton:disabled { opacity: 0.5; cursor: default; }
+
+/* El error se marca en rojo, pero el mensaje NUNCA distingue "esa cuenta no
+   existe" de "la contrasena es incorrecta": eso lo decide el backend, y decirlo
+   convertiria el formulario en una forma de averiguar quien esta registrado. */
+.acceso__error,
+.acceso__aviso {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  border-radius: var(--radius-sm);
+}
+
+.acceso__error {
+  color: var(--status-error);
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.acceso__aviso {
+  color: var(--status-info);
+  background: rgba(125, 211, 252, 0.1);
+}
+
+.acceso__enlaces {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  margin-top: 24px;
+}
+
+.acceso__enlaces button {
+  padding: 0;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.acceso__enlaces button:hover { color: var(--text-primary); }
+
+.ajustes-form { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+.ajustes-campo { display: flex; flex-direction: column; gap: 6px; max-width: 340px; }
+.ajustes-campo > span { font-size: 13px; color: var(--text-secondary); }
+
+.ajustes-campo input {
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.ajustes-campo input:focus { outline: none; border-color: var(--border-strong); }
+
+.ajustes-boton {
+  align-self: flex-start;
+  margin-top: 12px;
+  padding: 9px 18px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--action-fg);
+  background: var(--action-bg);
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.ajustes-boton:hover:not(:disabled) { opacity: 0.88; }
+.ajustes-boton:disabled { opacity: 0.5; cursor: default; }
+
+.ajustes-sesiones { margin: 14px 0 0; padding: 0; list-style: none; }
+
+.ajustes-sesiones li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.ajustes-sesiones span { font-size: 13px; color: var(--text-primary); }
+.ajustes-sesiones small { font-size: 12px; color: var(--text-muted); }
+
+/* La caja de espera se centra en vertical: sin contenido que la empuje, alineada
+   arriba parecia un error de maquetacion. */
+.acceso__caja--centrada { text-align: center; }
+.acceso__caja--centrada .acceso__ayuda { margin: 0; }
+
+/* --- Planes pendientes de aprobación (V1.6) ----------------------------- */
+
+.planes { display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 0; }
+
+.plan {
+  max-width: var(--composer-max);
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--risk-moderate);
+  border-radius: var(--radius-md);
+}
+
+.plan-cabecera {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.plan-cabecera h4 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.plan-objetivo { margin: 0; font-size: 15px; color: var(--text-primary); }
+
+.plan-riesgo {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.plan-riesgo.safe,
+.plan-riesgo.low_risk { color: var(--risk-safe); background: rgba(74, 222, 128, 0.12); }
+.plan-riesgo.moderate { color: var(--risk-moderate); background: rgba(251, 191, 36, 0.12); }
+.plan-riesgo.high_risk { color: var(--risk-high); background: rgba(251, 146, 60, 0.12); }
+.plan-riesgo.critical,
+.plan-riesgo.sensitive { color: var(--risk-critical); background: rgba(248, 113, 113, 0.12); }
+
+.plan-pasos { margin: 14px 0 0; padding: 0 0 0 4px; list-style: none; }
+
+.plan-paso {
+  padding: 8px 0 8px 12px;
+  border-left: 2px solid var(--border-subtle);
+}
+
+/* El borde marca los pasos que exigen la aprobación: sin él, en un plan de seis
+   pasos hay que leerlos todos para saber cuál es el delicado. */
+.plan-paso.delicado { border-left-color: var(--risk-critical); }
+
+.plan-paso-cabecera { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.plan-paso-orden { font-size: 12px; color: var(--text-muted); }
+.plan-paso-texto { flex: 1; font-size: 14px; color: var(--text-primary); }
+
+.plan-paso-herramienta {
+  padding: 1px 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-raised);
+  border-radius: var(--radius-sm);
+}
+
+.plan-paso-args { margin: 6px 0 0; font-size: 12px; }
+.plan-paso-args > div { display: flex; gap: 6px; }
+.plan-paso-args dt { color: var(--text-muted); }
+/* pre-wrap (3.3): lo que Morgan va a escribir en tu PC se aprueba viéndolo tal cual,
+   con sus saltos de línea, no aplastado en una. */
+.plan-paso-args dd { margin: 0; color: var(--text-secondary); word-break: break-all; white-space: pre-wrap; }
+.plan-paso-motivo { margin: 4px 0 0; font-size: 12px; color: var(--text-muted); }
+
+.plan-nota {
+  margin: 14px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.plan-acciones { display: flex; gap: 10px; margin-top: 14px; }
+
+.plan-boton {
+  padding: 9px 18px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.plan-boton.aprobar { color: var(--action-fg); background: var(--action-bg); }
+
+.plan-boton.rechazar {
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border-normal);
+}
+
+.plan-boton:hover:not(:disabled) { opacity: 0.85; }
+.plan-boton:disabled { opacity: 0.5; cursor: default; }
+.plan-error { margin: 10px 0 0; font-size: 13px; color: var(--status-error); }
+
+/* Verificación de pasos (V1.7). Solo se marca lo comprobado: un sello de
+   "correcto" sobre algo que nadie miró sería peor que no poner nada. */
+.tarea-paso-verificado,
+.tarea-paso-nover {
+  margin-left: 8px;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: var(--radius-pill);
+  vertical-align: middle;
+}
+
+.tarea-paso-verificado { color: var(--status-success); background: rgba(74, 222, 128, 0.12); }
+.tarea-paso-nover { color: var(--status-error); background: rgba(248, 113, 113, 0.12); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LA PIEL (V2.0.28)
+
+   El diseño de las capturas que di: azul noche como tema principal, su
+   versión clara y un oscuro monocromo. Sustituye a la capa de «estilo terminal»
+   y, como ella, **va encima de lo que existe**: los mismos componentes y los
+   mismos manejadores. Lo nuevo en el marcado es poco y está en `App.tsx` y
+   `Chat.tsx` (barra superior, tarjeta de usuario, portada y compositor).
+
+   Lo que se copió del diseño y lo que no:
+
+   - **Sí**: los colores, Outfit, la palabra destacada en cursiva, las pastillas
+     con borde, las tarjetas con icono en un cuadrito, el compositor con su fila
+     de controles debajo y el botón de enviar con texto.
+   - **No**: lo que en Morgan no haría nada. Compartir, avisos, un selector de
+     modelo que no existe, «modo de bajo consumo». Cada control que queda es real
+     y cada dato sale del servidor.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Armazón ──────────────────────────────────────────────────────────────── */
+
+.sidebar {
+  border-right: 1px solid var(--border-subtle);
+  padding: 14px 12px 0;
+  /* El alto lo da `align-items: stretch` del contenedor. NO se pone `flex: 1`:
+     .app-shell va en fila, y eso haría crecer la barra a lo ancho (lo vigila
+     tests/test_tema_web.py). */
+  height: auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.main-content {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 0%, var(--main-glow), transparent 70%),
+    var(--bg-app);
+}
+
+/* ── Marca y nueva conversación ───────────────────────────────────────────── */
+
+.sidebar-top {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  padding: 0 2px 14px;
+}
+
+.brand {
+  gap: 10px;
+  padding: 0;
+  min-width: 0;
+}
+
+.brand-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--accent-text);
+}
+
+.brand-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+.brand-nombre { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+.brand-lema { font-size: 12px; font-weight: 400; color: var(--accent-text); }
+
+.brand .env-tag { margin-left: auto; }
+
+.env-tag {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-secondary);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+  white-space: nowrap;
+}
+
+.boton-nueva {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  border: 1px solid var(--nueva-border);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, var(--nueva-bg-2), var(--nueva-bg));
+  color: var(--nueva-fg);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: filter var(--transition-fast), transform var(--transition-fast);
+}
+.boton-nueva:hover { filter: brightness(1.08); }
+.boton-nueva:active { transform: translateY(1px); }
+
+/* ── Navegación ───────────────────────────────────────────────────────────── */
+
+.sidebar-nav { gap: 2px; }
+
+.nav-item {
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 14.5px;
+}
+.nav-item:hover { background: var(--bg-raised); color: var(--text-primary); }
+.nav-item.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--nav-active-fg);
+}
+.nav-item .nav-icon { display: flex; align-items: center; justify-content: center; }
+.nav-item.active .nav-icon { color: var(--nav-active-fg); }
+
+.sidebar-section {
+  margin-top: 16px;
+  padding: 14px 4px 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.sidebar-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.section-action { font-size: 12px; }
+
+.session-search {
+  background: var(--bg-input);
+  border-radius: var(--radius-md);
+  padding: 7px 10px;
+}
+.session-search input { font-size: 13px; }
+
+.session-item {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+}
+.session-item:hover { color: var(--text-primary); }
+.session-row.active .session-item {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+/* ── Pie: la tarjeta de usuario ───────────────────────────────────────────── */
+
+.sidebar-footer {
+  position: sticky;
+  bottom: 0;
+  margin: auto -12px 0;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-sidebar);
+}
+
+.tarjeta-usuario {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.tarjeta-usuario__avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--action-bg-2), var(--action-bg));
+  color: var(--action-fg);
+  font-size: 14px;
+  font-weight: 600;
+}
+.tarjeta-usuario__avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.tarjeta-usuario__datos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  line-height: 1.25;
+}
+
+.tarjeta-usuario__nombre {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tarjeta-usuario .sidebar-status {
+  padding: 0;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tarjeta-usuario__ajustes {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.tarjeta-usuario__ajustes:hover { background: var(--bg-raised); color: var(--text-primary); }
+.tarjeta-usuario__ajustes.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--nav-active-fg);
+}
+
+/* La versión desplegada, discreta. Existe para el día que hace falta saber qué
+   hay en producción. */
+.sidebar-version {
+  padding: 6px 0 0 46px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* ── La barra de arriba ───────────────────────────────────────────────────── */
+
+.barra-superior {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--header-height);
+  flex-shrink: 0;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Dentro de la barra, en el flujo: ya no flotan en posición absoluta encima
+   del contenido (y por eso el contenido no tiene que reservarles hueco). */
+.barra-superior .sidebar-toggle { position: static; }
+.barra-superior .barra-cuenta { position: relative; top: auto; right: auto; }
+
+.barra-superior__derecha {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.pastilla {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  min-width: 0;
+  padding: 0 14px;
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-pill);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+.pastilla__logo { flex-shrink: 0; color: var(--accent-text); }
+.pastilla__fuerte { font-weight: 600; }
+.pastilla__sep { color: var(--text-muted); }
+.pastilla__suave {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pastilla--estado {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  background: var(--bg-raised);
+}
+.pastilla--estado.normal .pastilla__texto-estado { color: var(--accent-text); }
+.pastilla__texto-estado { overflow: hidden; text-overflow: ellipsis; }
+
+/* La cuenta, arriba: solo el avatar. El nombre ya está en el pie de la barra. */
+.barra-superior .barra-cuenta__nombre { display: none; }
+.barra-superior .barra-cuenta__chip {
+  padding: 2px;
+  border-radius: 50%;
+  background: transparent;
+  border-color: var(--border-normal);
+}
+.barra-cuenta__avatar {
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(180deg, var(--action-bg-2), var(--action-bg));
+  font-size: 13px;
+}
+.barra-cuenta__menu {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop);
+  background: var(--bg-card);
+}
+
+/* ── Portada del chat ─────────────────────────────────────────────────────── */
+
+.chat-hero {
+  gap: 0;
+  padding: 28px 24px 20px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.insignia {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 5px 13px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-pill);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  text-align: center;
+}
+.insignia__logo { flex-shrink: 0; color: var(--accent-text); }
+.insignia__fuerte { color: var(--text-primary); font-weight: 500; }
+.insignia__sep { color: var(--text-muted); }
+.insignia--temporal { border-style: dashed; border-color: var(--border-strong); }
+
+.chat-hero h1.saludo {
+  margin: 0 0 14px;
+  font-size: clamp(30px, 4.4vw, 44px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.18;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.saludo em {
+  font-family: var(--font-accent);
+  font-size: 1.1em;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--accent-text);
+  text-decoration: var(--accent-decoration);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 7px;
+  text-shadow: 0 0 28px var(--accent-glow);
+  padding: 0 0.04em;
+}
+
+.saludo__sub {
+  max-width: 540px;
+  margin: 0 0 28px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+
+/* ── Sugerencias: rellenan el compositor, no navegan a ningún sitio ───────── */
+
+.sugerencias {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: var(--composer-max);
+  margin: 0 auto 22px;
+}
+
+.sugerencia {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+  color: var(--text-secondary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+.sugerencia:hover:not(:disabled) {
+  border-color: var(--accent-border);
+  transform: translateY(-1px);
+}
+.sugerencia:disabled { opacity: 0.5; cursor: default; }
+
+.sugerencia__cabecera {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sugerencia__icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--accent-border);
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.sugerencia__titulo {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sugerencia__detalle {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* ── Compositor ───────────────────────────────────────────────────────────── */
+
+.composer {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 14px 14px 10px;
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+.composer:focus-within {
+  background: var(--bg-card);
+  border-color: var(--accent-border);
+}
+
+.composer-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 2px 4px 12px;
+  font-family: var(--font-ui);
+  font-size: 15.5px;
+}
+.composer-input::placeholder { color: var(--text-muted); }
+
+.composer__barra {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.composer-btn {
+  width: 36px;
+  height: 36px;
+  gap: 6px;
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+}
+.composer-btn:hover:not(:disabled) { background: var(--bg-raised); color: var(--text-primary); }
+
+.composer-btn--chip {
+  width: auto;
+  height: 32px;
+  padding: 0 12px;
+  background: var(--bg-raised);
+  font: inherit;
+  font-size: 13px;
+}
+
+/* El micrófono y enviar, a la derecha. Sin adjuntos (no hay micrófono), enviar
+   se empuja solo. */
+.composer-btn--mic { margin-left: auto; }
+.composer__barra > .send-button:first-child { margin-left: auto; }
+
+/* Solo la flecha (V2.0.31): cuadrado, con el mismo alto que antes. */
+.send-button {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, var(--action-bg-2), var(--action-bg));
+  color: var(--action-fg);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.send-button:hover:not(:disabled) { transform: none; filter: brightness(1.08); }
+.send-button:disabled { opacity: 0.45; }
+
+.adjuntos-pendientes { margin-bottom: 8px; }
+
+.composer-footnote {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.composer-area { padding: 12px 24px 18px; }
+
+/* ── Mensajes ─────────────────────────────────────────────────────────────── */
+
+.message-content { font-family: var(--font-sans); font-size: 15px; }
+
+.message.user .message-content {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--text-primary);
+}
+
+.message-meta { font-size: 11.5px; }
+
+/* Aparecen al pasar por encima del mensaje, no siempre. Tres botones fijos bajo
+   cada turno convierten la conversación en una barra de herramientas. */
+.acciones-mensaje {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+.message:hover .acciones-mensaje,
+.acciones-mensaje:focus-within { opacity: 1; }
+
+/* Un error no se descubre pasando por encima: si hay algo que reintentar, se
+   ve desde el primer momento. */
+.message.error .acciones-mensaje { opacity: 1; }
+
+.acciones-mensaje button,
+.editor-mensaje__acciones button,
+.acciones-turno button {
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-pill);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+.acciones-mensaje button:hover,
+.editor-mensaje__acciones button:hover,
+.acciones-turno button:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+.acciones-mensaje button.destacada,
+.editor-mensaje__acciones button.destacada {
+  background: linear-gradient(180deg, var(--action-bg-2), var(--action-bg));
+  color: var(--action-fg);
+  border-color: transparent;
+}
+.editor-mensaje__acciones button:disabled { opacity: 0.45; cursor: default; }
+
+/* El turno detenido se distingue del que falló: uno lo pediste tú. */
+.message.detenido .message-content { color: var(--text-muted); font-style: italic; }
+
+.acciones-turno {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 10px;
+}
+.boton-detener { border-color: var(--border-strong) !important; }
+
+.temporal-bar { border-radius: var(--radius-pill); }
+
+/* ── Editor de un mensaje ya enviado ──────────────────────────────────────── */
+
+.editor-mensaje {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.editor-mensaje__campo {
+  width: 100%;
+  resize: none;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.6;
+  padding: 10px 12px;
+  outline: none;
+}
+
+.editor-mensaje__acciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.editor-mensaje__aviso {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── Arrastrar y soltar ───────────────────────────────────────────────────── */
+
+/* Cubre la conversación entera, no solo el compositor: apuntar a una franja de
+   sesenta píxeles con un archivo en la mano es un ejercicio de puntería. */
+.soltar-aviso {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--bg-app) 82%, transparent);
+  pointer-events: none;
+}
+
+.soltar-aviso__caja {
+  border: 1px dashed var(--accent-border);
+  border-radius: var(--radius-lg);
+  padding: 22px 30px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+/* El aviso se posiciona contra la vista del chat. */
+.chat-view { position: relative; }
+
+/* ── Vistas, tarjetas y botones ───────────────────────────────────────────── */
+
+.view-header h2 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
+
+.header-action { font-size: 13px; }
+
+.tool-item,
+.memory-item,
+.status-card,
+.tarea,
+.archivo,
+.servicio,
+.plan,
+.connection-card {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.btn-primary,
+.acceso__boton,
+.ajustes-boton,
+.barra-cuenta__principal,
+.acceso__barra-boton.principal,
+.plan-boton.aprobar {
+  background: linear-gradient(180deg, var(--action-bg-2), var(--action-bg));
+  color: var(--action-fg);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+}
+
+.tema-opcion { border-radius: var(--radius-md); }
+.tema-opcion.activa {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--nav-active-fg);
+}
+
+.connection-overlay { background: var(--backdrop); }
+.sidebar-backdrop { background: var(--backdrop); }
+.inline-code { background: var(--accent-soft); }
+.md-table tr:hover td { background: var(--accent-soft); }
+
+/* Rojo solo en el borde y el texto, no de fondo. Un botón rojo macizo pide que
+   lo pulses; este pide que lo mires antes. */
+.ajustes-boton.peligro {
+  background: transparent;
+  border: 1px solid var(--status-error);
+  color: var(--status-error);
+}
+.ajustes-boton.peligro:hover:not(:disabled) {
+  background: var(--status-error);
+  color: var(--bg-app);
+}
+.ajustes-boton.peligro:disabled { opacity: 0.45; cursor: default; }
+
+.ajustes-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── Acceso ───────────────────────────────────────────────────────────────── */
+
+.acceso {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 0%, var(--main-glow), transparent 70%),
+    var(--bg-app);
+}
+.acceso__marca { font-weight: 600; letter-spacing: -0.02em; }
+.acceso__campo input {
+  font-family: var(--font-ui);
+  border-radius: var(--radius-md);
+}
+.acceso__campo input:focus { border-color: var(--accent-border); }
+
+/* ── Servicios externos (V1.9) ────────────────────────────────────────────── */
+
+.servicios {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.servicio {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-normal);
+  background: var(--bg-card);
+}
+.servicio.conectado { border-color: var(--accent-border); }
+
+.servicio-cabecera { display: flex; align-items: center; gap: 10px; }
+.servicio-cabecera h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Cuatro estados, y se distinguen a la vista: no configurado, sin conectar,
+   conectado, y conectado pero fallando. Los dos últimos son muy distintos. */
+.servicio-estado {
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-normal);
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.servicio-estado.activo { color: var(--status-success); border-color: var(--status-success); }
+.servicio-estado.fallando { color: var(--status-degraded); border-color: var(--status-degraded); }
+.servicio-estado.apagado { opacity: 0.6; }
+
+.servicio-descripcion { font-size: 13px; color: var(--text-secondary); margin: 0; }
+.servicio-cuenta { font-size: 12.5px; color: var(--text-secondary); margin: 0; }
+.servicio-cuenta strong { color: var(--text-primary); }
+.servicio-fallo { font-size: 12.5px; color: var(--status-degraded); margin: 0; }
+
+.servicio-permisos {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.servicio-no-disponible {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.servicio .ajustes-boton { align-self: flex-start; margin-top: 2px; }
+
+/* ── Confirmar el correo (V1.9) ───────────────────────────────────────────── */
+
+/* Va DENTRO de la aplicación, en el flujo, no superpuesto: se puede seguir
+   usando Morgan con él en pantalla. Eso es lo que separa un aviso de una
+   puerta, y es la decisión de diseño de toda esta función. */
+.aviso-verificar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 10px 16px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--status-degraded);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.aviso-verificar--error { border-color: var(--status-error); }
+
+.aviso-verificar__texto { flex: 1; min-width: 240px; }
+.aviso-verificar__texto strong { color: var(--text-primary); }
+
+.aviso-verificar__acciones { display: flex; align-items: center; gap: 8px; }
+
+.aviso-verificar__acciones button {
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-pill);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.aviso-verificar__acciones button:hover:not(:disabled) {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+.aviso-verificar__acciones button:disabled { opacity: 0.5; cursor: default; }
+
+.aviso-verificar__fallo { color: var(--status-error); font-size: 12.5px; }
+
+/* ── Pantalla de carga: la espiral, sola, en el centro (V2.0.28) ──────────── */
+
+/* La misma que pinta `index.html` antes de que llegue la aplicación: de una a
+   otra no hay salto. */
+.carga {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-app);
+  color: var(--accent-text);
+}
+
+.carga__logo {
+  display: block;
+  animation: carga-girar 1.6s linear infinite;
+}
+
+@keyframes carga-girar {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Pantallas medianas ───────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .pastilla--estado .pastilla__suave { display: none; }
+}
+
+@media (max-width: 620px) {
+  /* En un móvil el estado se queda en su punto de color: el texto lo repite
+     la portada y el pie de la barra lateral. */
+  .pastilla__texto-estado { display: none; }
+  .pastilla--estado { padding: 0 11px; }
+  .barra-superior { padding: 0 10px; gap: 6px; }
+  .sugerencia { padding: 12px 14px; }
+
+  /* Una columna. Con `minmax(0, ...)` y no `1fr` a secas: `1fr` es
+     `minmax(auto, 1fr)`, y ese `auto` impide a la pista encogerse por debajo
+     del contenido minimo de la tarjeta. En 320px se desbordaban por la derecha
+     (medido en un Galaxy S9+). */
+  .sugerencias { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .sugerencia__detalle { -webkit-line-clamp: 1; }
+}
+
+@media (max-width: 480px) {
+  /* Sin sitio para todo: el espacio actual ya se ve en la barra lateral. */
+  .pastilla--contexto { display: none; }
+  .barra-superior__derecha { gap: 6px; }
+  .barra-cuenta__enlace,
+  .barra-cuenta__principal { white-space: nowrap; padding: 6px 10px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOVIL — y va al final del fichero a proposito
+   ═══════════════════════════════════════════════════════════════════════════
+
+   El motivo no es de orden ni de gusto. El boton que abre el menu llevaba su
+   `display: flex` dentro de un `@media` situado ANTES de la regla base
+   `.sidebar-toggle { display: none }`. Misma especificidad, y en CSS gana la
+   ultima: el boton estaba oculto a TODOS los anchos.
+
+   Lo que eso significaba en un telefono, medido en un iPhone 13 contra
+   produccion, con la sesion abierta:
+
+     .sidebar-toggle  ->  display: none
+     .sidebar         ->  left: -248px, fuera de la pantalla
+     navegacion alcanzable  ->  0 elementos
+
+   Morgan en el movil era el compositor del chat y nada mas. Ni conversaciones,
+   ni Tareas, ni Archivos, ni Herramientas, ni Memoria, ni Estado, ni Auditoria,
+   ni Servicios, ni Ajustes. No era incomodo: era inaccesible.
+
+   Todo lo movil vive aqui abajo para que ninguna regla posterior lo pueda
+   volver a tapar sin que se vea.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 820px) {
+
+  /* --- El arreglo --------------------------------------------------------- */
+
+  .sidebar-toggle {
+    display: flex;
+    /* Por encima del velo (9) y de la barra (10): con el menu abierto sigue
+       siendo el mismo boton el que lo cierra, y no hay que adivinar donde
+       tocar. */
+    z-index: 11;
+    /* 44px es el minimo tactil de Apple. A 32 se falla y se toca lo de al
+       lado, que aqui es el titulo de la vista. */
+    width: 44px;
+    height: 44px;
+  }
+  /* Va en la barra superior, en el flujo. `relative` y no `static` para que el
+     `z-index` de arriba cuente: con el cajón abierto, el botón sigue encima. */
+  .barra-superior .sidebar-toggle { position: relative; }
+
+  /* El titulo deja sitio al boton, que ahora ocupa mas. */
+  .view-header { padding-left: 12px; }
+
+  /* --- Se toca con el dedo, no con un raton ------------------------------- */
+
+  /* Un raton acierta en 12px; un pulgar, no. Estos son los que se usan a
+     diario, y estaban todos por debajo de 40. */
+  .nav-item { padding: 11px 10px; font-size: 14.5px; }
+  .composer-btn,
+  .send-button { width: 40px; height: 40px; }
+  /* Los que llevan texto conservan su ancho: 40px dejaba «Adjuntar» encima del
+     icono, fuera del boton. */
+  .composer-btn--chip,
+  .send-button { width: auto; min-width: 40px; }
+
+  /* --- Que iOS no haga zoom al tocar un campo ----------------------------- */
+
+  /* Safari en iPhone amplia la pagina entera cuando el campo que recibe el
+     foco tiene la letra por debajo de 16px, y al terminar de escribir la deja
+     ampliada. Se sale con dos dedos, y da la sensacion de que algo se ha roto.
+     Medido: el buscador estaba a 12px y el compositor a 12.5px.
+
+     16px es el umbral exacto, no una preferencia de tamano. */
+  input,
+  textarea,
+  select,
+  .composer-input,
+  .token-input,
+  /* Estos van nombrados uno a uno a proposito. Un `input` a secas tiene
+     especificidad (0,0,1) y pierde contra cualquier regla con clase: el
+     buscador de conversaciones se quedaba en 12px con la regla de arriba
+     puesta, y era el unico campo que seguia haciendo zoom. */
+  .session-search input,
+  .memory-form input,
+  .ajuste input,
+  .ajuste textarea,
+  .ajustes-campo input,
+  .ajustes-token-nuevo__valor,
+  .token-input,
+  .settings-field input,
+  .settings-field textarea,
+  .settings-field select { font-size: 16px; }
+
+  /* --- El saludo no puede empujar al compositor fuera de la pantalla ------ */
+
+  /* `.chat-hero` centraba su contenido con `justify-content: center` y
+     `flex: 1`. En un movil el titulo, las cuatro sugerencias, el compositor y
+     la linea de estado no caben en 664px, y lo que sobra de un flex centrado
+     se sale por LOS DOS lados sin poder desplazarse. Medido en un iPhone 13:
+     el compositor terminaba en 722px con la ventana en 664. Se veia, pero la
+     mitad de abajo quedaba cortada por el `overflow: hidden` del contenedor.
+     Es la caja en la que se escribe: no es un detalle estetico.
+     Se deja de centrar y se permite desplazar. */
+  .chat-hero {
+    justify-content: flex-start;
+    padding: 4px 12px 12px;
+    gap: 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Sin esto el `overflow-y: auto` no sirve de nada. Un elemento flex tiene
+       `min-height: auto`, que lo obliga a ser al menos tan alto como su
+       contenido: en lugar de desplazarse, CRECE y se sale. Medido con el aviso
+       de confirmar el correo puesto: el compositor acababa en 816 con la
+       ventana en 664, fuera incluso de su propio contenedor. */
+    min-height: 0;
+  }
+  .chat-hero h1 { font-size: 22px; }
+
+  /* El compositor queda pegado abajo mientras el saludo se desplaza detras.
+     Con el aviso de confirmar el correo puesto, el contenido del saludo mide
+     790px y solo hay 483: se desplazaba bien, pero el compositor caia por
+     debajo del pliegue y habia que buscarlo. Es lo primero que se usa; no
+     puede estar escondido.
+     Lleva fondo propio porque si no, el texto que pasa por detras se le ve. */
+  .chat-hero .composer-wrapper {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    background: var(--bg-app);
+    padding: 8px 0;
+  }
+
+  /* --- El menu, como un cajon de verdad ---------------------------------- */
+
+  .sidebar {
+    /* Deja ver un trozo de la conversacion detras: se entiende que el menu
+       esta ENCIMA de algo y que tocando fuera se cierra. A pantalla completa
+       parece otra pagina, y entonces se busca un boton de volver que no hay. */
+    width: min(84vw, 300px);
+    min-width: 0;
+    /* El movil arrastra el contenido, no la barra de scroll. */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* --- El notch y la barra de gestos ------------------------------------- */
+
+  /* Sin esto, el compositor queda debajo de la barra de inicio del iPhone: se
+     ve, pero al tocarlo el sistema se queda el gesto. */
+  .composer-area {
+    padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+  }
+  .sidebar { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+  .barra-superior {
+    height: calc(var(--header-height) + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* --- Menos margenes, mas conversacion ---------------------------------- */
+
+  /* 24px por lado en una pantalla de 390 son 48: un octavo del ancho gastado
+     en nada. */
+  .view-header { padding-right: 12px; }
+  .messages-area,
+  .messages-container,
+  .view-body { padding-left: 12px; padding-right: 12px; }
+
+  /* El boton de menu y la cuenta flotaban antes encima del contenido, en
+     posicion absoluta, y se solapaban con lo primero de cada vista —sobre todo
+     con el aviso de confirmar el correo—; habia que reservarles 52px arriba.
+     Desde la V2.0.28 viven en `.barra-superior`, dentro del flujo: el contenido
+     empieza debajo de la barra por construccion y no hay hueco que mantener
+     (lo vigila tests/test_movil_web.py). */
+  .messages-container { padding-top: 8px; }
+
+  /* --- Cabeceras y filas que no cabian en 320px -------------------------- */
+
+  /* El titulo de la vista no encogia, asi que el boton «Actualizar» —que va
+     con `margin-left: auto`— se salia por la derecha. Medido en un Galaxy S9+
+     (320px): terminaba en 332. Que el titulo se recorte y el boton no. */
+  .view-header h2 {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .header-action { flex-shrink: 0; }
+
+  /* Las filas de auditoria llevan hora, herramienta y veredicto en una linea
+     que no se parte. En 320px el veredicto acababa en 354. Se deja envolver, y
+     el nombre de la herramienta se recorta en lugar de empujar. */
+  .audit-item { flex-wrap: wrap; row-gap: 4px; }
+  .audit-tool {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Pantallas de verdad pequenas, tipo iPhone SE (375) o menos. */
+@media (max-width: 400px) {
+  /* El aviso de confirmar el correo ocupaba media pantalla al entrar. */
+  .aviso-verificar { padding: 10px 12px; font-size: 13px; }
+  .aviso-verificar button { padding: 8px 10px; }
+}
+
+
+/* ── Espacios de trabajo (V2.2) ───────────────────────────────────────────── */
+
+.espacio-selector { margin-bottom: 4px; }
+
+/* Un select nativo: teclado, lector de pantalla y selector del movil sin
+   escribir nada. Solo se le da el aspecto del resto de la barra. */
+.espacio-select {
+  width: 100%;
+  margin: 4px 0 2px;
+  padding: 5px 8px;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: 12px;
+}
+
+.espacio-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+}
+.espacio-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.espacio-editor input,
+.espacio-editor textarea {
+  background: var(--bg-app);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 5px 7px;
+  font: inherit;
+  font-size: 12px;
+  resize: vertical;
+}
+.espacio-editor__cuenta { align-self: flex-end; font-size: 10px; color: var(--text-muted); }
+.espacio-editor__acciones { display: flex; flex-wrap: wrap; gap: 6px; }
+.section-action.danger { color: var(--status-error); }
+
+/* ── El logo: la espiral (V2.0.19) ───────────────────────────────────────── */
+
+.brand-mark svg { display: block; }
+
+.acceso__logo {
+  display: block;
+  margin: 0 auto 12px;
+  color: var(--accent-text);
+}
+
+/* Gira mientras se espera al servidor, que en Render puede tardar en despertar.
+   Despacio: es un «sigo aquí», no una alarma. */
+.acceso__logo--girando,
+.chat-hero__logo--girando {
+  animation: logo-girar 2.4s linear infinite;
+}
+
+@keyframes logo-girar {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acceso__logo--girando,
+  .chat-hero__logo--girando { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AJUSTES COMO PANEL (V2.0.29)
+
+   El diseño de mi captura: secciones a la izquierda con buscador y, a
+   la derecha, filas con su nombre, una línea de ayuda y el control. En pantallas
+   estrechas ocupa todo y las secciones pasan a una fila que se desplaza de lado.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.ajustes-velo {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--backdrop);
+  backdrop-filter: blur(3px);
+  animation: fadeIn var(--transition-fast);
+}
+
+.ajustes-panel {
+  display: flex;
+  width: min(760px, 100%);
+  height: min(600px, 100%);
+  overflow: hidden;
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-pop);
+  outline: none;
+}
+
+.ajustes-lado {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 220px;
+  flex-shrink: 0;
+  padding: 14px 10px;
+  border-right: 1px solid var(--border-subtle);
+  background: var(--bg-sidebar);
+  overflow-y: auto;
+}
+
+.ajustes-cerrar {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0 4px 2px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.ajustes-cerrar:hover { background: var(--bg-raised); color: var(--text-primary); }
+
+.ajustes-buscar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 38px;
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-pill);
+  background: var(--bg-input);
+  color: var(--text-muted);
+}
+.ajustes-buscar:focus-within { border-color: var(--accent-border); }
+.ajustes-buscar input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+}
+.ajustes-buscar input::placeholder { color: var(--text-muted); }
+
+.ajustes-nav { display: flex; flex-direction: column; gap: 2px; }
+
+.ajustes-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 14.5px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ajustes-nav__item svg { flex-shrink: 0; }
+.ajustes-nav__item:hover { background: var(--bg-raised); color: var(--text-primary); }
+.ajustes-nav__item.activa {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.ajustes-nav__vacio { padding: 8px 12px; font-size: 13px; color: var(--text-muted); }
+
+.ajustes-contenido {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 22px 26px 26px;
+}
+
+.ajustes-contenido__titulo {
+  margin: 0 0 6px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-normal);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ajustes-intro {
+  margin: 14px 0 2px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.ajustes-fila {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.ajustes-fila__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.ajustes-fila__titulo { font-size: 14.5px; color: var(--text-primary); }
+.ajustes-fila__ayuda { font-size: 12.5px; line-height: 1.45; color: var(--text-muted); }
+
+.ajustes-fila__control { flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+
+/* Los campos del perfil van debajo de su nombre: una caja de texto a la
+   derecha, en 400px de panel, dejaba sitio para cuatro palabras. */
+.ajustes-fila--campo { flex-direction: column; align-items: stretch; gap: 10px; }
+
+.ajustes-entrada {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  resize: vertical;
+}
+.ajustes-entrada:focus { border-color: var(--accent-border); }
+.ajustes-entrada:disabled { opacity: 0.6; }
+
+/* Un select nativo: teclado, lector de pantalla y el selector del móvil sin
+   escribir nada. Solo se le da el aspecto de la captura (texto y flecha). */
+.ajustes-select {
+  appearance: none;
+  -webkit-appearance: none;
+  max-width: 200px;
+  padding: 7px 30px 7px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(45deg, transparent 50%, currentColor 50%) right 15px center / 5px 5px no-repeat,
+    linear-gradient(135deg, currentColor 50%, transparent 50%) right 10px center / 5px 5px no-repeat;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.ajustes-select:hover:not(:disabled),
+.ajustes-select:focus { background-color: var(--bg-raised); border-color: var(--border-normal); outline: none; }
+.ajustes-select:disabled { opacity: 0.55; cursor: default; }
+.ajustes-select option { background: var(--bg-card); color: var(--text-primary); }
+
+.ajustes-valor { font-size: 14px; color: var(--text-secondary); text-align: right; }
+
+.ajustes-enlace {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.ajustes-enlace:hover { text-decoration: underline; }
+
+.ajustes-pie {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 16px;
+}
+
+.ajustes-contenido .ajustes-boton { margin-top: 0; align-self: auto; white-space: nowrap; }
+.ajustes-boton--suave {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  border: 1px solid var(--border-normal);
+  font-weight: 500;
+}
+.ajustes-boton--suave:hover:not(:disabled) { background: var(--bg-active); opacity: 1; }
+
+.ajustes-contenido .ajustes-aviso,
+.ajustes-contenido .error-banner { margin: 14px 0 0; }
+
+/* Las partes de la cuenta (contraseña, sesiones, descargar, eliminar) son
+   secciones con su título: dentro del panel se leen como filas más. */
+.ajustes-contenido .ajustes-grupo {
+  max-width: none;
+  margin: 0;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.ajustes-contenido .ajustes-grupo h3 {
+  margin: 0 0 2px;
+  padding: 0;
+  border: none;
+  font-size: 14.5px;
+  font-weight: 400;
+  color: var(--text-primary);
+}
+.ajustes-contenido .ajustes-nota {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.ajustes-contenido .ajustes-campo { max-width: none; }
+
+/* Dentro del panel, los botones de las secciones de la cuenta son acciones
+   secundarias (cerrar sesion, descargar, cerrar las demas): el azul lleno queda
+   para guardar. Y el de un formulario va a la derecha, no a todo lo ancho. */
+.ajustes-contenido .ajustes-grupo > .ajustes-boton:not(.peligro) {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  border: 1px solid var(--border-normal);
+  font-weight: 500;
+}
+.ajustes-contenido .ajustes-form .ajustes-boton[type="submit"]:not(.peligro) { align-self: flex-end; }
+
+/* ── Tokens de API, en Ajustes (V2.0.41) ─────────────────────────────────── */
+
+/* Cada token es una tarjeta como las sesiones, con el nombre y su botón en la
+   misma línea. Con un nombre largo en el móvil, el nombre se parte y el botón
+   no se sale. */
+.ajustes-token__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ajustes-token__cabecera > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.ajustes-tokens .ajustes-boton { margin-top: 0; padding: 6px 14px; }
+.ajustes-token__pronto { color: var(--risk-moderate) !important; }
+
+/* Qué puede hacer: tres casillas con su explicación debajo. */
+.ajustes-alcances {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+.ajustes-alcances legend { margin-bottom: 8px; padding: 0; font-size: 13px; color: var(--text-secondary); }
+.ajustes-alcance { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.ajustes-alcance input { margin-top: 3px; accent-color: var(--accent); flex-shrink: 0; }
+.ajustes-alcance span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ajustes-alcance strong { font-size: 13.5px; font-weight: 500; color: var(--text-primary); }
+.ajustes-alcance small { font-size: 12px; line-height: 1.4; color: var(--text-muted); }
+
+/* El token recién creado: lo único de Ajustes que no se vuelve a ver, así que
+   se destaca con el acento. El valor va en un campo de solo lectura que se
+   selecciona entero al tocarlo, y nunca ensancha la página. */
+.ajustes-token-nuevo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 14px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+.ajustes-token-nuevo p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+.ajustes-token-nuevo > strong { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+.ajustes-token-nuevo small { font-size: 12px; line-height: 1.4; color: var(--text-muted); }
+.ajustes-token-nuevo code { font-family: var(--font-mono); font-size: 11.5px; }
+.ajustes-token-nuevo__valor {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-normal);
+  border-radius: var(--radius-sm);
+  line-height: 1.5;
+  word-break: break-all;
+  resize: none;
+}
+.ajustes-token-nuevo__valor:focus { outline: none; border-color: var(--accent-border); }
+.ajustes-token-nuevo .ajustes-boton { margin-top: 0; }
+
+/* En el móvil va a 16px con los demás campos (bloque móvil): sin zoom en iOS. */
+
+/* El código de emparejamiento (3.0-C): grande y espaciado, porque se teclea a mano
+   en otro dispositivo leyéndolo de aquí. */
+.ajustes-codigo-agente {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  letter-spacing: 0.12em;
+  color: var(--text-primary);
+}
+.ajustes-orden {
+  display: block;
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  overflow-wrap: anywhere;
+}
+
+/* ── Estado, en palabras de quien usa Morgan (V2.0.29) ───────────────────── */
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-secondary);
+}
+.service-name { font-family: inherit; font-weight: 500; min-width: 170px; }
+.service-row, .capability-row { font-size: 14px; padding: 11px 14px; }
+.service-state { font-size: 12.5px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.mode-banner { font-size: 14px; background: var(--bg-card); }
+
+@media (max-width: 640px) {
+  /* El panel ocupa la pantalla entera: en un teléfono, una ventana flotante
+     con márgenes deja una franja de ajustes entre dos bandas inútiles. */
+  .ajustes-velo { padding: 0; }
+  .ajustes-panel {
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+  }
+
+  /* Arriba: cerrar y buscar en una fila; debajo, las secciones como pastillas
+     que se desplazan de lado. */
+  .ajustes-lado {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    width: 100%;
+    padding: calc(10px + env(safe-area-inset-top)) 12px 10px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+    overflow: visible;
+  }
+  .ajustes-cerrar { width: 44px; height: 44px; margin: 0; }
+  .ajustes-buscar { height: 44px; }
+  .ajustes-buscar input { font-size: 16px; }
+  .ajustes-nav {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .ajustes-nav::-webkit-scrollbar { display: none; }
+  .ajustes-nav__item {
+    width: auto;
+    flex-shrink: 0;
+    padding: 8px 13px;
+    border-color: var(--border-normal);
+    border-radius: var(--radius-pill);
+    font-size: 14px;
+  }
+
+  .ajustes-contenido { padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); }
+  .ajustes-contenido__titulo { font-size: 18px; }
+
+  /* Una fila con control largo (un selector, un botón con texto) baja el
+     control debajo en lugar de aplastar el texto de ayuda. */
+  .ajustes-fila { flex-wrap: wrap; gap: 10px 14px; }
+  .ajustes-fila__control { margin-left: auto; }
+  .ajustes-select { font-size: 16px; }
+  .ajustes-entrada { font-size: 16px; }
+  .ajustes-contenido .ajustes-campo input { font-size: 16px; }
+
+  .service-name { min-width: 0; }
+  .service-row { flex-wrap: wrap; row-gap: 2px; }
+  .service-detail { flex-basis: 100%; order: 3; padding-left: 17px; white-space: normal; }
+}
+
+/* Tus equipos (3.7): si está conectado ahora, y su historial. */
+.equipo-conectado { color: var(--success, #3fb950); }
+.equipo-desactualizado { color: var(--warning, #d29922); }
+.equipo-desconectado { color: var(--text-muted); }
+.equipo-historial { margin-top: 6px; }
+.equipo-historial__lista { list-style: none; margin: 6px 0 0; padding: 0; max-height: 220px; overflow-y: auto; }
+
+/* --- Ajustes → Permisos: el interruptor del permiso automático (4.6) --- */
+
+.interruptor {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  padding: 0;
+  background: var(--border-strong);
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.interruptor[aria-checked="true"] { background: var(--risk-safe); }
+.interruptor:disabled { opacity: 0.5; cursor: default; }
+.interruptor:focus-visible { outline: 2px solid var(--accent-border); outline-offset: 2px; }
+
+.interruptor__bola {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  /* Del color del texto: con el del fondo, apagado casi no se veía en el tema oscuro. */
+  background: var(--text-primary);
+  border-radius: 50%;
+  transition: transform var(--transition-fast);
+}
+
+.interruptor[aria-checked="true"] .interruptor__bola { transform: translateX(20px); }
+
+/* El color va en un punto y no en el texto: verde y amarillo claros no se leen sobre el
+   tema claro. */
+.permiso-color { font-weight: 600; white-space: nowrap; }
+.permiso-color::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--punto);
+}
+.permiso-color--verde { --punto: var(--risk-safe); }
+.permiso-color--amarillo { --punto: var(--risk-moderate); }
+.permiso-color--rojo { --punto: var(--risk-critical); }

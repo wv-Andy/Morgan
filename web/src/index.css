@@ -1,0 +1,291 @@
+/* ====================================================
+   Morgan Web UI — Sistema de diseño (V2.0.28)
+
+   Tres temas sacados de las capturas de diseño que di: **azul noche** (el
+   principal), **claro** (su versión de día) y **oscuro** (monocromo). La
+   estructura es la de siempre; lo que cambia es la piel.
+
+   **Ningún componente escribe un color a mano**: todos leen estas variables.
+   Cambiar el tema entero es cambiar este bloque, y esa es la razón de que
+   exista (lo vigila `tests/test_tema_web.py`).
+
+   El color de estado —riesgo, salud de los subsistemas— sigue siendo
+   información, no decoración. El acento (azul o blanco) es la superficie de lo
+   que se puede pulsar, no un semáforo.
+   ==================================================== */
+
+:root {
+  /* Superficies. Azul marino muy oscuro, con la barra lateral un punto más
+     clara que el fondo: se ve dónde acaba un panel y empieza otro. */
+  --bg-app: #0b1120;
+  --bg-sidebar: #0d1424;
+  --bg-raised: #151f33;
+  --bg-active: #1a2a44;
+  --bg-input: #111a2c;
+  --bg-input-hover: #17223a;
+  --bg-card: #111a2c;
+
+  --text-primary: #e8eef7;
+  --text-secondary: #a3b1c6;
+  --text-muted: #6f7f98;
+
+  --border-subtle: rgba(148, 163, 184, 0.10);
+  --border-normal: rgba(148, 163, 184, 0.16);
+  --border-strong: rgba(148, 163, 184, 0.30);
+
+  /* Acción principal: el botón de enviar y el de nueva conversación. Un
+     degradado corto de azul, de `--action-bg-2` arriba a `--action-bg` abajo.
+     El contraste se mide contra el tono más oscuro. */
+  --action-bg: #2563eb;
+  --action-bg-2: #3b82f6;
+  --action-fg: #ffffff;
+
+  /* Acento: enlaces de las tarjetas, la palabra destacada del saludo, la fila
+     activa de la barra lateral y los iconos en su cuadrito. */
+  --accent: #38bdf8;
+  --accent-text: #7cc4fa;
+  --accent-soft: rgba(56, 189, 248, 0.10);
+  --accent-border: rgba(56, 189, 248, 0.28);
+  --accent-glow: rgba(56, 189, 248, 0.35);
+  --nav-active-fg: #bfe3fc;
+
+  /* El botón de nueva conversación. Sigue a la acción principal salvo en el
+     tema oscuro, donde el diseño lo pone gris con borde y reserva el blanco
+     para enviar. */
+  --nueva-bg: var(--action-bg);
+  --nueva-bg-2: var(--action-bg-2);
+  --nueva-fg: var(--action-fg);
+  --nueva-border: transparent;
+
+  /* La palabra destacada del saludo: cursiva de serifa en el azul, como en el
+     diseño. En el tema oscuro pasa a cursiva subrayada de la misma familia. */
+  --font-accent: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --accent-decoration: none;
+
+  --shadow-card: 0 10px 30px rgba(2, 6, 23, 0.35);
+  --shadow-pop: 0 16px 40px rgba(2, 6, 23, 0.55);
+  /* El resplandor de fondo del área principal, arriba al centro. */
+  --main-glow: rgba(59, 130, 246, 0.07);
+  --backdrop: rgba(2, 6, 23, 0.65);
+
+  --risk-safe: #34d399;
+  --risk-low: #6ee7b7;
+  --risk-moderate: #fbbf24;
+  --risk-high: #fb923c;
+  --risk-critical: #f87171;
+
+  --status-success: #34d399;
+  --status-error: #f87171;
+  --status-degraded: #fb923c;
+  --status-info: #7dd3fc;
+
+  /* Tipografía. Outfit en toda la interfaz y en las respuestas: geométrica y
+     amable, la del diseño. La monoespaciada queda para lo que es código o
+     dato alineado (bloques de código, rutas, tiempos). */
+  --font-ui: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: var(--font-ui);
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  /* Métricas */
+  --sidebar-width: 256px;
+  --header-height: 56px;
+  --composer-max: 760px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --transition-fast: 120ms ease;
+  --transition-normal: 220ms ease;
+
+  color-scheme: dark;
+}
+
+/* Tema oscuro: monocromo. Grises neutros, acento blanco y el botón de enviar
+   blanco con texto negro. El único color que queda es el que informa. */
+:root[data-tema="negro"] {
+  --bg-app: #0f0f0f;
+  --bg-sidebar: #131313;
+  --bg-raised: #1c1c1c;
+  --bg-active: #232323;
+  --bg-input: #171717;
+  --bg-input-hover: #1f1f1f;
+  --bg-card: #171717;
+
+  --text-primary: #f5f5f5;
+  --text-secondary: #a3a3a3;
+  --text-muted: #737373;
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-normal: rgba(255, 255, 255, 0.13);
+  --border-strong: rgba(255, 255, 255, 0.24);
+
+  --action-bg: #ffffff;
+  --action-bg-2: #ffffff;
+  --action-fg: #0a0a0a;
+
+  --accent: #e5e5e5;
+  --accent-text: #ffffff;
+  --accent-soft: rgba(255, 255, 255, 0.06);
+  --accent-border: rgba(255, 255, 255, 0.16);
+  --accent-glow: transparent;
+  --nav-active-fg: #ffffff;
+
+  --nueva-bg: #1c1c1c;
+  --nueva-bg-2: #1c1c1c;
+  --nueva-fg: #f5f5f5;
+  --nueva-border: rgba(255, 255, 255, 0.14);
+
+  /* Con serifa, como en los otros temas (V2.0.31, a petición mía); el
+     subrayado sigue siendo lo propio de este tema. */
+  --font-accent: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --accent-decoration: underline;
+
+  --shadow-card: none;
+  --shadow-pop: 0 16px 40px rgba(0, 0, 0, 0.6);
+  --main-glow: transparent;
+  --backdrop: rgba(0, 0, 0, 0.65);
+
+  --risk-safe: #4ade80;
+  --risk-low: #86efac;
+  --risk-moderate: #fbbf24;
+  --risk-high: #fb923c;
+  --risk-critical: #f87171;
+
+  --status-success: #4ade80;
+  --status-error: #f87171;
+  --status-degraded: #fb923c;
+  --status-info: #d4d4d4;
+
+  color-scheme: dark;
+}
+
+/* Tema claro: el mismo diseño de día. Fondo gris azulado, tarjetas blancas con
+   sombra suave y el azul oscurecido lo justo para leerse sobre blanco. */
+:root[data-tema="claro"] {
+  --bg-app: #f4f7fb;
+  --bg-sidebar: #e9eff7;
+  --bg-raised: #e3eaf4;
+  --bg-active: #d6e3f3;
+  --bg-input: #ffffff;
+  --bg-input-hover: #f8fafd;
+  --bg-card: #ffffff;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+
+  --border-subtle: rgba(15, 23, 42, 0.08);
+  --border-normal: rgba(15, 23, 42, 0.13);
+  --border-strong: rgba(15, 23, 42, 0.24);
+
+  --action-bg: #2563eb;
+  --action-bg-2: #3b82f6;
+  --action-fg: #ffffff;
+
+  --accent: #1d4ed8;
+  --accent-text: #1f75b8;
+  --accent-soft: rgba(37, 99, 235, 0.08);
+  --accent-border: rgba(37, 99, 235, 0.24);
+  --accent-glow: transparent;
+  --nav-active-fg: #1e3a8a;
+
+  --nueva-bg: #1e3a8a;
+  --nueva-bg-2: #1e40af;
+  --nueva-fg: #ffffff;
+  --nueva-border: transparent;
+
+  --font-accent: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --accent-decoration: none;
+
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.05), 0 6px 18px rgba(15, 23, 42, 0.05);
+  --shadow-pop: 0 12px 32px rgba(15, 23, 42, 0.14);
+  --main-glow: transparent;
+  --backdrop: rgba(15, 23, 42, 0.35);
+
+  --risk-safe: #0f766e;
+  --risk-low: #14857a;
+  --risk-moderate: #b45309;
+  --risk-high: #c2410c;
+  --risk-critical: #b91c1c;
+
+  --status-success: #059669;
+  --status-error: #b91c1c;
+  --status-degraded: #c2410c;
+  --status-info: #0369a1;
+
+  color-scheme: light;
+}
+
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: var(--font-ui);
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-normal); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+:focus-visible {
+  outline: 2px solid var(--border-strong);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: var(--accent-border);
+  color: var(--text-primary);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes typing-dot {
+  0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.fade-in { animation: fadeIn var(--transition-normal) forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

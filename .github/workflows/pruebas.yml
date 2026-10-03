@@ -1,0 +1,89 @@
+# Las pruebas de Morgan en cada push y en cada pull request (4.19).
+#
+# Hasta la 4.18 solo corrían en mi PC: un fallo que solo se viera en otro PC, o una
+# prueba que dependiera de algo del mío, no lo veía nadie. Aquí corren en máquinas limpias:
+# Python en Windows (el agente es de Windows), la web en Linux, y la auditoría de las
+# dependencias. Ningún secreto: la suite vacía las claves al empezar (tests/conftest.py).
+
+name: Pruebas
+
+on:
+  push:
+    # `ci/**`: para probar cambios de la integración continua sin desplegar en Render.
+    branches: [main, "ci/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pruebas-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Dependencias
+        run: python -m pip install -r requirements-dev.txt
+      - name: Pruebas
+        env:
+          PYTHONIOENCODING: utf-8
+          # Sin un escritorio de verdad delante: lo que maneja ventanas, el portapapeles o la
+          # pantalla se salta (tests/conftest.py). En mi PC sí corre.
+          MORGAN_SIN_ESCRITORIO: "1"
+        # Con la cobertura y un suelo (4.19). Medida el 2026-10-02: 89 % en mi PC y 87,8 % aquí
+        # (sin escritorio se saltan unas 30). Si baja del 87 %, falla: así una parte nueva sin
+        # pruebas no pasa sin que se vea. Ojo: pytest-cov redondea antes de comparar.
+        run: python -m pytest -q -p no:cacheprovider --durations=15 --cov=src --cov-report=term --cov-fail-under=87
+
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Tipos
+        run: npx tsc --noEmit -p .
+      - name: Pruebas
+        run: npx vitest run
+      - name: Compilar
+        run: npm run build
+
+  dependencias:
+    name: Vulnerabilidades conocidas
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Python (lo que va a producción)
+        run: |
+          python -m pip install pip-audit
+          pip-audit -r requirements.txt --strict --desc
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Web (lo que va a producción)
+        working-directory: web
+        run: npm audit --omit=dev --audit-level=high

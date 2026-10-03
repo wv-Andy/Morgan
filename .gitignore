@@ -1,0 +1,60 @@
+# Entorno virtual
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Variables de entorno
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Datos locales
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.sqlite
+data/*.json
+# Archivos que sube el usuario (V1.4). Se guardan sin extension, con un
+# identificador generado, asi que los patrones por extension de arriba no los
+# cubren. Son datos personales: no pueden acabar en el repositorio.
+data/uploads/
+
+!data/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# Tests
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Salidas de pruebas manuales. Hubo un salida_de_prueba.txt con la palabra
+# "hola" versionado durante tres meses: lo escribio una prueba de la
+# herramienta de escritura y nadie lo noto porque no molestaba a nadie.
+salida_de_prueba.txt
+salida_*.txt
+suite_tmp.txt
+
+# Palabras personales que la interfaz no puede enseñar (no se publican).
+tests/personales.txt

@@ -1,0 +1,6 @@
+# Lo que hace falta además para pasar las pruebas (4.19): no va a producción.
+-r requirements.txt
+pytest==9.1.1
+pytest-cov==7.1.0
+# Para leer render.yaml y comprobar que no nombra variables que el código no lee.
+pyyaml==6.0.3

@@ -1,0 +1,182 @@
+# Despliegue del backend de Morgan en Render.
+#
+# Publica SOLO la API, en modo `cloud`. La interfaz sigue en Vercel, que ya tiene
+# URL estable; con el backend tambien estable desaparece el aviso de "API
+# desconectada" que salia al no haber ningun backend detras.
+#
+# En `cloud` las 20 herramientas que tocan el PC NO se registran: no es un permiso
+# que se pueda saltar, es que no existen en el catalogo. Quedan 5: memoria y web.
+#
+# Los secretos NO van aqui. `sync: false` hace que Render los pida al crear el
+# servicio y no queden en el repositorio.
+
+services:
+  - type: web
+    name: morgan-api
+    runtime: python
+    plan: free
+    # HECHO el 2026-09-12: el servicio se recreo en `virginia`.
+    #
+    # Este fichero sigue diciendo `frankfurt` porque el servicio de produccion
+    # NO se creo desde este blueprint, sino a mano, y Render no permite cambiar
+    # la region de un servicio existente. Lo que vale es lo que hay desplegado:
+    # `Morgan-IA-2.0`, en virginia. Esto queda como referencia para el dia que
+    # haya que montar otro, y por eso dice virginia mas abajo.
+    #
+    # Lo que se gano, medido en caliente contra los dos servicios a la vez:
+    #
+    #   Frankfurt   /status 445 ms   de eso la BD 130 ms
+    #   Virginia    /status 273 ms   de eso la BD  44 ms
+    #
+    # Lo que sigue es el razonamiento, que conviene conservar.
+    #
+    # Tiene que ser LA MISMA que la del proyecto de Supabase, y hoy no lo es:
+    # esta en frankfurt y Supabase en us-east-1. Cada consulta cruza el
+    # Atlantico, ~220 ms medidos, y un turno hace entre 6 y 9.
+    #
+    # Durante un dia el plan fue mover Supabase a frankfurt, que es lo barato
+    # (78 filas). Es la direccion equivocada: medido el 2026-09-11, quien usa
+    # Morgan esta a 94 ms de Virginia y a 183 de frankfurt (medido desde donde lo uso).
+    # Mover la base aqui juntaria las dos piezas al DOBLE de distancia de su
+    # unico usuario, y eso se paga en cada peticion.
+    #
+    # Render no permite cambiar la region de un servicio ya creado: hay que
+    # recrearlo, y de la URL cuelgan el proxy de vercel.json, MORGAN_API_URL y
+    # la URL de retorno de la app OAuth de GitHub. El orden importa y esta en
+    # docs/despliegue.md.
+    region: virginia
+    branch: main
+
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m src.api.server
+
+    # Render reinicia el servicio si esta ruta deja de responder. /health no exige
+    # token justamente para esto: comprobar disponibilidad sin repartir el secreto.
+    healthCheckPath: /health
+
+    envVars:
+      # --- Entorno ---
+      - key: MORGAN_ENVIRONMENT
+        value: cloud
+      # Activa el repositorio remoto (Supabase) ademas del local.
+      - key: MORGAN_CLOUD_ENABLED
+        value: "true"
+
+      # El contenedor debe escuchar en todas las interfaces. El puerto lo impone
+      # Render con la variable PORT, que la configuracion ya respeta.
+      - key: MORGAN_API_HOST
+        value: 0.0.0.0
+
+      - key: MORGAN_LOG_LEVEL
+        value: INFO
+
+      # Memoria: que glibc no cree una zona por hilo (V2.0.39). Medido en un
+      # despliegue igual a este (2.3-C): sin ella, 25 personas a la vez llevaron
+      # la memoria a 530 MB de 537 y Render mato el proceso sin dejar rastro en
+      # el registro. Con ella, 182 MB con 25 y 197 MB con 50, sin un error.
+      # El servidor avisa al arrancar en la nube si falta.
+      - key: MALLOC_ARENA_MAX
+        value: "2"
+
+      # Sin interfaz que servir: de eso se encarga Vercel. Ademas el build de
+      # Render no ejecuta npm, asi que aqui no existe web/dist.
+      - key: MORGAN_SERVE_WEB
+        value: "false"
+
+      # Servicio desatendido: no hay nadie que pueda responder a una confirmacion.
+      # Con "ask" y sin terminal interactiva, las herramientas de riesgo moderado
+      # se deniegan solas. En cloud solo afecta a forget_fact.
+      - key: MODERATE_PERMISSION_MODE
+        value: ask
+
+      # Cuentas de usuario. Con esto activo, el arranque ya no exige
+      # MORGAN_API_TOKEN: las cuentas cierran el despliegue igual de bien y
+      # ademas separan los datos de cada persona.
+      - key: MORGAN_REQUIRE_AUTH
+        value: true
+
+      # Si cualquiera puede crearse una cuenta. Abierto por defecto; ponlo a
+      # false para un Morgan de circulo pequeno.
+      - key: MORGAN_REGISTRO_ABIERTO
+        value: true
+
+      # La direccion publica de la web. SIN ESTO, los enlaces de recuperacion
+      # de contrasena se envian bien pero apuntan a localhost, es decir, al
+      # equipo de quien los recibe. /status lo marca en rojo.
+      - key: MORGAN_WEB_URL
+        sync: false
+
+      # Que cuenta es la propietaria. NO la crea: promociona una que ya exista,
+      # una sola vez, al arrancar. Si ya hay propietario, no cambia nada.
+      - key: MORGAN_OWNER_EMAIL
+        sync: false
+
+      # --- Correo de recuperacion ---
+      # 'brevo' o 'resend'. HACE FALTA UNA API HTTP: Render bloquea los puertos
+      # SMTP salientes, asi que con MORGAN_SMTP_* el envio muere con
+      # "Network is unreachable" aunque las credenciales sean correctas.
+      - key: MORGAN_EMAIL_API
+        sync: false
+      - key: MORGAN_EMAIL_API_KEY
+        sync: false
+      - key: MORGAN_EMAIL_FROM
+        sync: false
+
+      # --- Secretos: se introducen en el panel de Render, nunca aqui ---
+      # Sin MORGAN_API_TOKEN el arranque aborta a proposito: una URL publica sin
+      # autenticacion deja Morgan abierto a cualquiera que la encuentre.
+      - key: MORGAN_API_TOKEN
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+
+      # Dominios autorizados a llamar a la API desde un navegador: los de Vercel.
+      # Sin esto el navegador bloquea las peticiones por CORS.
+      - key: MORGAN_CORS_ORIGINS
+        sync: false
+      # Opcional. Los despliegues de vista previa de Vercel estrenan dominio cada
+      # vez; una expresion regular los cubre sin tener que enumerarlos.
+      # Ejemplo: https://morgan-.*-wv-andys-projects\.vercel\.app
+      - key: MORGAN_CORS_ORIGIN_REGEX
+        sync: false
+
+      # --- Servicios externos (V1.9) ---
+      #
+      # MORGAN_SECRET_KEY cifra los tokens de OAuth que se guardan. Sin ella las
+      # integraciones no se ofrecen: guardar en claro un token que abre
+      # repositorios privados convierte una copia de la base en una copia de las
+      # llaves.
+      #
+      # NO se cambia despues de conectar nada. Los tokens guardados se cifran
+      # con ella, asi que cambiarla los deja ilegibles y hay que volver a
+      # conectar cada servicio.
+      - key: MORGAN_SECRET_KEY
+        sync: false
+      # De la aplicacion OAuth de GitHub. Su URL de retorno tiene que apuntar a
+      # ESTE servicio, no a la web:
+      #   https://<api>/integraciones/github/callback
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      # APARCADO desde la 2.0.18 (docs/integraciones-aparcadas.md): hoy no se leen.
+      # De un cliente OAuth de Google Cloud, para Google Calendar (V2.0.17). Su URL
+      # de retorno autorizada apunta a ESTE servicio:
+      #   https://<api>/integraciones/google_calendar/callback
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # Opcional: donde esta esta API vista desde fuera, para componer la URL de
+      # retorno. Render define RENDER_EXTERNAL_URL por su cuenta, asi que solo
+      # hace falta si se sirve tras otro dominio.
+      - key: MORGAN_API_URL
+        sync: false
