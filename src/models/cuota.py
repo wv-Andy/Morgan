@@ -108,6 +108,16 @@ VENTANA_MAXIMA = 1800.0
 #: llamada siguiente arranca con la ventana limpia. Una espera la arregla.
 ESPERA_CORTA_MAXIMA = 10.0
 
+#: Un proveedor **caído** (4.20: tiempo agotado, sin conexión, un 5xx) pasa al final de la
+#: cadena esta ventana, que se dobla con cada caída seguida hasta el tope. Antes se le
+#: volvía a llamar en cada petición y cada una pagaba su plazo entero (medido: NVIDIA agota
+#: sus 30 s y contesta Gemini a los 64). Como con la cuota, **se pospone, nunca se quita**:
+#: si los demás fallan, se le llama igual. Y el primer acierto lo devuelve a su sitio.
+CAIDO_PRIMERA = 30.0
+CAIDO_MAXIMA = 600.0
+#: Un fallo que tarda esto o más ya ha costado: se pospone a la primera.
+CAIDO_LENTO = 5.0
+
 #: A partir de qué fracción de la cuota conocida se avisa. El aviso solo sirve
 #: si llega con margen para hacer algo.
 AVISAR_AL = 0.8
@@ -151,6 +161,10 @@ class _Estado:
     rechazos: int = 0
     #: Instante hasta el que se le da por agotado. `0.0` = disponible.
     agotado_hasta: float = 0.0
+    #: Lo mismo, pero por estar **caído** (4.20): tiempo agotado, sin conexión, un 5xx.
+    caido_hasta: float = 0.0
+    #: Caídas seguidas, sin un acierto en medio: cada una dobla la ventana.
+    caidas_seguidas: int = 0
     #: Cuándo empezó a contar la ventana de tokens.
     desde: float = field(default_factory=time.time)
 
@@ -227,7 +241,45 @@ class _Registro:
         )
         return espera
 
+    def marcar_caido(self, proveedor: str, segundos_perdidos: float = 0.0) -> float:
+        """Apunta una caída del proveedor (4.20). Se le pospone si **costó**: si tardó
+        `CAIDO_LENTO` o más en fallar, o si es la segunda seguida. Un fallo rápido y suelto
+        (un corte de red de 0,1 s) puede estar arreglado en la llamada siguiente, y volver
+        a probar casi no cuesta. La ventana se dobla con cada caída seguida, de
+        `CAIDO_PRIMERA` a `CAIDO_MAXIMA`. Devuelve cuántos segundos (0 si no se pospone)."""
+        with self._lock:
+            e = self._de(proveedor)
+            e.caidas_seguidas += 1
+            seguidas = e.caidas_seguidas
+            if segundos_perdidos < CAIDO_LENTO and seguidas < 2:
+                return 0.0
+            espera = min(CAIDO_PRIMERA * 2 ** (seguidas - 1), CAIDO_MAXIMA)
+            e.caido_hasta = time.time() + espera
+        logger.warning(
+            "%s se da por caído durante %.0f s (%d caída(s) seguida(s)): pasa al final de "
+            "la cadena para no esperar su plazo en cada petición.", proveedor, espera, seguidas,
+        )
+        return espera
+
+    def apuntar_acierto(self, proveedor: str) -> None:
+        """Contestó: deja de estar caído y la ventana vuelve a empezar."""
+        with self._lock:
+            e = self._estados.get(proveedor)
+            if e is not None and (e.caidas_seguidas or e.caido_hasta):
+                e.caidas_seguidas = 0
+                e.caido_hasta = 0.0
+                logger.info("%s vuelve a contestar: deja de estar caído.", proveedor)
+
     # --- Lo que se pregunta -------------------------------------------------
+
+    def caido(self, proveedor: str) -> bool:
+        with self._lock:
+            e = self._estados.get(proveedor)
+            return e is not None and time.time() < e.caido_hasta
+
+    def pospuesto(self, proveedor: str) -> bool:
+        """Agotado o caído: va al final de la cadena (nunca fuera de ella)."""
+        return self.agotado(proveedor) or self.caido(proveedor)
 
     def agotado(self, proveedor: str) -> bool:
         with self._lock:
@@ -258,6 +310,8 @@ class _Registro:
                     "rechazos": e.rechazos,
                     "agotado": bool(e.agotado_hasta and ahora < e.agotado_hasta),
                     "vuelve_en": max(0, int(e.agotado_hasta - ahora)) if e.agotado_hasta else 0,
+                    "caido": ahora < e.caido_hasta,
+                    "caidas_seguidas": e.caidas_seguidas,
                     "tope_conocido": CUOTA_DIARIA_CONOCIDA.get(familia(nombre)),
                 }
                 for nombre, e in self._estados.items()
@@ -348,6 +402,29 @@ def es_rechazo_por_cuota(exc: BaseException) -> bool:
         "resource_exhausted",
         "quota",
         "too many requests",
+    ))
+
+
+def es_caida(exc: BaseException) -> bool:
+    """Si el fallo es del **proveedor** (no contesta, no se llega, se le rompió algo) y no
+    de la petición (4.20).
+
+    Un 400 no cuenta: lo rechaza por cómo es la petición, y otro igual no fallaría; ni la
+    cuota, que tiene su ventana propia. Lo que sí: tiempo agotado, sin conexión y 5xx.
+    """
+    if es_rechazo_por_cuota(exc) or es_rechazo_por_tamano(exc):
+        return False
+    if isinstance(exc, (TimeoutError, ConnectionError)):
+        return True
+    from src.models.errors import _codigo_http
+
+    codigo = _codigo_http(exc)
+    if codigo is not None:
+        return codigo >= 500 or codigo == 408
+    texto = str(exc).lower()
+    return any(s in texto for s in (
+        "timeout", "timed out", "deadline exceeded", "connection", "unavailable",
+        "overloaded", "bad gateway", "internal server error", "unreachable",
     ))
 
 

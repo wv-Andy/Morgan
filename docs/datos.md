@@ -101,6 +101,37 @@ fichero es seguro: se recrea vacío.
 | `MORGAN_PERSIST_HISTORY` | `true` | Guardar y recuperar conversaciones |
 | `MORGAN_HISTORY_WINDOW` | `20` | Mensajes recientes al reanudar |
 
+### La copia de seguridad de Supabase (4.20)
+
+El plan gratuito de Supabase no da copias descargables, así que `scripts/copia_supabase.py`
+hace una **copia lógica**: las 22 tablas de `public`, enteras, en JSON, con la huella
+(SHA-256) de cada una en un manifiesto. Se guarda en `~/.morgan/copias/` (fuera de OneDrive
+y del repositorio: lleva correos, hashes de contraseñas y conversaciones).
+
+```bash
+python scripts/copia_supabase.py copiar                        # producción
+python scripts/copia_supabase.py comprobar --desde <carpeta>   # ¿la base sigue igual?
+python scripts/copia_supabase.py restaurar --desde <carpeta> --proyecto carga
+```
+
+**Rehacer la base desde cero**, si el proyecto se perdiera:
+
+1. Un proyecto nuevo, y las migraciones en orden: `migraciones/supabase/v01_v14_esquema_inicial.sql`
+   y después `v15` … `v30`. Las 14 primeras **no estaban en el repositorio** (se aplicaron
+   directamente en Supabase): las recuperé de su historial en la 4.20, comprobando el MD5 de
+   cada una contra el que guarda Postgres. Sin ellas, la copia no tenía dónde volver.
+2. Los secretos del Vault (`morgan_reloj`, `morgan_reloj_url`), de las variables de Render
+   (ver la cabecera de `v29_reloj.sql`).
+3. `restaurar`: escribe las tablas en orden (las de las que dependen otras, primero) y
+   comprueba antes que cada fichero es el que se copió; uno cambiado o roto no se restaura.
+4. **Ajustar los contadores** con el `secuencias.sql` que deja `restaurar`. Sin eso, el
+   primer mensaje nuevo chocaría con uno restaurado (mismo `id`).
+5. `comprobar`: la base y la copia, tabla a tabla.
+
+Lo que **no** va en la copia: los bytes de los archivos subidos (el bucket `morgan-uploads`;
+su índice sí va, en `uploads`) y `auth.users`, que Morgan no usa (`auth_user_id` está vacío
+en todas las cuentas). Restaurar sobre producción pide `--si-produccion`.
+
 ## 3. Memoria: los cinco tipos
 
 Mezclarlos es lo que hace que un asistente arrastre basura en el contexto.

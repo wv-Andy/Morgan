@@ -73,8 +73,9 @@ class FallbackProvider(LLMProvider):
         """
         from src.models.cuota import CUOTAS
 
-        vivos = [p for p in candidatos if not CUOTAS.agotado(p.model_name)]
-        agotados = [p for p in candidatos if CUOTAS.agotado(p.model_name)]
+        # Agotados por cuota y, desde la 4.20, caídos: los dos van al final.
+        vivos = [p for p in candidatos if not CUOTAS.pospuesto(p.model_name)]
+        agotados = [p for p in candidatos if CUOTAS.pospuesto(p.model_name)]
         if agotados and vivos:
             logger.debug(
                 "Se posponen %d proveedor(es) agotado(s): %s",
@@ -83,17 +84,20 @@ class FallbackProvider(LLMProvider):
         return vivos + agotados
 
     @staticmethod
-    def _apuntar_si_es_de_cuota(proveedor: str, exc: BaseException) -> None:
-        """Si el fallo fue por cuota, se recuerda para no repetirlo enseguida."""
+    def _apuntar_si_es_de_cuota(proveedor: str, exc: BaseException, segundos: float = 0.0) -> None:
+        """Si el fallo fue por cuota, o el proveedor está caído (4.20), se recuerda para
+        no repetirlo enseguida."""
         from src.models.cuota import (
             CUOTAS,
+            es_caida,
             es_rechazo_por_cuota,
             segundos_hasta_reintentar,
         )
 
-        if not es_rechazo_por_cuota(exc):
-            return
-        CUOTAS.marcar_agotado(proveedor, segundos_hasta_reintentar(str(exc)))
+        if es_rechazo_por_cuota(exc):
+            CUOTAS.marcar_agotado(proveedor, segundos_hasta_reintentar(str(exc)))
+        elif es_caida(exc):
+            CUOTAS.marcar_caido(proveedor, segundos)
 
     def providers_for(self, capability: Capability) -> list[LLMProvider]:
         """Los eslabones que admiten esa capacidad, en el orden de la cadena."""
@@ -178,6 +182,9 @@ class FallbackProvider(LLMProvider):
                 # devuelve la cadena entera —«Groq [Respaldo: NVIDIA, Gemini]»—
                 # asi que hasta ahora no habia forma de saber quien hablo.
                 anotar("proveedor", proveedor.model_name)
+                from src.models.cuota import CUOTAS
+
+                CUOTAS.apuntar_acierto(proveedor.model_name)
                 # Contra el PRINCIPAL configurado, no contra la posicion: con el
                 # principal ya agotado, la cadena lo manda al final y quien
                 # contesta queda primero. Comparar con `indice > 0` hacia que
@@ -206,7 +213,7 @@ class FallbackProvider(LLMProvider):
                 ultimo_error = exc
                 razonamiento_de_reserva = razonamiento_de_reserva or getattr(exc, "razonamiento", "")
                 anotar("proveedor_fallo", proveedor.model_name)
-                self._apuntar_si_es_de_cuota(proveedor.model_name, exc)
+                self._apuntar_si_es_de_cuota(proveedor.model_name, exc, time.monotonic() - inicio)
                 if indice == 0:
                     self.primary_failures += 1
 

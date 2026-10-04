@@ -361,3 +361,102 @@ class TestLaCapacidadDeVisionNoSeRompe:
             "Se ha saltado al único proveedor con visión por estar agotado, y "
             "el de solo texto no puede atender la petición"
         )
+
+
+class TestUnProveedorCaido:
+    """4.20: un proveedor que **no contesta** (tiempo agotado, sin conexión, un 5xx) costaba
+    su plazo entero en cada petición: medido, NVIDIA agotaba sus 30 s y contestaba Gemini a
+    los 64. Ahora, si la caída costó, pasa al final de la cadena una ventana que se dobla.
+    Como con la cuota: se pospone, nunca se quita."""
+
+    def _lento(self, monkeypatch):
+        """Que cualquier caída cuente como cara, sin esperar 5 s de verdad."""
+        from src.models import cuota
+
+        monkeypatch.setattr(cuota, "CAIDO_LENTO", 0.0)
+
+    def test_uno_que_tarda_en_caerse_pasa_al_final(self, monkeypatch):
+        self._lento(monkeypatch)
+        nvidia = Proveedor("nvidia", error="Request timed out.")
+        gemini = Proveedor("gemini")
+        cadena = FallbackProvider(nvidia, gemini)
+
+        cadena.generate([])
+        cadena.generate([])
+        cadena.generate([])
+
+        assert nvidia.llamadas == 1, "pagó su plazo en cada petición"
+        assert gemini.llamadas == 3
+
+    def test_un_fallo_rapido_y_suelto_no_pospone(self):
+        """Un corte de red de 0,1 s puede estar arreglado ya: volver a probar no cuesta."""
+        caido = Proveedor("caido", error="Connection reset by peer")
+        cadena = FallbackProvider(caido, Proveedor("respaldo"))
+        cadena.generate([])
+        assert not CUOTAS.caido("caido")
+
+    def test_pero_dos_seguidos_si(self):
+        caido = Proveedor("caido", error="503 Service Unavailable")
+        cadena = FallbackProvider(caido, Proveedor("respaldo"))
+        cadena.generate([])
+        cadena.generate([])
+        assert CUOTAS.caido("caido")
+        cadena.generate([])
+        assert caido.llamadas == 2
+
+    def test_un_400_no_es_una_caida(self, monkeypatch):
+        """Lo rechaza por cómo es la petición: no dice nada del proveedor."""
+        self._lento(monkeypatch)
+        groq = Proveedor("groq", error="Error code: 400 - invalid_request_error")
+        cadena = FallbackProvider(groq, Proveedor("gemini"))
+        cadena.generate([])
+        cadena.generate([])
+        assert groq.llamadas == 2 and not CUOTAS.caido("groq")
+
+    def test_si_todos_estan_caidos_se_les_llama_igual(self, monkeypatch):
+        self._lento(monkeypatch)
+        a = Proveedor("a", error="Request timed out.")
+        b = Proveedor("b", error="Request timed out.")
+        cadena = FallbackProvider(a, b)
+        with pytest.raises(RuntimeError):
+            cadena.generate([])
+        a.error = None
+        assert cadena.generate([]).content == "soy a", "pospuesto no es quitado"
+
+    def test_al_contestar_vuelve_a_su_sitio(self, monkeypatch):
+        self._lento(monkeypatch)
+        nvidia = Proveedor("nvidia", error="Request timed out.")
+        cadena = FallbackProvider(nvidia, Proveedor("gemini"))
+        gemini = cadena.providers[1]
+        cadena.generate([])
+        assert CUOTAS.caido("nvidia")
+        # Pospuesto, solo se le llama si falla el otro; y si entonces contesta, vuelve.
+        nvidia.error, gemini.error = None, "Request timed out."
+        assert cadena.generate([]).content == "soy nvidia"
+        assert not CUOTAS.caido("nvidia")
+        gemini.error = None
+        assert cadena.generate([]).content == "soy nvidia", "de vuelta, primero"
+
+    def test_la_ventana_se_dobla_y_tiene_tope(self):
+        from src.models.cuota import CAIDO_MAXIMA, CAIDO_PRIMERA
+
+        ventanas = [CUOTAS.marcar_caido("x", segundos_perdidos=30) for _ in range(8)]
+        assert ventanas[:3] == [CAIDO_PRIMERA, 2 * CAIDO_PRIMERA, 4 * CAIDO_PRIMERA]
+        assert max(ventanas) == CAIDO_MAXIMA
+
+    @pytest.mark.parametrize("error, caida", [
+        ("Request timed out.", True),
+        ("Connection error.", True),
+        ("Error code: 502 - Bad Gateway", True),
+        ("503 UNAVAILABLE. The model is overloaded.", True),
+        ("Error code: 400 - invalid_request_error", False),
+        ("Error code: 429 - rate_limit_exceeded", False),
+        ("Error code: 413 - Request too large", False),
+        ("Error code: 401 - invalid_api_key", False),
+        # Una cuota, aunque diga palabras de caída: tiene su propia ventana.
+        ("Quota exceeded: the model is overloaded with requests", False),
+    ])
+    def test_que_cuenta_como_caida(self, error, caida):
+        from src.models.cuota import es_caida
+
+        assert es_caida(RuntimeError(error)) is caida
