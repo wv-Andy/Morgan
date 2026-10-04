@@ -61,6 +61,33 @@ def app() -> Path:
     return almacen.carpeta() / "app"
 
 
+#: La marca de que el agente de este PC lo emparejó el programa de Windows (5.0.1).
+MARCA_DEL_PROGRAMA = "programa.json"
+NO_ES_DEL_PROGRAMA = ("El agente de este PC no lo instaló el programa de Windows (es el de la línea "
+                      "de PowerShell): no se toca. Se quita solo el programa.")
+
+
+def marcar_del_programa() -> None:
+    """El programa de Windows (el agente congelado) apunta que este agente es suyo al
+    emparejarlo. Solo entonces su desinstalador lo desempareja y borra su estado.
+
+    **Por qué** (medido, 2026-10-04): instalé el programa en un PC con el agente de la
+    línea de PowerShell, que comparte la carpeta del estado; al desinstalar el programa, su
+    gancho lanzó `desinstalar` y se llevó por delante al otro agente: desemparejado en la
+    nube, su política y su historial borrados."""
+    from src.agente import arranque
+
+    if not arranque.congelado():
+        return
+    almacen.carpeta().mkdir(parents=True, exist_ok=True)
+    (almacen.carpeta() / MARCA_DEL_PROGRAMA).write_text(
+        json.dumps({"programa": sys.executable, "desde": time.time()}), encoding="utf-8")
+
+
+def es_del_programa() -> bool:
+    return (almacen.carpeta() / MARCA_DEL_PROGRAMA).exists()
+
+
 def instalada(raiz: Path | None = None) -> bool:
     """Si el código que corre es una versión instalada (y no una copia del repositorio)."""
     from src.agente import arranque

@@ -34,6 +34,10 @@ $env:MORGAN_AGENTE_DIR = Join-Path $raiz "estado"
 $env:MORGAN_CARPETA_INICIO = Join-Path $raiz "inicio"
 $env:MORGAN_CARPETA_MENU = Join-Path $raiz "menu"
 $resultado = [ordered]@{}
+# El caso del 2026-10-04 (5.0.1): un PC que ya tiene el agente de la línea de PowerShell, con
+# su política. Instalar y desinstalar el programa no puede llevárselo por delante.
+New-Item -ItemType Directory -Force $env:MORGAN_AGENTE_DIR | Out-Null
+'{"carpetas": ["C:/Users/ana/Documentos"]}' | Set-Content (Join-Path $env:MORGAN_AGENTE_DIR "politica.json")
 try {
     $p = Start-Process $Instalador -ArgumentList @("/" + "S", "/D=$instalado") -PassThru -Wait
     $resultado.instalado = ($p.ExitCode -eq 0) -and (Test-Path "$instalado\Morgan.exe") `
@@ -58,6 +62,7 @@ try {
     $resultado.fuera_de_aplicaciones = -not [bool](Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall |
         Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -eq "Morgan para Windows" })
     $resultado.quedan_los_respaldos = Test-Path (Join-Path $env:MORGAN_AGENTE_DIR "respaldos\r.txt")
+    $resultado.el_agente_de_la_linea_sigue = Test-Path (Join-Path $env:MORGAN_AGENTE_DIR "politica.json")
 }
 finally {
     Remove-Item Env:MORGAN_AGENTE_DIR, Env:MORGAN_CARPETA_INICIO, Env:MORGAN_CARPETA_MENU -ErrorAction SilentlyContinue

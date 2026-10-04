@@ -118,6 +118,9 @@ def main(argv: list[str] | None = None) -> int:
     ins.add_argument("--nombre", default=socket.gethostname(), help="cómo se verá en la web")
     des = ordenes.add_parser("desinstalar", help="quitar el agente de este PC (quedan los respaldos)")
     des.add_argument("--si", action="store_true", help="sin preguntar")
+    # Lo que usa el desinstalador del programa de Windows (5.0.1): solo si el agente es SUYO.
+    des.add_argument("--del-programa", action="store_true",
+                     help="solo si este agente lo emparejó el programa de Windows")
     args = parser.parse_args(argv)
 
     try:
@@ -129,7 +132,12 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"CUENTA: {consultar(args.nube, codigo)}")
                 return 0
             preguntar = (lambda _texto: "s") if args.si else input
-            return 0 if emparejar(args.nube, codigo, args.nombre, preguntar=preguntar) else 1
+            hecho = emparejar(args.nube, codigo, args.nombre, preguntar=preguntar)
+            if hecho:
+                from src.agente import instalacion
+
+                instalacion.marcar_del_programa()
+            return 0 if hecho else 1
         if args.orden == "desemparejar":
             desemparejar()
             return 0
@@ -200,6 +208,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.orden == "desinstalar":
             from src.agente import instalacion
 
+            if args.del_programa and not instalacion.es_del_programa():
+                print(instalacion.NO_ES_DEL_PROGRAMA)
+                return 0
             if not args.si and input(
                     "Se desempareja este PC, se quita del inicio de Windows y se borra el agente "
                     "(menos los respaldos de tus archivos). ¿Seguir? [s/N] ").strip().lower() not in ("s", "si", "sí"):

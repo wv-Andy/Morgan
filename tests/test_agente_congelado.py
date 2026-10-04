@@ -97,3 +97,65 @@ class TestNoSeActualizaSolo:
         for orden in (["volver"], ["instalar"]):
             assert consola.main(orden) == 2
             assert PROGRAMA_DE_WINDOWS in capsys.readouterr().out
+
+
+class TestElDesinstaladorSoloQuitaLoSuyo:
+    """5.0.1. Medido el 2026-10-04: instalar y desinstalar el programa en un PC con el agente de
+    la línea de PowerShell (comparten la carpeta del estado) lo desemparejó en la nube y borró
+    su política. El desinstalador solo desempareja y borra si el agente lo emparejó el programa."""
+
+    def _estado_de_otro_agente(self):
+        from src.agente import estado as almacen
+
+        almacen.carpeta().mkdir(parents=True, exist_ok=True)
+        (almacen.carpeta() / "politica.json").write_text("{}", encoding="utf-8")
+        return almacen.carpeta()
+
+    def test_si_no_es_suyo_no_toca_nada(self, monkeypatch, tmp_path, capsys):
+        from src.agente import __main__ as consola, instalacion
+
+        carpeta = self._estado_de_otro_agente()
+        llamadas = []
+        monkeypatch.setattr(instalacion, "desinstalar", lambda *a, **k: llamadas.append(1) or 0)
+        assert consola.main(["desinstalar", "--si", "--del-programa"]) == 0
+        assert llamadas == [] and (carpeta / "politica.json").exists()
+        assert instalacion.NO_ES_DEL_PROGRAMA in capsys.readouterr().out
+
+    def test_si_es_suyo_si(self, monkeypatch, tmp_path):
+        from src.agente import __main__ as consola, instalacion
+
+        _congelar(monkeypatch, tmp_path)
+        instalacion.marcar_del_programa()
+        assert instalacion.es_del_programa()
+        llamadas = []
+        monkeypatch.setattr(instalacion, "desinstalar", lambda *a, **k: llamadas.append(1) or 0)
+        assert consola.main(["desinstalar", "--si", "--del-programa"]) == 0
+        assert llamadas == [1]
+
+    def test_emparejar_desde_el_programa_lo_marca(self, monkeypatch, tmp_path):
+        from src.agente import __main__ as consola, instalacion
+
+        _congelar(monkeypatch, tmp_path)
+        monkeypatch.setattr(consola, "emparejar", lambda *a, **k: True)
+        consola.main(["emparejar", "--codigo", "ABCD-EFGH", "--si"])
+        assert instalacion.es_del_programa()
+
+    def test_con_python_no_se_marca(self, monkeypatch):
+        """El agente de la línea no es del programa: su desinstalación es la suya."""
+        from src.agente import __main__ as consola, instalacion
+
+        monkeypatch.setattr(consola, "emparejar", lambda *a, **k: True)
+        consola.main(["emparejar", "--codigo", "ABCD-EFGH", "--si"])
+        assert not instalacion.es_del_programa()
+
+    def test_un_emparejar_fallido_no_marca(self, monkeypatch, tmp_path):
+        from src.agente import __main__ as consola, instalacion
+
+        _congelar(monkeypatch, tmp_path)
+        monkeypatch.setattr(consola, "emparejar", lambda *a, **k: None)
+        consola.main(["emparejar", "--codigo", "ABCD-EFGH", "--si"])
+        assert not instalacion.es_del_programa()
+
+    def test_el_gancho_del_instalador_lo_pide(self):
+        gancho = (Path(__file__).resolve().parents[1] / "escritorio" / "src-tauri" / "hooks.nsh").read_text(encoding="utf-8")
+        assert "desinstalar --si --del-programa" in gancho
