@@ -1,0 +1,78 @@
+/* Los colores de la web (2.0.28): azul noche, claro y oscuro según Windows. */
+:root {
+  --fondo: #f4f6fb;
+  --tarjeta: #ffffff;
+  --texto: #0f1b33;
+  --texto-suave: #4b5a78;
+  --acento: #2f5bd8;
+  --acento-texto: #ffffff;
+  --borde: #d9e0ee;
+  --error: #b42318;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #0b1426;
+    --tarjeta: #12203b;
+    --texto: #e6ecf8;
+    --texto-suave: #9fb0d0;
+    --acento: #6f95ff;
+    --acento-texto: #0b1426;
+    --borde: #22345a;
+    --error: #ff8a80;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+}
+main { padding: 24px; }
+header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+h1 { font-size: 22px; margin: 0; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+.tarjeta {
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  padding: 20px;
+}
+ol { padding-left: 20px; margin: 0 0 16px; color: var(--texto-suave); }
+a { color: var(--acento); }
+form { display: flex; gap: 8px; }
+input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  background: var(--fondo);
+  color: var(--texto);
+  font: inherit;
+  letter-spacing: 0.08em;
+}
+button {
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--acento);
+  color: var(--acento-texto);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:disabled { opacity: 0.6; cursor: wait; }
+button.secundario { background: transparent; color: var(--acento); border: 1px solid var(--borde); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.botones { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.aviso { color: var(--error); white-space: pre-wrap; margin: 12px 0 0; }
+.nota { color: var(--texto-suave); font-size: 13px; }
+#detalle { white-space: pre-wrap; color: var(--texto-suave); font-size: 13px; margin: 0; }
+#cargando { display: flex; align-items: center; gap: 14px; }
+.espiral {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 3px solid var(--borde); border-top-color: var(--acento);
+  animation: girar 0.9s linear infinite;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .espiral { animation: none; } }

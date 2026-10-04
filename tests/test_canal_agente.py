@@ -942,7 +942,7 @@ class TestReconexionMedidaEnLa305:
 
         from src.agente.canal import CIERRE_MAXIMO, Canal
 
-        conexiones = []
+        conexiones, cambios = [], []
 
         async def atender(ws):
             conexiones.append(time.monotonic())
@@ -974,9 +974,13 @@ class TestReconexionMedidaEnLa305:
 
                 proxy = await asyncio.start_server(intermediario, "127.0.0.1", 0)
                 puerto = proxy.sockets[0].getsockname()[1]
-                canal = Canal(f"http://127.0.0.1:{puerto}", "mga_x", Ejecutor("agt-1"), espera_minima=0.1)
+                canal = Canal(f"http://127.0.0.1:{puerto}", "mga_x", Ejecutor("agt-1"), espera_minima=0.1,
+                              al_cambiar=lambda e, d: cambios.append((time.monotonic(), e, d)))
                 tarea = asyncio.create_task(canal.correr())
-                limite = time.monotonic() + 20
+                # 40 s y no 20 (4.21/5.0): 1 vez en la integración continua no llegó la segunda
+                # conexión en 20 s (aquí llega en ~4). Si llega tarde, la comprobación de abajo
+                # dice cuánto; si no llega, lo que estaba haciendo el agente.
+                limite = time.monotonic() + 40
                 while len(conexiones) < 2 and time.monotonic() < limite:
                     await asyncio.sleep(0.05)
                 canal.parar()
@@ -984,9 +988,11 @@ class TestReconexionMedidaEnLa305:
                 proxy.close()
 
         asyncio.run(probar())
-        assert len(conexiones) >= 2
+        origen = conexiones[0] if conexiones else 0.0
+        historia = [f"{t - origen:+.1f} s {getattr(e, 'value', e)}: {d}" for t, e, d in cambios]
+        assert len(conexiones) >= 2, f"no volvió a conectar en 40 s. El agente: {historia}"
         # 0,3 s hablando + dos latidos de 0,2 + el cierre que no llega + la espera mínima.
-        assert conexiones[1] - conexiones[0] < 0.3 + 0.4 + CIERRE_MAXIMO + 1.5
+        assert conexiones[1] - conexiones[0] < 0.3 + 0.4 + CIERRE_MAXIMO + 1.5, historia
 
 
 class TestRecuperarTrasUnCorte:

@@ -166,6 +166,14 @@ def main(argv: list[str] | None = None) -> int:
             preguntar = None if args.si else (
                 lambda texto: input(f"{texto} [s/N] ").strip().lower() in ("s", "si", "sí"))
             return instalacion.actualizar(preguntar=preguntar)
+        if args.orden in ("volver", "instalar"):
+            from src.agente import arranque
+
+            if arranque.congelado():
+                from src.agente.instalacion import PROGRAMA_DE_WINDOWS
+
+                print(PROGRAMA_DE_WINDOWS)
+                return 2
         if args.orden == "volver":
             return _volver()
         if args.orden == "rotar":

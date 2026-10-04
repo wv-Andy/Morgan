@@ -58,3 +58,12 @@ suite_tmp.txt
 
 # Palabras personales que la interfaz no puede enseñar (no se publican).
 tests/personales.txt
+
+# Morgan para Windows (5.0): lo que se genera al compilar.
+escritorio/node_modules/
+escritorio/package-lock.json
+escritorio/src-tauri/target/
+escritorio/src-tauri/agente/
+escritorio/src-tauri/gen/
+escritorio/src-tauri/icons/
+build-agente/

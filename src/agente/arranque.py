@@ -34,6 +34,8 @@ TAMANO_MAXIMO_REGISTRO = 1_000_000
 
 
 def raiz_del_proyecto() -> Path:
+    if congelado():
+        return Path(sys.executable).parent       # la carpeta del programa (5.0)
     return Path(__file__).resolve().parents[2]
 
 
@@ -67,6 +69,29 @@ def pythonw(python: Path | None = None) -> Path:
     base = Path(python) if python is not None else Path(sys.executable)
     candidato = base.with_name("pythonw.exe")
     return candidato if candidato.exists() else base
+
+
+#: El agente congelado (5.0, decisión W2) son dos ejecutables sobre los mismos ficheros: el de
+#: las órdenes, con consola, y este, sin ventana, para lo que corre de fondo (vigilar,
+#: conectar, la ventana de ajustes). Uno con consola abriría una ventana negra al arrancar.
+FONDO = "morgan-agente-fondo.exe"
+
+
+def congelado() -> bool:
+    """Si esto es el agente congelado con PyInstaller (el programa de Windows) y no Python."""
+    return bool(getattr(sys, "frozen", False))
+
+
+def orden(*argumentos: str, python: Path | None = None, sin_consola: bool = True) -> list[str]:
+    """Cómo arrancar el agente con esos argumentos: con Python (`pythonw -m src.agente …`) o,
+    congelado, su propio ejecutable. Un solo sitio para el arranque, el vigilante, los
+    ajustes y la actualización."""
+    if congelado() and python is None:
+        exe = Path(sys.executable)
+        fondo = exe.with_name(FONDO)
+        return [str(fondo if sin_consola and fondo.exists() else exe), *argumentos]
+    interprete = pythonw(python) if sin_consola else (Path(python) if python else Path(sys.executable))
+    return [str(interprete), "-m", "src.agente", *argumentos]
 
 
 # --- Uno solo a la vez ---------------------------------------------------------------
@@ -192,14 +217,14 @@ def activar(python: Path | None = None, carpeta: Path | None = None) -> Path:
     """Crea el acceso directo en la carpeta de Inicio. Devuelve su ruta. Con `python` y
     `carpeta`, a esa versión instalada del agente (3.8); si no, a esta."""
     # El vigilante, no el agente (3.6): lo lanza él y lo levanta si se cae.
-    return _crear_acceso(acceso_directo(), python, carpeta, "-m src.agente vigilar",
+    return _crear_acceso(acceso_directo(), python, carpeta, ["vigilar"],
                          "Morgan: agente local (solo lee lo que permitas)", estilo=7)
 
 
 def crear_acceso_de_ajustes(python: Path | None = None, carpeta: Path | None = None) -> Path:
     """«Morgan en tu PC» en el menú Inicio (4.17): la ventana de ajustes, para quien no usa
     la consola. Apunta a la versión activa, como el arranque: se rehace al actualizar."""
-    return _crear_acceso(acceso_de_ajustes(), python, carpeta, "-m src.agente ajustes",
+    return _crear_acceso(acceso_de_ajustes(), python, carpeta, ["ajustes"],
                          "Morgan: qué carpetas ve y qué puede hacer en este PC", estilo=1)
 
 
@@ -211,9 +236,10 @@ def quitar_acceso_de_ajustes() -> bool:
         return False
 
 
-def _crear_acceso(destino: Path, python: Path | None, carpeta: Path | None, argumentos: str,
+def _crear_acceso(destino: Path, python: Path | None, carpeta: Path | None, argumentos: list[str],
                   descripcion: str, estilo: int) -> Path:
     destino.parent.mkdir(parents=True, exist_ok=True)
+    programa, *resto = orden(*argumentos, python=python)
     # Un .lnk se crea con el objeto COM de Windows; sin dependencias nuevas, a través
     # de PowerShell. Rutas entre comillas simples de PowerShell (con '' escapado).
     def ps(texto: str) -> str:
@@ -221,8 +247,8 @@ def _crear_acceso(destino: Path, python: Path | None, carpeta: Path | None, argu
 
     guion = (
         "$s = (New-Object -ComObject WScript.Shell).CreateShortcut(" + ps(destino) + ");"
-        "$s.TargetPath = " + ps(pythonw(python)) + ";"
-        "$s.Arguments = " + ps(argumentos) + ";"
+        "$s.TargetPath = " + ps(programa) + ";"
+        "$s.Arguments = " + ps(subprocess.list2cmdline(resto)) + ";"
         "$s.WorkingDirectory = " + ps(carpeta or raiz_del_proyecto()) + ";"
         "$s.Description = " + ps(descripcion) + ";"
         f"$s.WindowStyle = {int(estilo)};"
@@ -256,7 +282,7 @@ def lanzar_en_segundo_plano(python: Path | None = None, carpeta: Path | None = N
     # (pasó en la primera activación en mi PC: corría, sin registro).
     with abrir_registro() as registro:
         subprocess.Popen(
-            [str(pythonw(python)), "-m", "src.agente", "vigilar"],
+            orden("vigilar", python=python),
             cwd=str(carpeta or raiz_del_proyecto()), creationflags=banderas, close_fds=True,
             stdin=subprocess.DEVNULL, stdout=registro, stderr=registro,
         )

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Morgan</title>
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+  <main>
+    <header>
+      <img src="logo.png" alt="" width="56" height="56">
+      <h1>Morgan en tu PC</h1>
+    </header>
+
+    <section id="cargando" class="tarjeta">
+      <div class="espiral" aria-hidden="true"></div>
+      <p>Mirando cómo está tu PC…</p>
+    </section>
+
+    <section id="sin-emparejar" class="tarjeta" hidden>
+      <h2>Conecta este PC con tu cuenta</h2>
+      <ol>
+        <li>Entra en <a href="#" id="enlace-web">Morgan</a> con tu cuenta.</li>
+        <li>Ve a <strong>Ajustes → Tu equipo</strong> y pulsa <strong>Conectar un equipo</strong>.</li>
+        <li>Escribe aquí el código que te da.</li>
+      </ol>
+      <form id="formulario">
+        <input id="codigo" autocomplete="off" spellcheck="false" placeholder="El código de la web" maxlength="64" required>
+        <button type="submit" id="emparejar">Conectar</button>
+      </form>
+      <p class="aviso" id="error" role="alert" hidden></p>
+    </section>
+
+    <section id="emparejado" class="tarjeta" hidden>
+      <h2>Este PC está conectado</h2>
+      <p id="detalle"></p>
+      <p class="nota">Morgan solo ve las carpetas que permitas, y lo que haga en tu PC te lo pregunta antes.</p>
+      <div class="botones">
+        <button id="ajustes">Qué puede hacer y qué carpetas ve</button>
+        <button id="web" class="secundario">Abrir Morgan</button>
+      </div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

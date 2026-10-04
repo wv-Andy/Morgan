@@ -136,12 +136,12 @@ def abrir_en_segundo_plano() -> bool:
     usa el instalador al acabar. No cambia nada: decide la persona, en la ventana."""
     if os.environ.get("MORGAN_SIN_VENTANAS") == "1":
         return False     # las pruebas: nunca abrir ventanas de verdad
-    raiz = Path(__file__).resolve().parents[2]
-    ejecutable = Path(sys.executable)
-    sin_consola = ejecutable.with_name("pythonw.exe")
+    from src.agente import arranque
+
+    raiz = arranque.raiz_del_proyecto()
     try:
         subprocess.Popen(
-            [str(sin_consola if sin_consola.exists() else ejecutable), "-m", "src.agente", "ajustes"],
+            arranque.orden("ajustes"),
             cwd=str(raiz), env={**os.environ, "PYTHONPATH": str(raiz)},
             creationflags=getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NO_WINDOW", 0),
             close_fds=True)

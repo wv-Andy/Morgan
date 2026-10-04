@@ -51,6 +51,12 @@ MIRAR_CADA = 6 * 3600.0
 POSPONER = 24 * 3600.0
 
 
+#: Lo que dice el agente congelado (el programa de Windows, 5.0) si se le pide actualizarse,
+#: instalarse o volver atrás: eso lo hace el programa entero, no el agente por su cuenta.
+PROGRAMA_DE_WINDOWS = ("Este agente es parte del programa Morgan para Windows: se actualiza "
+                       "instalando la versión nueva del programa, no por su cuenta.")
+
+
 def app() -> Path:
     return almacen.carpeta() / "app"
 
@@ -302,6 +308,9 @@ def actualizar(decir: Callable[[str], None] = print, preguntar: Callable[[str], 
     hubieran llegado a cambiar de versión, se habrían parado y lanzado la una a la otra."""
     from src.agente import arranque
 
+    if arranque.congelado():
+        decir(PROGRAMA_DE_WINDOWS)
+        return 2
     candado = arranque.Candado("actualizar.lock")
     try:
         candado.tomar()
@@ -598,6 +607,6 @@ def _lanzar_actualizar() -> None:
     if sys.platform == "win32":
         banderas = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
     with arranque.abrir_registro() as registro:
-        subprocess.Popen([str(arranque.pythonw()), "-m", "src.agente", "actualizar", "--si"],
+        subprocess.Popen(arranque.orden("actualizar", "--si"),
                          cwd=str(arranque.raiz_del_proyecto()), creationflags=banderas, close_fds=True,
                          stdin=subprocess.DEVNULL, stdout=registro, stderr=registro)

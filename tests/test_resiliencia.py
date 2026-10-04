@@ -370,13 +370,19 @@ class TestElVigilante:
         codigo = vigilante.vigilar(lanzar, lambda s: time.sleep(min(s, 0.05)))
         assert codigo == 5 and len(lanzados) == 6
 
-    def test_el_arranque_lanza_el_vigilante(self):
-        import inspect
-
+    def test_el_arranque_lanza_el_vigilante(self, monkeypatch):
+        """El acceso de Inicio y el arranque inmediato lanzan el vigilante, no el agente
+        (se comprueba lo que se lanzaría, no el texto del código: desde la 5.0 sale de
+        `arranque.orden`, que sirve igual con Python que congelado)."""
         from src.agente import arranque
 
-        assert "src.agente vigilar" in inspect.getsource(arranque.activar)
-        assert '"vigilar"' in inspect.getsource(arranque.lanzar_en_segundo_plano)
+        creados, lanzados = [], []
+        monkeypatch.setattr(arranque, "_crear_acceso", lambda d, p, c, args, *r, **k: creados.append(args))
+        monkeypatch.setattr(arranque.subprocess, "Popen", lambda cmd, **k: lanzados.append(cmd))
+        arranque.activar()
+        arranque.lanzar_en_segundo_plano()
+        assert creados == [["vigilar"]]
+        assert lanzados[0][-1] == "vigilar" and lanzados[0][-3:-1] == ["-m", "src.agente"]
 
     def test_parar_con_solo_el_vigilante_en_marcha(self, monkeypatch):
         """El agente caído y el vigilante esperando para levantarlo: `parar` tiene que

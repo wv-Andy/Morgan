@@ -64,7 +64,7 @@ def _terminar_arbol(hijo) -> None:
 
 def lanzar_agente() -> subprocess.Popen:
     banderas = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-    return subprocess.Popen([str(arranque.pythonw()), "-m", "src.agente", "conectar"],
+    return subprocess.Popen(arranque.orden("conectar"),
                             cwd=str(arranque.raiz_del_proyecto()), creationflags=banderas,
                             stdin=subprocess.DEVNULL, stdout=sys.stdout, stderr=sys.stderr)
 

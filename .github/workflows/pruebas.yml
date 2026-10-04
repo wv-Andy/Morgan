@@ -27,6 +27,9 @@ concurrency:
 jobs:
   python:
     name: Python (Windows)
+    # Solo en el espejo público (5.0): en el repositorio privado los minutos son limitados (y
+    # Windows cuenta doble); allí el trabajo sale «omitido» y no gasta nada.
+    if: github.repository == 'wv-Andy/Morgan'
     runs-on: windows-latest
     timeout-minutes: 40
     steps:
@@ -51,6 +54,7 @@ jobs:
 
   web:
     name: Web
+    if: github.repository == 'wv-Andy/Morgan'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -73,6 +77,7 @@ jobs:
 
   dependencias:
     name: Vulnerabilidades conocidas
+    if: github.repository == 'wv-Andy/Morgan'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
