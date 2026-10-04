@@ -19,10 +19,17 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[1]
 
 
-def _publicados() -> list[str]:
+#: El script del espejo no se publica (lleva justo las palabras que vigila): en el repositorio
+#: público la lista sale de los propios ficheros. Medido en la integración continua de la 5.2.1.
+ESPEJO = RAIZ / "scripts" / "publicar_espejo.py"
+
+
+def _publicados() -> list[str] | None:
+    if not ESPEJO.exists():
+        return None
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location("espejo", RAIZ / "scripts" / "publicar_espejo.py")
+    spec = importlib.util.spec_from_file_location("espejo", ESPEJO)
     espejo = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(espejo)
     return espejo.PUBLICADOS
@@ -31,7 +38,8 @@ def _publicados() -> list[str]:
 PUBLICADOS = _publicados()
 #: Los documentos en inglés que se publican, y los README de las carpetas publicadas.
 EN_INGLES = sorted(
-    [p for p in PUBLICADOS if p.endswith(".md") and not p.endswith(".es.md")]
+    ([p for p in PUBLICADOS if p.endswith(".md") and not p.endswith(".es.md")] if PUBLICADOS is not None
+     else ["README.md"] + [f"docs/{d.name[:-6]}.md" for d in (RAIZ / "docs").glob("*.es.md")])
     + ["web/README.md", "migraciones/supabase/README.md"]
 )
 
@@ -79,6 +87,8 @@ class TestCadaDocumentoEnLosDos:
 
 def test_el_espejo_publica_los_dos():
     """En el repositorio público tienen que estar las dos versiones de lo público."""
+    if PUBLICADOS is None:
+        pytest.skip("en el repositorio público no está el script del espejo")
     for ruta in EN_INGLES:
         if ruta.startswith(("web/", "migraciones/")):
             continue                # van con su carpeta entera (`web/*`, `migraciones/*`)

@@ -135,7 +135,8 @@ describe('la privacidad al crear la cuenta (4.20)', () => {
     render(<PantallaAcceso alEntrar={() => {}} modoInicial="crear" />);
     const enlace = screen.getByRole('link', { name: /condiciones y la política de privacidad/i });
     expect(enlace.getAttribute('href')).toBe(PRIVACIDAD);
-    expect(PRIVACIDAD).toMatch(/^https:\/\/github\.com\/wv-Andy\/Morgan\/.*privacidad\.md$/);
+    // La web está en español: la política, en su versión en español (5.2.1).
+    expect(PRIVACIDAD).toMatch(/^https:\/\/github\.com\/wv-Andy\/Morgan\/.*privacidad\.es\.md$/);
   });
 
   it('al entrar, no', () => {
