@@ -47,7 +47,7 @@ lo garantiza es el del turno, por reloj.
 | `MORGAN_TURN_TIMEOUT` | 180 s local, 85 s nube | El turno de `/chat` |
 | `MORGAN_HTTP_DEADLINE` | sin tope local, 100 s nube | Cuándo contesta la petición; el turno sigue |
 | `MORGAN_STREAM_TURN_TIMEOUT` | 180 s local, 170 s nube | El turno de `/chat/stream` (la web) |
-| `MORGAN_MAX_ITERATIONS` | 6 | Vueltas al modelo |
+| `MORGAN_MAX_ITERATIONS` | 6 | Vueltas al modelo. Si se acaban, una última llamada **sin herramientas** contesta con lo encontrado (4.20) |
 
 Por qué 85 y 170 en la nube: [web.md](web.md#los-120-segundos-del-proxy) y
 [agente.md](agente.md#1-el-turno).

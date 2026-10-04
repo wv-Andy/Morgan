@@ -19,10 +19,15 @@ from src.config import MAXIMO_CLAVES_POR_PROVEEDOR, reset_settings
 
 #: Todo lo que abre una puerta a un servicio real: bases de datos, modelos (uno de
 #: pago), correo y OAuth. Ver `_isolated_environment`.
+#: Los proveedores con varias claves (`X`, `X_2`…): todas fuera. Antes solo las de Groq, y una
+#: `GEMINI_API_KEY_3` real llegó a una prueba y salió entera en su fallo (4.20).
+CON_VARIAS_CLAVES = ("GROQ_API_KEY", "GEMINI_API_KEY")
 SECRETOS_EXTERNOS = (
     "SUPABASE_URL", "SUPABASE_KEY", "SUPABASE_SECRET_KEY",
-    *(f"GROQ_API_KEY_{n}" for n in range(2, MAXIMO_CLAVES_POR_PROVEEDOR + 1)),
+    "MORGAN_CARGA_SUPABASE_URL", "MORGAN_CARGA_SUPABASE_SECRET",
+    *(f"{base}_{n}" for base in CON_VARIAS_CLAVES for n in range(2, MAXIMO_CLAVES_POR_PROVEEDOR + 1)),
     "GROQ_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY", "NVIDIA_API_KEY",
+    "SERPER_API_KEY", "TAVILY_API_KEY", "BRAVE_API_KEY",
     "MORGAN_EMAIL_API", "MORGAN_EMAIL_API_KEY", "MORGAN_SMTP_HOST", "MORGAN_SMTP_PASSWORD",
     "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET",
     "MORGAN_RELOJ_SECRETO",

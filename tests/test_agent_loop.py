@@ -219,3 +219,71 @@ class TestNoRepetirLoQueYaFallo:
 
         self._agente(Buena(), mock_llm).process("mira dos veces")
         assert len(llamadas) == 2
+
+
+class TestSinMasPasos:
+    """4.20: cuando se acaban las vueltas, una última llamada SIN herramientas para contestar
+    con lo encontrado. Antes se tiraba todo y salía «He alcanzado el límite…»: medido en
+    producción el 30-09, en 3 de 30 preguntas, casi todas búsquedas de varias partes."""
+
+    def _agente(self, llm, vueltas=3):
+        registry = ToolRegistry()
+        registry.register(SystemInfoTool())
+        return Agent(model=llm, tool_registry=registry, permission_manager=PermissionManager(),
+                     max_iterations=vueltas)
+
+    def _sin_parar(self, llm, n=3):
+        for i in range(n):
+            llm.queue_tool_call("system_info", {"vuelta": i})     # distintas: no es un bucle
+
+    def test_contesta_con_lo_que_encontro(self):
+        llm = MockLLMProvider()
+        self._sin_parar(llm)
+        llm.queue_text("Con lo que encontré: tu equipo tiene 16 GB. No llegué a mirar el disco.")
+        respuesta = self._agente(llm).process("Dime todo de mi equipo")
+
+        assert respuesta.startswith("Con lo que encontré")
+        assert llm.call_count == 4, "tres vueltas y una última"
+        assert llm.herramientas[-1] == [], "la última, sin herramientas"
+        assert "límite" not in respuesta.lower()
+
+    def test_la_nota_no_se_guarda_en_el_historial(self):
+        from src.agent.core import SIN_MAS_PASOS
+
+        llm = MockLLMProvider()
+        self._sin_parar(llm)
+        llm.queue_text("Esto es lo que hay.")
+        agente = self._agente(llm)
+        agente.process("Dime todo de mi equipo")
+
+        assert SIN_MAS_PASOS in [m.content for m in llm._calls[-1]], "el modelo sí la ve"
+        assert all(m.content != SIN_MAS_PASOS for m in agente.messages), "el historial no"
+
+    def test_si_la_ultima_tampoco_contesta_el_aviso_de_siempre(self):
+        llm = MockLLMProvider()
+        self._sin_parar(llm, 4)              # la última llamada también pide una herramienta
+        assert "límite máximo" in self._agente(llm).process("Bucle").lower()
+
+    def test_si_la_ultima_falla_el_aviso_de_siempre(self):
+        llm = MockLLMProvider()
+        self._sin_parar(llm)
+        agente = self._agente(llm)
+        original = llm.generate
+
+        def generate(messages, tools=None, system_prompt=None):
+            if tools is None and llm.call_count >= 3:
+                raise RuntimeError("Request timed out.")
+            return original(messages, tools=tools, system_prompt=system_prompt)
+
+        llm.generate = generate
+        assert "límite máximo" in agente.process("Bucle").lower()
+
+    def test_sin_tiempo_no_se_intenta(self, monkeypatch):
+        import src.agent.core as core
+
+        monkeypatch.setattr(core, "MARGEN_ULTIMA_RESPUESTA", 10**9)
+        llm = MockLLMProvider()
+        self._sin_parar(llm)
+        llm.queue_text("no debería salir")
+        assert "límite máximo" in self._agente(llm).process("Bucle").lower()
+        assert llm.call_count == 3

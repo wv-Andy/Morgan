@@ -6,7 +6,7 @@ validación de argumentos, permisos contextuales, detección de bucles y eventos
 """
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import logging
 import re
 import sys
@@ -136,6 +136,38 @@ NO_CONFIRMADO = ("La persona no lo permitió en su PC (o no contestó a tiempo):
                  "intentes de otra forma ni vuelvas a proponerlo; díselo, y si quiere, que lo pida otra vez.")
 SIN_MAS_INTENTOS = ("No se ejecutó: ya probaste otro camino y tampoco salió. Dile a la persona qué "
                     "intentaste y qué falló; si quiere, lo intentará de otra forma en su próximo mensaje.")
+#: La nota de la última llamada de un turno sin vueltas (4.20). No se guarda.
+SIN_MAS_PASOS = ("[Nota de Morgan, no de la persona: ya no puedes usar más herramientas en este turno. "
+                 "Contesta ahora a la persona con lo que has encontrado. Si te falta algo para responder "
+                 "del todo, dilo con claridad (qué te falta) y no inventes lo que no encontraste.]")
+#: Lo que tiene que quedar de turno para intentar esa última respuesta (segundos).
+MARGEN_ULTIMA_RESPUESTA = 15.0
+
+#: Lo que ocupa como mucho, en caracteres, el resultado de una herramienta en lo que se manda
+#: al modelo (4.20): el de la última tanda de llamadas, y los anteriores del turno, que el
+#: modelo ya leyó. Medido con el modelo real: la base fija de una petición (instrucciones y
+#: herramientas) son ~4.900 tokens y Groq admite 8.000 por minuto; una página leída (hasta
+#: 12.000 caracteres, ~3.400 tokens) y un par de búsquedas pedían 8.299 y 10.941, Groq las
+#: rechazaba (413) y el turno caía en el respaldo, que contestaba peor.
+RESULTADO_RECIENTE = 6000
+RESULTADO_ANTERIOR = 1500
+
+
+def recortar_resultados(messages: list[ChatMessage]) -> list[ChatMessage]:
+    """Lo que se manda al modelo, con los resultados de las herramientas acotados. **No
+    cambia el historial**: devuelve copias de los mensajes recortados."""
+    ultima = max((i for i, m in enumerate(messages) if m.tool_calls), default=-1)
+    salida = []
+    for i, m in enumerate(messages):
+        if m.role == "tool" and m.tool_result is not None:
+            limite = RESULTADO_RECIENTE if i > ultima else RESULTADO_ANTERIOR
+            texto = json.dumps(m.tool_result, ensure_ascii=False, default=str)
+            if len(texto) > limite:
+                m = replace(m, tool_result={
+                    "recortado": f"(Morgan lo acortó a {limite} de {len(texto)} caracteres)",
+                    "contenido": texto[:limite]})
+        salida.append(m)
+    return salida
 
 
 def texto_con_adjuntos(mensaje: str, adjuntos: list[dict] | None) -> str:
@@ -820,7 +852,7 @@ class Agent:
             try:
                 # 2. Consultar al LLM Provider
                 response: LLMResponse = self.model.generate(
-                    messages=messages,
+                    messages=recortar_resultados(messages),
                     tools=tool_schemas if tool_schemas else None,
                     system_prompt=prompt_del_turno,
                 )
@@ -965,6 +997,17 @@ class Agent:
                 self.event_handler.on_turn_complete(iteration)
                 return texto
 
+        # Sin vueltas y sin respuesta (4.20): una última llamada, SIN herramientas, para que
+        # conteste con lo que ya encontró. Antes se tiraba todo y la persona leía «He
+        # alcanzado el límite…»: medido en producción el 30-09, 3 de 30 preguntas, casi
+        # todas búsquedas de varias partes. Solo si queda tiempo; si no, el aviso de siempre.
+        respuesta_final = self._contestar_con_lo_que_hay(messages, prompt_del_turno, deadline)
+        if respuesta_final:
+            anotar("pasos_agotados", "si")
+            messages.append(ChatMessage(role="model", content=respuesta_final))
+            self.event_handler.on_turn_complete(iteration)
+            return respuesta_final
+
         # Si se excedieron las iteraciones máximas sin respuesta final
         limit_notice = (
             "He alcanzado el límite máximo de pasos permitidos para esta solicitud. "
@@ -974,6 +1017,20 @@ class Agent:
         messages.append(ChatMessage(role="model", content=limit_notice))
         self.event_handler.on_turn_complete(iteration)
         return limit_notice
+
+    def _contestar_con_lo_que_hay(self, messages, prompt_del_turno, deadline) -> str:
+        """La última llamada de un turno sin vueltas (4.20): sin herramientas, con una nota
+        que no se guarda. Devuelve el texto, o "" si no queda tiempo o no contesta."""
+        if deadline - time.monotonic() < MARGEN_ULTIMA_RESPUESTA:
+            return ""
+        nota = ChatMessage(role="user", content=SIN_MAS_PASOS, guardar="")
+        try:
+            respuesta = self.model.generate(messages=[*recortar_resultados(messages), nota], tools=None,
+                                            system_prompt=prompt_del_turno)
+        except Exception as exc:
+            logger.warning("La última respuesta sin herramientas falló: %s", exc)
+            return ""
+        return (respuesta.content or "").strip() if not respuesta.tool_calls else ""
 
     @staticmethod
     def _imposible(tool, argumentos: dict) -> str | None:

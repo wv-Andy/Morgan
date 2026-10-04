@@ -262,7 +262,8 @@ docs/historia.md.
 - [x] V4.6 — Archivos (copiar, comprimir, metadatos, buscar por extensión, fecha, tamaño y contenido) y el permiso automático en Ajustes
 - [x] V4.5 — Lo que salió en mis pruebas: la búsqueda en producción, un turno a la vez por conversación, el PC que reconecta
 - [x] V4.19 — La base: integración continua (20 de 20 en verde), dependencias fijadas y auditadas, cobertura con suelo, y el código público en [wv-Andy/Morgan](https://github.com/wv-Andy/Morgan)
-- [ ] V4.20-4.24 — El resto del endurecimiento hasta producción, con un gate medible (plan)
+- [x] V4.20 — Aguante en producción y exacto al buscar: peticiones acotadas, un proveedor caído no cuesta su plazo, copia de seguridad restaurada de verdad, los errores llegan a la bandeja
+- [ ] V4.21-4.24 — El resto del endurecimiento hasta producción, con un gate medible (plan)
 - [ ] V5.x — Morgan para Windows: instalador, bandeja, ventana propia, firma y Store (plan)
 
 Detalle de cada una en docs/roadmap-maestro.md.

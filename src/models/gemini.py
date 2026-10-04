@@ -229,6 +229,17 @@ class GeminiProvider(LLMProvider):
         # Un functionResponse sin su functionCall delante tambien es invalido, asi
         # que los resultados siguen la misma suerte que su llamada.
         llamadas_con_firma = False
+        #: Las llamadas sin firma, por id, para contarlas junto a su resultado (4.20).
+        sin_firma: dict[str, str] = {}
+
+        def a_la_persona(texto: str) -> None:
+            """Una nota en el turno de la persona; pegada al anterior si ya era suyo, para que
+            los turnos sigan alternando."""
+            parte = types.Part.from_text(text=texto)
+            if contents and contents[-1].role == "user":
+                contents[-1].parts.append(parte)
+            else:
+                contents.append(types.Content(role="user", parts=[parte]))
 
         for msg in messages:
             if msg.role == "tool":
@@ -243,24 +254,21 @@ class GeminiProvider(LLMProvider):
                         )
                     )
                 else:
-                    contents.append(
-                        types.Content(
-                            role="user",
-                            parts=[types.Part.from_text(text=self._resultado_como_texto(msg))],
-                        )
-                    )
+                    a_la_persona(self._resultado_como_texto(msg, sin_firma.get(msg.tool_call_id or "")))
             elif msg.tool_calls:
                 if getattr(msg, "raw_parts", None):
                     llamadas_con_firma = True
                     contents.append(types.Content(role="model", parts=msg.raw_parts))
                 else:
+                    # 4.20: ya NO como mensaje del modelo («He usado estas herramientas: …»).
+                    # Medido: Gemini, al entrar de respaldo a mitad de un turno de Groq,
+                    # **imitaba** ese formato y contestaba con la lista de llamadas en vez de
+                    # con la respuesta. La llamada va con su resultado, como nota de Morgan.
                     llamadas_con_firma = False
-                    contents.append(
-                        types.Content(
-                            role="model",
-                            parts=[types.Part.from_text(text=self._llamadas_como_texto(msg))],
-                        )
-                    )
+                    for tc in msg.tool_calls:
+                        sin_firma[tc.id or ""] = f"{tc.name}({self._resumen(tc.arguments or {}, 500)})"
+                    if msg.content:
+                        contents.append(types.Content(role="model", parts=[types.Part.from_text(text=msg.content)]))
             else:
                 llamadas_con_firma = False
                 role = "model" if msg.role in ("model", "assistant") else "user"
@@ -292,19 +300,11 @@ class GeminiProvider(LLMProvider):
             texto = str(valor)
         return texto if len(texto) <= limite else texto[:limite] + "… (truncado)"
 
-    def _llamadas_como_texto(self, msg: ChatMessage) -> str:
-        lineas = [
-            f"- {tc.name}({self._resumen(tc.arguments or {}, 500)})"
-            for tc in (msg.tool_calls or [])
-        ]
-        cuerpo = "\n".join(lineas) or "- (ninguna)"
-        prefijo = f"{msg.content}\n" if msg.content else ""
-        return f"{prefijo}He usado estas herramientas:\n{cuerpo}"
-
-    def _resultado_como_texto(self, msg: ChatMessage) -> str:
+    def _resultado_como_texto(self, msg: ChatMessage, llamada: str | None = None) -> str:
+        que = llamada or msg.tool_name or "una herramienta"
         return (
-            f"Resultado de {msg.tool_name or 'la herramienta'}: "
-            f"{self._resumen(msg.tool_result or {})}"
+            f"[Nota de Morgan, no de la persona: en este turno ya se consultó {que}. "
+            f"Lo que devolvió: {self._resumen(msg.tool_result or {})}]"
         )
 
     @classmethod

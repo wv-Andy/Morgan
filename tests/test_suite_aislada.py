@@ -61,7 +61,7 @@ class TestDentroDeUnaPruebaNoHayCredencialesReales:
         assert not s.has_supabase
         assert not s.groq_api_keys
         assert not s.openai_api_key
-        assert not s.gemini_api_key
+        assert not s.gemini_api_key and not s.gemini_api_keys
         assert not s.nvidia_api_key
 
     def test_en_modo_nube_el_contenedor_no_monta_supabase(self, monkeypatch):
@@ -99,6 +99,18 @@ class TestLaListaCubreTodoLoQueLeeElCodigo:
             f"vacía: {sin_cubrir}. Añádelas a SECRETOS_EXTERNOS en tests/conftest.py, "
             "o a NO_EXTERNAS aquí con el motivo."
         )
+
+    def test_las_claves_numeradas_tambien(self):
+        """`_env_keys("X")` lee X, X_2… X_N: nombres que se construyen y el patrón de arriba
+        no ve. Las de Gemini no se vaciaban, y una real salió entera en el fallo de una
+        prueba (4.20)."""
+        from src.config import MAXIMO_CLAVES_POR_PROVEEDOR
+
+        bases = re.findall(r'_env_keys\("([A-Z_]+)"\)', (RAIZ / "src" / "config.py").read_text(encoding="utf-8"))
+        assert bases, "el patrón no encuentra ninguna lectura de varias claves"
+        sin_cubrir = [f"{b}_{n}" for b in bases for n in range(2, MAXIMO_CLAVES_POR_PROVEEDOR + 1)
+                      if f"{b}_{n}" not in SECRETOS_EXTERNOS]
+        assert not sin_cubrir, sin_cubrir
 
     def test_la_comprobacion_encuentra_bastantes_como_para_significar_algo(self):
         leidos: set[str] = set()
