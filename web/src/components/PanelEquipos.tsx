@@ -5,6 +5,9 @@ import { MorganAPIError, morganAPI, type AgenteLocal, type OrdenDeAgente } from 
 import type { EstadoCuenta } from './Cuenta';
 import { ParaCopiar } from './ParaCopiar';
 
+/** Morgan para Windows (5.0): la última versión publicada del programa. */
+export const DESCARGA_WINDOWS = 'https://github.com/wv-Andy/Morgan/releases/latest';
+
 function fecha(marca: number | null): string {
   if (!marca) return 'nunca';
   return new Date(marca * 1000).toLocaleString('es', {
@@ -173,24 +176,44 @@ export function PanelEquipos({ cuenta }: { cuenta: EstadoCuenta }) {
             </p>
             {codigo.instalar ? (
               <>
+                {/* 5.0: el programa de Windows es lo recomendado; la línea, la alternativa. */}
                 <ol className="pasos-equipo">
                   <li>
-                    <strong>Copia esta línea</strong>:
-                    <ParaCopiar texto={codigo.instalar} etiqueta="Copiar la línea de instalación" />
+                    <a href={DESCARGA_WINDOWS} target="_blank" rel="noreferrer">
+                      <strong>Descarga Morgan para Windows</strong>
+                    </a>{' '}
+                    e instálalo (no pide administrador).
+                    <span className="ajustes-nota">
+                      {' '}Aún no está firmado: si Windows dice «Windows protegió tu PC», pulsa{' '}
+                      <strong>Más información</strong> y después <strong>Ejecutar de todas formas</strong>.
+                    </span>
                   </li>
                   <li>
-                    En tu PC, pulsa <kbd>Inicio</kbd>, escribe <strong>PowerShell</strong> y ábrelo.
-                    Pega con <strong>clic derecho</strong> y pulsa <kbd>Intro</kbd>.
+                    Ábrelo, escribe este código y pulsa <strong>Conectar</strong>. Te enseñará de qué
+                    cuenta es: si es la tuya, confirma.
                   </li>
                   <li>
-                    Di que sí cuando te enseñe tu cuenta. Si no tienes Python, te pregunta si lo
-                    instala (sin administrador).
-                  </li>
-                  <li>
-                    Al acabar se abre <strong>«Morgan en tu PC»</strong>: elige allí qué carpetas
-                    ve Morgan y qué puede hacer. Esta página te avisará cuando se conecte.
+                    Después elige en <strong>«Qué puede hacer y qué carpetas ve»</strong> lo que
+                    Morgan puede usar de tu PC. Esta página te avisará cuando se conecte.
                   </li>
                 </ol>
+                <details>
+                  <summary>Sin el programa: con una línea de PowerShell</summary>
+                  <ol className="pasos-equipo">
+                    <li>
+                      <strong>Copia esta línea</strong>:
+                      <ParaCopiar texto={codigo.instalar} etiqueta="Copiar la línea de instalación" />
+                    </li>
+                    <li>
+                      En tu PC, pulsa <kbd>Inicio</kbd>, escribe <strong>PowerShell</strong> y ábrelo.
+                      Pega con <strong>clic derecho</strong> y pulsa <kbd>Intro</kbd>.
+                    </li>
+                    <li>
+                      Di que sí cuando te enseñe tu cuenta. Si no tienes Python, te pregunta si lo
+                      instala (sin administrador).
+                    </li>
+                  </ol>
+                </details>
                 <details>
                   <summary>¿Ya tenías el agente instalado?</summary>
                   <ParaCopiar

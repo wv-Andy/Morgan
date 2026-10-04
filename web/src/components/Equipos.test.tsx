@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MorganAPIError, morganAPI, type AgenteLocal } from '../lib/api';
 import type { EstadoCuenta } from './Cuenta';
-import { PanelEquipos } from './PanelEquipos';
+import { DESCARGA_WINDOWS, PanelEquipos } from './PanelEquipos';
 
 const CON_CUENTA: EstadoCuenta = {
   cargando: false,
@@ -64,6 +64,25 @@ describe('Tu equipo', () => {
     expect(screen.getByLabelText('Código de emparejamiento').textContent).toBe('K7QF-2M9D');
     expect(screen.getByText(/10:00|9:5\d/)).toBeTruthy();
     expect(screen.getByText(/si la cuenta que ves no es la tuya, di que no/)).toBeTruthy();
+  });
+
+  it('el programa de Windows primero, y la línea de PowerShell como alternativa (5.0)', async () => {
+    vi.spyOn(morganAPI, 'agentes').mockResolvedValue({ success: true, agentes: [] });
+    vi.spyOn(morganAPI, 'codigoAgente').mockResolvedValue({
+      success: true, codigo: 'K7QF-2M9D', caduca_en: Date.now() / 1000 + 600,
+      instalar: 'irm https://nube/agente/instalar.ps1 -OutFile x; powershell -File x -Codigo K7QF-2M9D',
+    });
+
+    render(<PanelEquipos cuenta={CON_CUENTA} />);
+    await act(async () => { fireEvent.click(await screen.findByText('Emparejar un equipo')); });
+
+    const descarga = screen.getByRole('link', { name: /Descarga Morgan para Windows/ });
+    expect(descarga.getAttribute('href')).toBe(DESCARGA_WINDOWS);
+    expect(DESCARGA_WINDOWS).toBe('https://github.com/wv-Andy/Morgan/releases/latest');
+    expect(screen.getByText(/Ejecutar de todas formas/)).toBeTruthy();
+    // La línea sigue, pero dentro de «Sin el programa».
+    const alternativa = screen.getByText('Sin el programa: con una línea de PowerShell').closest('details');
+    expect(alternativa?.textContent).toContain('Copia esta línea');
   });
 
   it('un código caducado no se enseña como si valiera', async () => {
