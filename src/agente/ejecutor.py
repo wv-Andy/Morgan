@@ -194,6 +194,15 @@ class Ejecutor:
         # Ya pasó el punto sin vuelta: termina, y se dice (decisión mía).
         return {"tipo": "estado", "command_id": command_id, "estado": RUNNING, "sin_vuelta": True}
 
+    def cancelar_todas(self, motivo: str) -> int:
+        """Pide parar todas las que estén en cola o en marcha (al parar o pausar el agente,
+        5.1). Devuelve a cuántas se les pidió. Se llama desde el hilo que vigila la parada."""
+        pedidas = 0
+        for command_id in list(self._controles):
+            if self.cancelar(command_id, motivo).get("estado") == CANCEL_REQUESTED:
+                pedidas += 1
+        return pedidas
+
     def consultar(self, command_id: str) -> dict:
         """Qué pasó con una orden: lo que la nube pregunta tras un corte (3.4)."""
         entrada = self.diario.de(command_id)

@@ -12,7 +12,30 @@ verdad (2026-10-03). Por eso se toma huella de lo real antes y después: si camb
 param([Parameter(Mandatory = $true)][string]$Instalador)
 
 $ErrorActionPreference = "Stop"
+$RUN = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+function Instalado {
+    # En una máquina limpia ni siquiera existe la clave Uninstall.
+    [bool](Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall -ErrorAction SilentlyContinue |
+        Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -eq "Morgan para Windows" })
+}
+# Con el programa instalado de verdad, uno de prueba comparte su entrada de «Aplicaciones
+# instaladas», sus accesos y su clave Run: desinstalar el de prueba se llevaría los de verdad.
+# Por eso esta prueba corre en GitHub Actions (una máquina limpia), no en un PC con Morgan.
+if ((Instalado) -and $env:GITHUB_ACTIONS -ne "true") {
+    throw "Morgan para Windows está instalado en este PC: la prueba se llevaría el de verdad. Córrela en GitHub Actions."
+}
 $raiz = Join-Path $env:USERPROFILE "morgan-prueba-instalador"
+# La ventana de Morgan de un proceso, por accesibilidad: el título de la «ventana principal»
+# no vale (5.1): el proceso tiene también la ventana oculta de la instancia única, y
+# `CloseMainWindow` la cerraba a ella y rompía la instancia única.
+Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+function VentanaDeMorgan([int]$id) {
+    $A = [System.Windows.Automation.AutomationElement]
+    $condicion = New-Object System.Windows.Automation.AndCondition(
+        (New-Object System.Windows.Automation.PropertyCondition($A::ProcessIdProperty, $id)),
+        (New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, "Morgan")))
+    $A::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Children, $condicion)
+}
 $instalado = Join-Path $raiz "programa"
 Remove-Item -Recurse -Force $raiz -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $raiz | Out-Null
@@ -45,26 +68,52 @@ try {
     $clave = Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall |
         Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -eq "Morgan para Windows" }
     $resultado.en_aplicaciones_instaladas = [bool]$clave
+    # 5.1: arranca solo, en la bandeja, al iniciar sesión.
+    $resultado.arranca_en_la_bandeja = "$((Get-ItemProperty $RUN -ErrorAction SilentlyContinue).'Morgan para Windows')" -like "*Morgan.exe*--bandeja"
 
     $estado = & "$instalado\agente\morgan-agente\morgan-agente.exe" estado 2>&1 | Select-Object -First 1
     $resultado.agente = "$estado"
 
     $app = Start-Process "$instalado\Morgan.exe" -PassThru
     Start-Sleep 6
-    $resultado.ventana = (Get-Process -Id $app.Id).MainWindowTitle
-    Stop-Process -Id $app.Id -Force
+    $ventana = VentanaDeMorgan $app.Id
+    $resultado.ventana = [bool]$ventana
+    # 5.1: cerrar la ventana la esconde (sigue en la bandeja), y abrirlo otra vez no lanza otro:
+    # vuelve a enseñar la que había.
+    if ($ventana) {
+        $ventana.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
+    }
+    Start-Sleep 3
+    $resultado.cerrar_la_ventana_la_esconde = (-not $app.HasExited) -and -not (VentanaDeMorgan $app.Id)
+    $otra = Start-Process "$instalado\Morgan.exe" -PassThru
+    Start-Sleep 4
+    $resultado.una_sola_instancia = $otra.HasExited -and @(Get-Process Morgan -ErrorAction SilentlyContinue |
+        Where-Object { $_.Path -like "$instalado*" }).Count -eq 1
+    $resultado.abrirlo_otra_vez_la_enseña = [bool](VentanaDeMorgan $app.Id)
 
     New-Item -ItemType Directory -Force (Join-Path $env:MORGAN_AGENTE_DIR "respaldos") | Out-Null
     "respaldo" | Set-Content (Join-Path $env:MORGAN_AGENTE_DIR "respaldos\r.txt")
     $p = Start-Process (Join-Path $instalado "uninstall.exe") -ArgumentList @("/" + "S") -PassThru -Wait
     Start-Sleep 5
     $resultado.desinstalado = ($p.ExitCode -eq 0) -and -not (Test-Path "$instalado\Morgan.exe")
+    # Con el programa abierto en la bandeja: el desinstalador lo cierra.
+    $resultado.sin_el_programa_abierto = -not @(Get-Process Morgan -ErrorAction SilentlyContinue |
+        Where-Object { $_.Path -like "$instalado*" }).Count
+    $resultado.fuera_del_inicio = -not "$((Get-ItemProperty $RUN -ErrorAction SilentlyContinue).'Morgan para Windows')"
     $resultado.fuera_de_aplicaciones = -not [bool](Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall |
         Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -eq "Morgan para Windows" })
     $resultado.quedan_los_respaldos = Test-Path (Join-Path $env:MORGAN_AGENTE_DIR "respaldos\r.txt")
     $resultado.el_agente_de_la_linea_sigue = Test-Path (Join-Path $env:MORGAN_AGENTE_DIR "politica.json")
 }
 finally {
+    # La ruta de instalación que recuerda el registro: si es la de la prueba, fuera. Si no, el
+    # próximo instalador la propone: el 2026-10-04 mi programa de verdad acabó instalado dentro
+    # de la carpeta de esta prueba (que la prueba borra al empezar).
+    $claveDelPrograma = "HKCU:\Software\Morgan\Morgan para Windows"
+    if ("$((Get-ItemProperty $claveDelPrograma -ErrorAction SilentlyContinue).'(default)')" -like "$raiz*") {
+        Remove-Item $claveDelPrograma -Recurse -Force
+    }
+    Get-Process Morgan -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$instalado*" } | Stop-Process -Force
     Remove-Item Env:MORGAN_AGENTE_DIR, Env:MORGAN_CARPETA_INICIO, Env:MORGAN_CARPETA_MENU -ErrorAction SilentlyContinue
     $despues = Huella
     $resultado.lo_real_intacto = -not (Compare-Object @($antes) @($despues))
@@ -72,3 +121,5 @@ finally {
 }
 $resultado.GetEnumerator() | ForEach-Object { "{0,-28} {1}" -f $_.Key, $_.Value }
 if (-not $resultado.lo_real_intacto) { Write-Error "CAMBIÓ ALGO REAL DEL AGENTE: revisar ya." }
+$fallos = @($resultado.GetEnumerator() | Where-Object { $_.Value -is [bool] -and -not $_.Value } | ForEach-Object Key)
+if ($fallos) { Write-Error "Falla: $($fallos -join ', ')" }

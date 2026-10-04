@@ -185,7 +185,12 @@ def esperar_a_que_pare(hasta: float | None = None) -> bool:
     return True
 
 
-def vigilar_parada(parar, cada: float = 2.0, hasta=None) -> None:
+#: Cada cuánto mira el agente si le piden parar. Era 2 s; la pausa de la bandeja (5.1) tiene
+#: que cortar en menos de 2 s, y mirar si existe un fichero cada 0,25 s no cuesta nada.
+MIRAR_PARADA = 0.25
+
+
+def vigilar_parada(parar, cada: float = MIRAR_PARADA, hasta=None) -> None:
     """Hilo: si aparece la señal, la borra y para el agente. `hasta` corta la vigilancia."""
     while hasta is None or not hasta():
         if senal_de_parada().exists():

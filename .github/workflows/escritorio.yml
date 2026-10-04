@@ -29,6 +29,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # 5.1: el estado de la bandeja (Rust sin dependencias), probado y mutado en segundos.
+      - name: El estado de la bandeja, con sus mutaciones
+        shell: pwsh
+        run: escritorio/mutaciones.ps1
+
       - uses: actions/setup-python@v7
         with:
           python-version-file: .python-version
@@ -47,6 +52,10 @@ jobs:
           & $exe actualizar
           if ($LASTEXITCODE -ne 2) { throw "el congelado no debe actualizarse solo" }
           exit 0   # el 2 de arriba es lo esperado; sin esto, el paso acabaría con él
+      # 5.1: pausar corta el agente en menos de 2 s (el congelado de verdad), y la pausa aguanta.
+      - name: La pausa, medida
+        shell: pwsh
+        run: empaquetado/probar_pausa.ps1 -Agente escritorio/src-tauri/agente/morgan-agente
 
       - uses: actions/setup-node@v7
         with:
@@ -57,6 +66,27 @@ jobs:
           npm install --no-audit --no-fund
           npx tauri icon ../web/public/logo-512.png
           npx tauri build
+
+      # Instalar, abrir, cerrar a la bandeja, una sola instancia y desinstalar, en una máquina
+      # limpia: en un PC con el programa de verdad, la prueba se llevaría el suyo (5.1).
+      - name: El instalador, probado
+        shell: powershell
+        run: |
+          $instalador = Get-ChildItem escritorio/src-tauri/target/release/bundle/nsis/*.exe | Select-Object -First 1
+          powershell -ExecutionPolicy Bypass -File empaquetado/probar_instalador.ps1 -Instalador $instalador.FullName
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      # Actualizar encima de la 5.0.1 con ventana, por «Desinstalar antes de instalar» (lo que
+      # sale marcado): el agente emparejado por el programa tiene que seguir emparejado (5.1).
+      - name: Actualizar sin desemparejar
+        shell: powershell
+        run: |
+          $instalador = Get-ChildItem escritorio/src-tauri/target/release/bundle/nsis/*.exe | Select-Object -First 1
+          powershell -ExecutionPolicy Bypass -File empaquetado/probar_actualizar.ps1 -Instalador $instalador.FullName
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          # Y cambiando de carpeta al actualizar (sacar el programa de donde no debía estar).
+          powershell -ExecutionPolicy Bypass -File empaquetado/probar_actualizar.ps1 -Instalador $instalador.FullName -Mover
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - uses: actions/upload-artifact@v7
         with:

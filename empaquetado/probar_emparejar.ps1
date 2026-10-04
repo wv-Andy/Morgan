@@ -14,6 +14,13 @@ param([Parameter(Mandatory = $true)][string]$Instalador,
 
 $ErrorActionPreference = "Stop"
 if ($Nube -match "morgan-ia-2-0") { throw "Contra producción no: esta prueba crea una cuenta." }
+# Con el programa instalado de verdad, uno de prueba comparte su entrada de «Aplicaciones
+# instaladas», sus accesos y su clave Run (5.1): desinstalar el de prueba se llevaría los de verdad.
+$instaladoDeVerdad = [bool](Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall -ErrorAction SilentlyContinue |
+    Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -eq "Morgan para Windows" })
+if ($instaladoDeVerdad -and $env:GITHUB_ACTIONS -ne "true") {
+    throw "Morgan para Windows está instalado en este PC: la prueba se llevaría el de verdad."
+}
 
 $raiz = Join-Path $env:USERPROFILE "morgan-prueba-emparejar"
 $instalado = Join-Path $raiz "programa"
@@ -80,6 +87,13 @@ try {
     $r.sin_procesos = -not [bool](Get-Process | Where-Object { $_.Path -like "$instalado*" })
 }
 finally {
+    # La ruta de instalación que recuerda el registro: si es la de la prueba, fuera. Si no, el
+    # próximo instalador la propone: el 2026-10-04 mi programa de verdad acabó instalado dentro
+    # de la carpeta de esta prueba (que la prueba borra al empezar).
+    $claveDelPrograma = "HKCU:\Software\Morgan\Morgan para Windows"
+    if ("$((Get-ItemProperty $claveDelPrograma -ErrorAction SilentlyContinue).'(default)')" -like "$raiz*") {
+        Remove-Item $claveDelPrograma -Recurse -Force
+    }
     # Si algo falló a mitad, se desinstala igual: si no, quedaban el acceso del programa y su
     # entrada en «Aplicaciones instaladas» (pasó en la primera ejecución).
     $desinstalador = Join-Path $instalado "uninstall.exe"

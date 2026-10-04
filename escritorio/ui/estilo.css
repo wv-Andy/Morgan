@@ -79,3 +79,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--acento); ou
 }
 @keyframes girar { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .espiral { animation: none; } }
+#lista { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow-y: auto; }
+#lista li { padding: 8px 0; border-bottom: 1px solid var(--borde); font-size: 13px; }
+#lista li:last-child { border-bottom: 0; }
+#lista .cuando { color: var(--texto-suave); margin-right: 6px; }
+#lista .detalle { display: block; color: var(--texto-suave); overflow-wrap: anywhere; }
+#lista .estado { float: right; color: var(--texto-suave); }

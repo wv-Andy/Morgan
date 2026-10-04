@@ -96,6 +96,10 @@ def url_del_canal(nube: str) -> str:
     return nube.rstrip("/").replace("https://", "wss://", 1).replace("http://", "ws://", 1) + "/agente/canal"
 
 
+#: Lo que se le deja a una conexión para cerrar por las buenas cuando piden parar (5.1).
+GRACIA_AL_PARAR = 0.5
+
+
 class Canal:
     """El canal de un agente emparejado. `correr()` no vuelve hasta que se le para."""
 
@@ -193,7 +197,7 @@ class Canal:
         espera = self.espera_minima
         while not self._parar.is_set():
             self._estuvo_listo, self._motivo = False, ""
-            codigo = await self._una_conexion()
+            codigo = await self._salvo_que_paren(self._una_conexion())
             if self._estuvo_listo:
                 # Un corte tras una conexión buena empieza de cero. Medido en mi PC
                 # (3.0.5): la espera seguía creciendo entre cortes separados por
@@ -221,6 +225,31 @@ class Canal:
                 pass
         self._pasar_a(EstadoAgente.DISCONNECTED, "parado")
         return self.estado
+
+    async def _salvo_que_paren(self, conexion) -> int | None:
+        """Una conexión, salvo que pidan parar: entonces se le da un instante para cerrar por
+        las buenas (conectado, `parar` ya cierra el websocket) y, si no, se cancela.
+
+        Medido en la 5.1: un intento de conexión espera hasta 30 s a que la nube conteste (y
+        otros 30 al saludo) sin mirar si le piden parar. En Windows, conectar a una dirección
+        que rechaza ya tarda 2 s; sin red, mucho más. La pausa de la bandeja, que tiene que
+        cortar en menos de 2 s, se quedaba esperando a que acabase el intento."""
+        tarea = asyncio.ensure_future(conexion)
+        parada = asyncio.ensure_future(self._parar.wait())
+        try:
+            await asyncio.wait({tarea, parada}, return_when=asyncio.FIRST_COMPLETED)
+            if not tarea.done():
+                await asyncio.wait({tarea}, timeout=GRACIA_AL_PARAR)
+        finally:
+            parada.cancel()
+        if not tarea.done():
+            tarea.cancel()
+            try:
+                await tarea
+            except (asyncio.CancelledError, Exception):
+                pass
+            return None
+        return tarea.result()
 
     async def _rotar(self, ws) -> None:
         """La credencial tiene más de 90 días (3.8): pedir una nueva, guardarla y

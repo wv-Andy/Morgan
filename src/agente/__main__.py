@@ -103,6 +103,11 @@ def main(argv: list[str] | None = None) -> int:
     a = ordenes.add_parser("arranque", help="que el agente se abra solo al iniciar sesión en Windows")
     a.add_argument("accion", nargs="?", choices=["activar", "desactivar", "estado"], default="estado")
     ordenes.add_parser("parar", help="parar el agente que está en marcha (también el automático)")
+    ordenes.add_parser("pausar", help="parar el agente y que no se levante hasta reanudar (la bandeja, 5.1)")
+    ordenes.add_parser("reanudar", help="quitar la pausa y volver a lanzar el agente")
+    ult = ordenes.add_parser("ultimas", help="lo último que pidió la nube en este PC (JSON, para la bandeja)")
+    ult.add_argument("--cuantas", type=int, default=15)
+    ordenes.add_parser("novedades", help="si hay versión nueva del programa (JSON, para la bandeja)")
     ordenes.add_parser("vigilar", help="lanzar el agente y levantarlo si se cae (lo usa el arranque automático)")
     ordenes.add_parser("cruzar", help="comparar lo que la nube apuntó de este PC con su diario")
     act = ordenes.add_parser("actualizar", help="instalar la última versión del agente, si está firmada por el autor de Morgan")
@@ -134,9 +139,11 @@ def main(argv: list[str] | None = None) -> int:
             preguntar = (lambda _texto: "s") if args.si else input
             hecho = emparejar(args.nube, codigo, args.nombre, preguntar=preguntar)
             if hecho:
-                from src.agente import instalacion
+                from src.agente import bandeja, instalacion
 
                 instalacion.marcar_del_programa()
+                # Quien empareja quiere el agente en marcha: una pausa de antes no sigue (5.1).
+                bandeja.quitar_pausa()
             return 0 if hecho else 1
         if args.orden == "desemparejar":
             desemparejar()
@@ -163,6 +170,8 @@ def main(argv: list[str] | None = None) -> int:
             return _arranque(args.accion)
         if args.orden == "parar":
             return _parar()
+        if args.orden in ("pausar", "reanudar", "ultimas", "novedades"):
+            return _bandeja(args)
         if args.orden == "vigilar":
             return _vigilar()
         if args.orden == "cruzar":
@@ -415,7 +424,11 @@ def _arranque(accion: str) -> int:
             print("Este PC no está emparejado. Primero: python -m src.agente emparejar")
             return 2
         print(f"Activado: {arranque.activar()}")
-        if not arranque.en_marcha():
+        from src.agente import bandeja
+
+        if bandeja.en_pausa():
+            print("En pausa: no se lanza hasta que lo reanudes (python -m src.agente reanudar).")
+        elif not arranque.en_marcha():
             arranque.lanzar_en_segundo_plano()
             # Tarda un instante en coger el candado: sin esperar, diría «en marcha: no».
             import time
@@ -429,6 +442,25 @@ def _arranque(accion: str) -> int:
         if arranque.en_marcha():
             print("El agente sigue en marcha hasta que lo pares: python -m src.agente parar")
     _contar_marcha()
+    return 0
+
+
+def _bandeja(args) -> int:
+    """Lo que pide la bandeja de Morgan para Windows (5.1): ver `bandeja.py`."""
+    from src.agente import bandeja
+
+    if args.orden == "pausar":
+        print(bandeja.pausar())
+        return 0 if bandeja.en_pausa() else 1
+    if args.orden == "reanudar":
+        print(bandeja.reanudar())
+        return 0
+    if args.orden == "ultimas":
+        bandeja.imprimir(bandeja.ultimas(max(1, min(args.cuantas, 50))))
+        return 0
+    from src import __version__
+
+    bandeja.imprimir(bandeja.novedades(__version__))
     return 0
 
 
@@ -536,6 +568,13 @@ def _conectar() -> int:
     if datos is None or credencial is None:
         print("Este PC no está emparejado. Primero: python -m src.agente emparejar")
         return 2
+    from src.agente import bandeja
+
+    if bandeja.en_pausa():
+        # En pausa desde la bandeja (5.1): no se conecta hasta que se reanude. Con 0, el
+        # vigilante no lo levanta.
+        print("En pausa: no se conecta hasta que lo reanudes.")
+        return 0
     try:
         candado = arranque.Candado().tomar()
     except arranque.YaEnMarcha:
@@ -560,12 +599,19 @@ def _conectar() -> int:
 
     from src.agente.emparejar import rotar_credencial
 
-    canal = Canal(datos.nube, credencial, Ejecutor(datos.agent_id), al_cambiar=al_cambiar,
+    ejecutor = Ejecutor(datos.agent_id)
+    canal = Canal(datos.nube, credencial, ejecutor, al_cambiar=al_cambiar,
                   revisar_capacidades=lambda: (Politica.firma(), capacidades.disponibles()),
                   rotar_credencial=rotar_credencial)
     print(f"Conectando «{datos.nombre}» con {datos.nube} (Ctrl+C para parar)…")
     terminado = threading.Event()
-    threading.Thread(target=arranque.vigilar_parada, args=(canal.parar,),
+    def parar() -> None:
+        # Lo que esté en marcha se cancela en su siguiente punto seguro, con su motivo: la
+        # pausa de la bandeja (5.1) tiene que cortarlo en menos de 2 s.
+        ejecutor.cancelar_todas("pausa" if bandeja.en_pausa() else "parada")
+        canal.parar()
+
+    threading.Thread(target=arranque.vigilar_parada, args=(parar,),
                      kwargs={"hasta": terminado.is_set}, daemon=True).start()
     # Si hay versión nueva firmada, se pregunta con una notificación (3.8).
     threading.Thread(target=instalacion.mirar_novedades, args=(terminado.is_set,), daemon=True).start()

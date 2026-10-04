@@ -135,6 +135,13 @@ def vigilar(lanzar: Callable[[], subprocess.Popen] = lanzar_agente,
     codigo = relevo()
     if codigo is not None:
         return codigo
+    from src.agente import bandeja
+
+    if bandeja.en_pausa():
+        # En pausa desde la bandeja (5.1): tampoco al iniciar sesión.
+        _anotar("en pausa: no se lanza el agente hasta que se reanude")
+        return 0
+    bandeja.apuntar_vigilante()
     caidas: deque = deque()
     estreno = ahora() if por_confirmar() else None
     while True:

@@ -1,11 +1,13 @@
-// La ventana de Morgan para Windows (5.0): emparejar sin consola y abrir los ajustes.
+// La ventana de Morgan para Windows (5.0): emparejar sin consola y abrir los ajustes. Desde la
+// 5.1, también pausar y reanudar y lo último que hizo (lo mismo que ofrece la bandeja).
 // Las órdenes van al agente congelado a través de Tauri (src-tauri/src/main.rs).
 const { invoke } = window.__TAURI__.core;
+const { listen } = window.__TAURI__.event;
 
 const $ = (id) => document.getElementById(id);
 
 function ver(seccion) {
-  for (const id of ["cargando", "sin-emparejar", "confirmar", "emparejado"]) {
+  for (const id of ["cargando", "sin-emparejar", "confirmar", "emparejado", "ultimas"]) {
     $(id).hidden = id !== seccion;
   }
 }
@@ -25,6 +27,7 @@ async function mirar() {
     const { emparejado, texto } = leerEstado(await invoke("estado"));
     if (emparejado) {
       $("detalle").textContent = texto;
+      await pintarEstado();
       ver("emparejado");
     } else {
       ver("sin-emparejar");
@@ -76,6 +79,73 @@ $("no").addEventListener("click", () => {
   $("codigo").value = "";
   ver("sin-emparejar");
   $("codigo").focus();
+});
+
+/** El estado como lo pinta la bandeja (sin lanzar el agente): [clave, texto]. */
+async function pintarEstado() {
+  const [clave, texto] = await invoke("resumen");
+  $("titulo-estado").textContent = texto;
+  $("pausa").textContent = clave === "EnPausa" ? "Reanudar Morgan" : "Pausar Morgan en este PC";
+  $("pausa").dataset.clave = clave;
+}
+
+$("pausa").addEventListener("click", async () => {
+  const boton = $("pausa");
+  const orden = boton.dataset.clave === "EnPausa" ? "reanudar" : "pausar";
+  boton.disabled = true;
+  boton.textContent = orden === "pausar" ? "Pausando…" : "Reanudando…";
+  try {
+    await invoke(orden);
+  } finally {
+    boton.disabled = false;
+    await pintarEstado();
+  }
+});
+
+function hora(segundos) {
+  return new Date(segundos * 1000).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+}
+
+/** Lo último que pidió Morgan a este PC (el diario del agente, 24 h). */
+async function verUltimas() {
+  ver("ultimas");
+  const lista = $("lista");
+  lista.replaceChildren();
+  let ultimas = [];
+  try {
+    ultimas = JSON.parse(await invoke("ultimas"));
+  } catch (error) {
+    ultimas = [];
+  }
+  for (const u of ultimas) {
+    const li = document.createElement("li");
+    const cuando = document.createElement("span");
+    cuando.className = "cuando";
+    cuando.textContent = hora(u.cuando);
+    const estado = document.createElement("span");
+    estado.className = "estado";
+    estado.textContent = u.estado;
+    li.append(estado, cuando, document.createTextNode(u.que));
+    if (u.detalle) {
+      const detalle = document.createElement("span");
+      detalle.className = "detalle";
+      detalle.textContent = u.detalle;
+      li.append(detalle);
+    }
+    lista.append(li);
+  }
+  $("sin-ultimas").hidden = ultimas.length > 0;
+}
+
+$("ver-ultimas").addEventListener("click", verUltimas);
+$("volver").addEventListener("click", () => mirar());
+
+// La bandeja avisa cuando cambia el estado, y pide abrir una sección («Lo último que hizo»).
+listen("estado", () => {
+  if (!$("emparejado").hidden) pintarEstado();
+});
+listen("ir", (evento) => {
+  if (evento.payload === "ultimas") verUltimas();
 });
 
 $("ajustes").addEventListener("click", () => invoke("abrir_ajustes"));

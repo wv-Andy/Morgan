@@ -44,12 +44,25 @@
     </section>
 
     <section id="emparejado" class="tarjeta" hidden>
-      <h2>Este PC está conectado</h2>
+      <h2 id="titulo-estado">Este PC está conectado</h2>
       <p id="detalle"></p>
       <p class="nota">Morgan solo ve las carpetas que permitas, y lo que haga en tu PC te lo pregunta antes.</p>
       <div class="botones">
+        <button id="pausa" class="secundario">Pausar Morgan en este PC</button>
         <button id="ajustes">Qué puede hacer y qué carpetas ve</button>
+        <button id="ver-ultimas" class="secundario">Lo último que hizo en este PC</button>
         <button id="web" class="secundario">Abrir Morgan</button>
+      </div>
+      <p class="nota">Morgan sigue en la bandeja, junto al reloj, aunque cierres esta ventana.</p>
+    </section>
+
+    <section id="ultimas" class="tarjeta" hidden>
+      <h2>Lo último que hizo en este PC</h2>
+      <p class="nota">Lo que le pidió Morgan a este PC en las últimas 24 horas.</p>
+      <ul id="lista"></ul>
+      <p class="nota" id="sin-ultimas" hidden>Nada en las últimas 24 horas.</p>
+      <div class="botones">
+        <button id="volver" class="secundario">Volver</button>
       </div>
     </section>
   </main>
