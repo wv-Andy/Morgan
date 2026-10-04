@@ -82,6 +82,11 @@ async def _ciclo_de_vida(app: FastAPI):
                 logger.warning("No se pudo arrancar el reloj de las automatizaciones", exc_info=True)
 
         threading.Thread(target=arrancar_el_reloj, name="morgan-reloj-arranque", daemon=True).start()
+    # Los errores, a la bandeja del propietario (4.20).
+    if get_settings().avisar_errores:
+        from src import alertas
+
+        alertas.instalar()
     yield
 
 

@@ -74,6 +74,8 @@ def _isolated_environment(_test_workspace, monkeypatch):
     monkeypatch.setenv("MORGAN_CLOUD_ENABLED", "false")
     # El reloj de las automatizaciones (4.14) no se pone a ejecutar nada solo en una prueba.
     monkeypatch.setenv("MORGAN_RELOJ_INTERNO", "false")
+    # Ni los avisos de errores a la bandeja (4.20): las pruebas cuentan los avisos.
+    monkeypatch.setenv("MORGAN_AVISAR_ERRORES", "false")
     monkeypatch.setenv("MORGAN_DATA_DIR", str(_test_workspace / "data"))
     monkeypatch.setenv("MORGAN_LOG_DIR", str(_test_workspace / "logs"))
     # El agente local (3.0) guarda su credencial en %LOCALAPPDATA%/Morgan/agente.

@@ -319,6 +319,9 @@ class Settings:
     #: Además, un reloj dentro del proceso que mira cada minuto. En local es el único; en la
     #: nube cubre lo que toque mientras Render está despierto (dormido, no corre).
     reloj_interno: bool = True
+    #: Que un error del servidor llegue a la bandeja del propietario (4.20), agrupado y
+    #: con tope. Sin esto, un error solo se veía leyendo los registros de Render.
+    avisar_errores: bool = True
 
     # --- Cuentas de usuario (identidad, V2.0 adelantada) ---
     # Si Morgan exige iniciar sesión. El valor por defecto depende del entorno y
@@ -484,6 +487,7 @@ class Settings:
             "api_token": "configurado" if self.api_token else "ausente",
             "reloj_secreto": "configurado" if self.reloj_secreto else "ausente",
             "reloj_interno": self.reloj_interno,
+            "avisar_errores": self.avisar_errores,
             "require_auth": self.require_auth,
             "registro_abierto": self.registro_abierto,
             "tokens_api": self.tokens_api,
@@ -688,6 +692,7 @@ def load_settings() -> Settings:
         api_token=_env_key("MORGAN_API_TOKEN"),
         reloj_secreto=_env_key("MORGAN_RELOJ_SECRETO"),
         reloj_interno=_env_bool("MORGAN_RELOJ_INTERNO", True),
+        avisar_errores=_env_bool("MORGAN_AVISAR_ERRORES", True),
         # El valor por defecto sigue al entorno: la nube es publica y local no.
         require_auth=_env_bool("MORGAN_REQUIRE_AUTH", environment == "cloud"),
         registro_abierto=_env_bool("MORGAN_REGISTRO_ABIERTO", True),
