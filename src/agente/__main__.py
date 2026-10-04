@@ -45,6 +45,7 @@ en la carpeta del agente.
 """
 
 import argparse
+import os
 import socket
 import sys
 from pathlib import Path
@@ -63,7 +64,9 @@ def main(argv: list[str] | None = None) -> int:
     p = ordenes.add_parser("emparejar", help="emparejar este PC con tu cuenta")
     # Directo a Render, no a través de Vercel: el canal del agente dura horas y el
     # proxy de Vercel no está hecho para eso (contrato §7).
-    p.add_argument("--nube", default="https://morgan-ia-2-0.onrender.com")
+    # `MORGAN_NUBE` (5.0): otra nube, para probar el programa contra morgan-carga sin tocar
+    # producción, o para quien tenga su propio Morgan.
+    p.add_argument("--nube", default=os.environ.get("MORGAN_NUBE") or "https://morgan-ia-2-0.onrender.com")
     p.add_argument("--nombre", default=socket.gethostname(), help="cómo se verá en la web")
     p.add_argument("--codigo", help="el código de la web (si no, se pregunta)")
     ordenes.add_parser("conectar", help="conectar con la nube y atender peticiones (Ctrl+C para parar)")

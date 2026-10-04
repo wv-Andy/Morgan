@@ -1,4 +1,4 @@
-<#
+﻿<#
 La prueba del instalador de Morgan para Windows (5.0), en un PC que ya tiene Morgan.
 
 Instala en una carpeta de prueba, abre el programa y lo captura, y desinstala. **Todo lo del
