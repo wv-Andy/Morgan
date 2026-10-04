@@ -6,8 +6,9 @@ Asistente personal de IA que conversa en lenguaje natural y ejecuta acciones con
 sobre tu computador: archivos, terminal, git, web y memoria persistente, todo bajo un
 sistema de permisos por niveles de riesgo y con auditoría completa.
 
-**Estado (5.2)**: **Morgan para Windows**, un programa de doble clic que vive en la bandeja,
-trae la conversación en su propia ventana (Ctrl+Alt+M) y conecta tu PC sin consola
+**Estado (5.3)**: **Morgan para Windows**, un programa de doble clic que vive en la bandeja,
+abre Morgan en una sola ventana (Ctrl+Alt+M), conecta tu PC sin consola y se actualiza, firmado
+y volviendo solo atrás si algo falla
 ([descargar](https://github.com/wv-Andy/Morgan/releases/latest)) · CLI + API REST + web ·
 cuentas con datos separados por persona · espacios de trabajo · automatizaciones · desplegado
 en la nube · **agente local**: Morgan lee las carpetas que permitas en tu PC y, si lo
@@ -267,11 +268,12 @@ docs/historia.md.
 - [x] V4.19 — La base: integración continua (20 de 20 en verde), dependencias fijadas y auditadas, cobertura con suelo, y el código público en [wv-Andy/Morgan](https://github.com/wv-Andy/Morgan)
 - [x] V4.20 — Aguante en producción y exacto al buscar: peticiones acotadas, un proveedor caído no cuesta su plazo, copia de seguridad restaurada de verdad, los errores llegan a la bandeja
 - [x] V4.21 — Varias búsquedas en una sola vuelta: la pregunta de tres partes, de 29,7 s a 4,9 s
-- [ ] V4.22-4.24 — El resto del endurecimiento hasta producción, con un gate medible (plan)
+- [ ] V4.22-4.24 — El resto del endurecimiento hasta producción, **en paralelo con la 5.x** (el gate para empezar la 5.0 se cumplió con la 4.21; plan). Hecho: las cabeceras de seguridad de la web y ningún aviso de Supabase de nivel WARN. También hecho: revisar los límites por cuenta (recuerdos, espacios y documentos). Falta: rotar el secreto del reloj, el recorrido de alguien nuevo con el modelo real, lo básico de accesibilidad y una semana de uso real
 - [x] **V5.0 — Morgan para Windows**: un instalador de doble clic, emparejar sin consola desde una ventana ([descargar](https://github.com/wv-Andy/Morgan/releases/latest))
 - [x] V5.1 — Morgan en la bandeja: el estado, pausar y reanudar al momento, lo último que hizo, y actualizar sin desemparejar
 - [x] V5.2 — La conversación en su propia ventana, Ctrl+Alt+M, y los avisos como notificación de Windows
-- [ ] V5.3-5.5 — Firma, actualizaciones solas, Microsoft Store y Morgan para cualquiera (plan)
+- [x] V5.3 — Una sola ventana con la web (lo del programa en Ajustes → Este PC, y la web solo pide lo inofensivo) y actualizaciones firmadas con vuelta atrás sola
+- [ ] V5.4-5.5 — Firma de Windows, Microsoft Store y Morgan para cualquiera (plan)
 
 Detalle de cada una en docs/roadmap-maestro.md.
 

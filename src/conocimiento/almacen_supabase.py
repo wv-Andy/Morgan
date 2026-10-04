@@ -81,6 +81,10 @@ class AlmacenDeConocimientoSupabase:
 
         ahora = time.time()
         existente = self._id_por_titulo(titulo.strip(), coleccion)
+        from src.conocimiento.almacen import MAX_DOCUMENTOS, _demasiados
+
+        if existente is None and self._cuantos(MAX_DOCUMENTOS) >= MAX_DOCUMENTOS:
+            raise _demasiados()
 
         documento = Documento(
             id=existente or f"doc-{secrets.token_urlsafe(8)}",
@@ -136,6 +140,10 @@ class AlmacenDeConocimientoSupabase:
 
         logger.info("Documento indexado: %s (%s)", documento.titulo, documento.id)
         return documento
+
+    def _cuantos(self, hasta: int) -> int:
+        """Los documentos de quien pide, en todos sus espacios (contados hasta `hasta`)."""
+        return len(self.client.select("conocimiento", f"{_mio()}&select=id&limit={int(hasta)}"))
 
     def _id_por_titulo(self, titulo: str, coleccion: str) -> str | None:
         from src.conocimiento.almacen import normalizar

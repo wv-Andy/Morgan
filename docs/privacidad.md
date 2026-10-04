@@ -38,7 +38,7 @@ process it on my behalf:
 | **Groq**, **Google (Gemini)** and, as a last resort, **OpenAI** | The text of each conversation, so the model can answer | United States |
 | **Serper (Google)** | What Morgan searches the internet for on your behalf | United States |
 | **Brevo** | Your email, only to send you the verification or the password recovery | European Union |
-| **GitHub** | If you use Morgan for Windows: one request a day to its releases page, to tell you about a new version (like any visit, it sees your PC's IP; it carries nothing of yours) | United States |
+| **GitHub** | If you use Morgan for Windows: one request a day for the latest version's `latest.json`, to tell you about a new one; and, when you press «Update now», the download of the new installer and of the current one (to be able to go back). Like any visit, it sees your PC's IP; it carries nothing of yours | United States |
 
 Each model provider handles what it receives under its own terms. **One to watch out for**:
 the free tier of the Gemini API may use what is sent to it to improve Google's products. Morgan

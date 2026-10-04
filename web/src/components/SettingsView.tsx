@@ -4,12 +4,14 @@ import type { UserSettings } from '../lib/api';
 import { type Tema, TEMAS } from '../lib/tema';
 import { PanelCuenta } from './PanelCuenta';
 import { PanelEquipos } from './PanelEquipos';
+import { PanelEstePC } from './PanelEstePC';
 import { PanelPermisos } from './PanelPermisos';
 import { PanelTokens } from './PanelTokens';
 import type { EstadoCuenta } from './Cuenta';
 import { PRIVACIDAD } from './Cuenta';
+import { dentroDelPrograma } from '../lib/programa';
 import {
-  IconAudit, IconClose, IconCore, IconDatabase, IconExternal, IconInfo, IconMemory, IconPlug, IconSearch, IconShield, IconSparkle, IconUser,
+  IconAudit, IconClose, IconCore, IconDatabase, IconExternal, IconInfo, IconMemory, IconPlug, IconRobot, IconSearch, IconShield, IconSparkle, IconUser,
 } from './Icons';
 
 /**
@@ -58,7 +60,7 @@ const PERFIL: Campo[] = [
  */
 const IDIOMAS = ['', 'Español', 'English', 'Português', 'Français', 'Deutsch', 'Italiano'];
 
-export type SeccionAjustes = 'general' | 'personalizacion' | 'memoria' | 'datos' | 'cuenta' | 'equipos' | 'permisos' | 'api' | 'acerca';
+export type SeccionAjustes = 'general' | 'personalizacion' | 'memoria' | 'datos' | 'cuenta' | 'equipos' | 'este-pc' | 'permisos' | 'api' | 'acerca';
 
 const SECCIONES: { id: SeccionAjustes; titulo: string; icono: React.ReactNode; claves: string }[] = [
   { id: 'general', titulo: 'General', icono: <IconCore size={17} />, claves: 'apariencia tema claro oscuro azul sistema idioma lengua' },
@@ -68,6 +70,8 @@ const SECCIONES: { id: SeccionAjustes; titulo: string; icono: React.ReactNode; c
   { id: 'cuenta', titulo: 'Cuenta', icono: <IconUser size={17} />, claves: 'contraseña sesión sesiones cerrar correo email' },
   // El agente local (3.0-C): emparejar el PC con la cuenta.
   { id: 'equipos', titulo: 'Tu equipo', icono: <IconDatabase size={17} />, claves: 'pc ordenador equipo agente local emparejar código archivos carpetas' },
+  // Morgan para Windows (5.3): lo del programa, solo cuando la web corre dentro de él.
+  { id: 'este-pc', titulo: 'Este PC', icono: <IconRobot size={17} />, claves: 'pc programa windows bandeja pausar reanudar último versión actualizar carpetas emparejar' },
   // El permiso automático (4.6, pedido por mí): lo verde y amarillo sin esperar.
   { id: 'permisos', titulo: 'Permisos', icono: <IconShield size={17} />, claves: 'permiso permisos automático aprobar planes verde amarillo rojo preguntar' },
   // Tokens de API (V2.0.41). Aparte de la cuenta: es para quien conecta un
@@ -169,9 +173,11 @@ export function SettingsView({
   }, []);
 
   const visibles = useMemo(() => {
+    // «Este PC» solo dentro de Morgan para Windows: en un navegador sería un botón inútil.
+    const secciones = dentroDelPrograma() ? SECCIONES : SECCIONES.filter(s => s.id !== 'este-pc');
     const q = normalizar(busqueda.trim());
-    if (!q) return SECCIONES;
-    return SECCIONES.filter(s => normalizar(`${s.titulo} ${s.claves}`).includes(q));
+    if (!q) return secciones;
+    return secciones.filter(s => normalizar(`${s.titulo} ${s.claves}`).includes(q));
   }, [busqueda]);
 
   // Si la búsqueda deja fuera la sección abierta, se enseña la primera que
@@ -361,6 +367,8 @@ export function SettingsView({
           {actual === 'cuenta' && <PanelCuenta cuenta={cuenta} parte="cuenta" />}
 
           {actual === 'equipos' && <PanelEquipos cuenta={cuenta} />}
+
+          {actual === 'este-pc' && <PanelEstePC />}
 
           {actual === 'permisos' && <PanelPermisos apiOnline={apiOnline} />}
 

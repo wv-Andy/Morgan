@@ -263,3 +263,9 @@ prohibida para leer y para escribir). Vive en `%LOCALAPPDATA%\Morgan\agente\`.
 | `programa.json` | El agente lo emparejó Morgan para Windows: solo entonces lo desempareja su desinstalador (5.0.1) | Hasta desemparejar |
 | `app\<versión>\`, `app\activa.json` | El agente instalado (3.8): cada versión con su entorno, y cuál es la activa, la anterior y si está por confirmar | La activa y la anterior |
 | `morgan-agente.cmd` | Los comandos del agente con la versión activa (3.8) | Lo reescribe el agente al cambiar de versión |
+
+Morgan para Windows guarda dos cosas más suyas en `%LOCALAPPDATA%\io.github.wv-andy.morgan\`:
+**el perfil de WebView2 de la ventana** (la sesión de la web de Morgan, para entrar una vez, como
+la de un navegador) y, desde la 5.3, `actualizacion\`: la marca de una actualización que se está
+juzgando, su registro (`actualizacion.log`) y el instalador de la versión anterior con su firma,
+para volver. El instalador anterior se sustituye en la siguiente actualización.

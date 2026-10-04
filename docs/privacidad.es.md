@@ -38,7 +38,7 @@ procesan en mi nombre:
 | **Groq**, **Google (Gemini)** y, como último recurso, **OpenAI** | El texto de cada conversación, para que el modelo conteste | Estados Unidos |
 | **Serper (Google)** | Lo que Morgan busca en internet por ti | Estados Unidos |
 | **Brevo** | Tu correo, solo para mandarte la verificación o la recuperación de contraseña | Unión Europea |
-| **GitHub** | Si usas Morgan para Windows: una consulta al día a su página de versiones, para avisarte de una nueva (como cualquier visita, ve la IP de tu PC; no lleva nada tuyo) | Estados Unidos |
+| **GitHub** | Si usas Morgan para Windows: una consulta al día al `latest.json` de la última versión, para avisarte de una nueva; y, al pulsar «Actualizar ahora», la descarga del instalador nuevo y la del de ahora (para poder volver). Como cualquier visita, ve la IP de tu PC; no lleva nada tuyo | Estados Unidos |
 
 Cada proveedor de modelos trata lo que recibe según sus propias condiciones. **Ojo con una**:
 el plan gratuito de la API de Gemini puede usar lo que se le envía para mejorar los productos

@@ -81,6 +81,13 @@ def _no_existe(espacio_id: str) -> HTTPException:
 
 
 def _traducir(exc: Exception, accion: str) -> HTTPException:
+    from src.espacios.modelos import EspaciosDemasiados
+
+    if isinstance(exc, EspaciosDemasiados):
+        return HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "ESPACIOS_DEMASIADOS", "message": str(exc)},
+        )
     if isinstance(exc, EspacioDuplicado):
         return HTTPException(
             status_code=status.HTTP_409_CONFLICT,

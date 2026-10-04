@@ -60,6 +60,12 @@ class RememberFactTool(Tool):
         }
 
     def execute(self, key: str, value: str, category: str = "general", **kwargs: Any) -> dict:
+        from src.memory.manager import MemoriaLlena
+
+        try:
+            self.memory.comprobar_que_cabe(key, value)
+        except MemoriaLlena as e:
+            return {"success": False, "data": None, "error": str(e)}
         try:
             stored = self.memory.remember(key=key, value=value, category=category)
             return {

@@ -18,6 +18,17 @@
       <p>Mirando cómo está tu PC…</p>
     </section>
 
+    <section id="conectado" class="tarjeta" hidden>
+      <h2>Este PC ya está conectado</h2>
+      <p id="detalle"></p>
+      <p class="nota">Para conectarlo con otra cuenta (o otra vez, si lo quitaste desde la web), primero se desconecta: la cuenta de ahora deja de poder usarlo.</p>
+      <div class="botones">
+        <button id="volver">Volver a Morgan</button>
+        <button id="desconectar" class="secundario">Desconectar este PC</button>
+      </div>
+      <p class="aviso" id="error3" role="alert" hidden></p>
+    </section>
+
     <section id="sin-emparejar" class="tarjeta" hidden>
       <h2>Conecta este PC con tu cuenta</h2>
       <ol>
@@ -26,7 +37,7 @@
         <li>Escribe aquí el código que te da.</li>
       </ol>
       <form id="formulario">
-        <input id="codigo" autocomplete="off" spellcheck="false" placeholder="El código de la web" maxlength="64" required>
+        <input id="codigo" autocomplete="off" spellcheck="false" placeholder="El código de la web" maxlength="64" required aria-label="El código de la web">
         <button type="submit" id="emparejar">Conectar</button>
       </form>
       <p class="aviso" id="error" role="alert" hidden></p>
@@ -43,28 +54,7 @@
       <p class="aviso" id="error2" role="alert" hidden></p>
     </section>
 
-    <section id="emparejado" class="tarjeta" hidden>
-      <h2 id="titulo-estado">Este PC está conectado</h2>
-      <p id="detalle"></p>
-      <p class="nota">Morgan solo ve las carpetas que permitas, y lo que haga en tu PC te lo pregunta antes.</p>
-      <div class="botones">
-        <button id="pausa" class="secundario">Pausar Morgan en este PC</button>
-        <button id="ajustes">Qué puede hacer y qué carpetas ve</button>
-        <button id="ver-ultimas" class="secundario">Lo último que hizo en este PC</button>
-        <button id="web" class="secundario">Abrir Morgan</button>
-      </div>
-      <p class="nota">Morgan sigue en la bandeja, junto al reloj, aunque cierres esta ventana.</p>
-    </section>
-
-    <section id="ultimas" class="tarjeta" hidden>
-      <h2>Lo último que hizo en este PC</h2>
-      <p class="nota">Lo que le pidió Morgan a este PC en las últimas 24 horas.</p>
-      <ul id="lista"></ul>
-      <p class="nota" id="sin-ultimas" hidden>Nada en las últimas 24 horas.</p>
-      <div class="botones">
-        <button id="volver" class="secundario">Volver</button>
-      </div>
-    </section>
+    <p class="nota pie">Morgan sigue en la bandeja, junto al reloj, aunque cierres esta ventana.</p>
   </main>
   <script src="app.js"></script>
 </body>

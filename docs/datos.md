@@ -261,3 +261,9 @@ for reading and writing). It lives in `%LOCALAPPDATA%\Morgan\agente\`.
 | `programa.json` | The agent was paired by Morgan for Windows: only then does its uninstaller unpair it (5.0.1) | Until unpaired |
 | `app\<version>\`, `app\activa.json` | The installed agent (3.8): each version with its environment, and which one is active, the previous one and whether it's pending confirmation | The active and the previous one |
 | `morgan-agente.cmd` | The agent's commands with the active version (3.8) | Rewritten by the agent when changing version |
+
+Morgan for Windows keeps two more things of its own in `%LOCALAPPDATA%\io.github.wv-andy.morgan\`:
+**the window's WebView2 profile** (the Morgan web session, so you sign in once, like a
+browser's) and, since 5.3, `actualizacion\`: the mark of an update being judged, its log
+(`actualizacion.log`) and the installer of the previous version with its signature, to go back.
+The previous installer is replaced on the next update.

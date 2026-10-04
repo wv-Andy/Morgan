@@ -65,6 +65,15 @@ def remember_fact(
     container: CoreContainer = Depends(get_container),
 ) -> MemoryItem:
     """Almacena o actualiza un hecho en la memoria persistente de Morgan."""
+    from src.memory.manager import MemoriaLlena
+
+    try:
+        container.memory_manager.comprobar_que_cabe(request.key, request.value)
+    except MemoriaLlena as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "MEMORIA_LLENA", "message": str(e)},
+        ) from None
     try:
         updated = container.memory_manager.remember(
             category=request.category,

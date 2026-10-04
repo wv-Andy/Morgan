@@ -1,4 +1,4 @@
-<#
+﻿<#
 Las pruebas del estado de la bandeja (src-tauri/src/bandeja.rs), y que cazan lo que tienen que
 cazar: cada mutación rompe el código a propósito y las pruebas tienen que fallar. Con `rustc
 --test`, sin compilar Tauri: segundos. Lo corre .github/workflows/escritorio.yml.
@@ -37,9 +37,18 @@ $mutaciones = [ordered]@{
     "cualquier estado es conectado"  = @("if l.estado == Some(""READY"") && reciente(l.pulso, ahora)", "if reciente(l.pulso, ahora)")
     "color siempre"                  = @("    c == Clave::Conectado`n", "    c != Clave::SinEmparejar`n")
     "reanudar en todo"               = @("        Clave::EnPausa => (false, true),", "        Clave::EnPausa => (true, true),")
-    "la ventana admite http"         = @("    esquema == ""https"" && anfitrion", "    anfitrion")
-    "la ventana admite cualquiera"   = @("&& anfitrion == Some(ANFITRION_DE_MORGAN)", "")
-    "la ventana admite parecidos"    = @("anfitrion == Some(ANFITRION_DE_MORGAN)", "anfitrion.map_or(false, |a| a.contains(""morgan-ia""))")
+    "vuelve aunque antes no hubiera red" = @("    if !antes_conectado {`n        return Veredicto::Confirmar;", "    if false {`n        return Veredicto::Confirmar;")
+    "la pausa cuenta como fallo"     = @("        Clave::EnPausa => Veredicto::Confirmar,", "")
+    "vuelve sin esperar el plazo"    = @("_ if despierto >= plazo => Veredicto::VolverAtras,", "_ => Veredicto::VolverAtras,")
+    "nunca vuelve"                   = @("_ if despierto >= plazo => Veredicto::VolverAtras,", "")
+    "conectada no confirma"          = @("        Clave::Conectado => Veredicto::Confirmar,", "")
+    "plazo de un minuto"             = @("pub const PLAZO_ESTRENO: f64 = 180.0;", "pub const PLAZO_ESTRENO: f64 = 60.0;")
+    "la ventana admite http"         = @("(""https"", Some(ANFITRION_DE_MORGAN))", "(_, Some(ANFITRION_DE_MORGAN))")
+    "la ventana admite parecidos"    = @("(""https"", Some(ANFITRION_DE_MORGAN)) => Navegacion::Queda,", "(""https"", Some(a)) if a.contains(""morgan-ia"") => Navegacion::Queda,")
+    "sin la pantalla del programa"   = @("(""http"", Some(""tauri.localhost"")) | ", "")
+    "about:blank al navegador"       = @("        (""about"", None) => Navegacion::Queda,`n", "")
+    "todo al navegador"              = @("        _ => Navegacion::Nada,", "        _ => Navegacion::AlNavegador,")
+    "nada al navegador"              = @("(""http"" | ""https"" | ""mailto"", _) => Navegacion::AlNavegador,", "(""mailto"", _) => Navegacion::AlNavegador,")
 }
 $vivas = 0
 foreach ($nombre in $mutaciones.Keys) {

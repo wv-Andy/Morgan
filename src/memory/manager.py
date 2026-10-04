@@ -40,6 +40,17 @@ def _memoria_local() -> MemoryStorage:
 #: Cuántos recuerdos van en el prompt de cada turno.
 RECUERDOS_EN_EL_PROMPT = 15
 
+#: Los topes de la memoria de una cuenta (4.22, revisión de los límites por cuenta). Los
+#: recuerdos los escribe el modelo (`remember_fact`) y la API: sin tope, un bucle o un script
+#: llenaban la base sin que el cupo diario lo notara (cada turno puede guardar varios). Holgados
+#: para cualquier uso normal: en el prompt solo van los 15 últimos.
+MAX_RECUERDOS = 500
+LARGO_MAXIMO_RECUERDO = 2000
+
+
+class MemoriaLlena(ValueError):
+    """No cabe un recuerdo nuevo, o es demasiado largo. El mensaje dice qué hacer."""
+
 class MemoryManager:
     """Gestiona la memoria persistente del agente, integrando preferencias y perfil."""
 
@@ -48,6 +59,19 @@ class MemoryManager:
 
     def remember(self, key: str, value: str, category: str = "general") -> dict:
         return self.storage.remember(key=key, value=value, category=category)
+
+    def comprobar_que_cabe(self, key: str, value: str) -> None:
+        """Lanza `MemoriaLlena` si este recuerdo no puede guardarse. Actualizar uno que ya
+        existe siempre cabe; uno nuevo, si la cuenta no tiene ya `MAX_RECUERDOS`."""
+        if len(value or "") > LARGO_MAXIMO_RECUERDO:
+            raise MemoriaLlena(f"Un recuerdo puede tener como mucho {LARGO_MAXIMO_RECUERDO} caracteres: "
+                               "guarda lo esencial, o pásalo a un documento de conocimiento.")
+        repositorio = getattr(self.storage, "repositorio", None)
+        if repositorio is None or repositorio.get(key) is not None:
+            return
+        if len(repositorio.search(limit=MAX_RECUERDOS)) >= MAX_RECUERDOS:
+            raise MemoriaLlena(f"Ya hay {MAX_RECUERDOS} recuerdos guardados, el máximo: olvida alguno "
+                               "(Ajustes → Memoria) antes de guardar otro.")
 
     def recall(self, query: str | None = None, category: str | None = None) -> list[dict]:
         return self.storage.recall(query=query, category=category)

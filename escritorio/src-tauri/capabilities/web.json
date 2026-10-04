@@ -1,20 +1,17 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "default",
-  "description": "La pantalla del propio programa (emparejar): todas sus órdenes. Solo la página local, nunca la web.",
+  "identifier": "web-de-morgan",
+  "description": "La web de Morgan dentro del programa (5.3): solo lo inofensivo (lo decidí el 2026-10-04). Ni emparejar, ni consultar códigos, ni nada de Tauri.",
   "windows": ["main"],
+  "remote": {
+    "urls": ["https://morgan-ia.vercel.app/*"]
+  },
   "permissions": [
-    "core:default",
-    "allow-estado",
     "allow-resumen",
     "allow-pausar",
     "allow-reanudar",
     "allow-ultimas",
-    "allow-consultar",
-    "allow-emparejar",
-    "allow-desemparejar",
     "allow-abrir-ajustes",
-    "allow-abrir-web",
     "allow-pantalla-emparejar",
     "allow-programa",
     "allow-actualizar-ahora"

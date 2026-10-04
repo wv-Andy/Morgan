@@ -641,6 +641,22 @@ tests, 11 of 11 mutations.
 
 See [`src/identidad/cuotas.py`](../src/identidad/cuotas.py).
 
+### What costs no quota but fills the database (4.22)
+
+What spends money already had a cap (messages, images and transcriptions, the global quota,
+files, API tokens, PCs, automations). The review of per-account limits looked for what does
+**not** spend quota but takes up the database, and that the model or a script can create in a
+loop. Now it has a cap, a generous one, and on reaching it you're told what to do:
+
+| What | Cap per account | On reaching it |
+|---|---|---|
+| Memories (`remember_fact`, `POST /memory`) | **500**, and **2000 characters** each | 409 `MEMORIA_LLENA`: «forget one that's no longer useful». Updating one that already exists is always possible |
+| Workspaces | **50** | 409 `ESPACIOS_DEMASIADOS`: «delete one you don't use» |
+| Knowledge documents, across all workspaces | **300** | The tool says so («delete one with `remove_knowledge`»). Replacing one (same title and collection) is always possible |
+
+In the cloud only the account's rows are counted (with a `limit`, without fetching the table).
+`tests/test_limites_por_cuenta.py`: 10 tests, 11 of 11 mutations.
+
 ## Schema
 
 Migration **v11**, mirrored in Supabase.

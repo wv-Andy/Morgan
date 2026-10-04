@@ -36,15 +36,6 @@ function VentanaDeMorgan([int]$id) {
         (New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, "Morgan")))
     $A::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Children, $condicion)
 }
-# La de la conversación (5.2) es la grande: la del programa mide 480 de ancho.
-function VentanaDeLaConversacion([int]$id) {
-    $A = [System.Windows.Automation.AutomationElement]
-    $condicion = New-Object System.Windows.Automation.AndCondition(
-        (New-Object System.Windows.Automation.PropertyCondition($A::ProcessIdProperty, $id)),
-        (New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, "Morgan")))
-    $A::RootElement.FindAll([System.Windows.Automation.TreeScope]::Children, $condicion) |
-        Where-Object { $_.Current.BoundingRectangle.Width -gt 800 } | Select-Object -First 1
-}
 Add-Type -AssemblyName System.Windows.Forms
 $instalado = Join-Path $raiz "programa"
 Remove-Item -Recurse -Force $raiz -ErrorAction SilentlyContinue
@@ -88,6 +79,18 @@ try {
     Start-Sleep 6
     $ventana = VentanaDeMorgan $app.Id
     $resultado.ventana = [bool]$ventana
+    # Que pinte (la conversación de la 5.2 salía en negro): el texto de la pantalla de emparejar,
+    # leído por accesibilidad dentro de la ventana, sin depender de la depuración.
+    $resultado.pinta_la_pantalla = $false
+    if ($ventana) {
+        $limite = (Get-Date).AddSeconds(30)
+        $texto = New-Object System.Windows.Automation.PropertyCondition(
+            [System.Windows.Automation.AutomationElement]::NameProperty, "Conecta este PC con tu cuenta")
+        while (-not $resultado.pinta_la_pantalla -and (Get-Date) -lt $limite) {
+            $resultado.pinta_la_pantalla = [bool]$ventana.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $texto)
+            if (-not $resultado.pinta_la_pantalla) { Start-Sleep 1 }
+        }
+    }
     # 5.1: cerrar la ventana la esconde (sigue en la bandeja), y abrirlo otra vez no lanza otro:
     # vuelve a enseñar la que había.
     if ($ventana) {
@@ -100,22 +103,28 @@ try {
     $resultado.una_sola_instancia = $otra.HasExited -and @(Get-Process Morgan -ErrorAction SilentlyContinue |
         Where-Object { $_.Path -like "$instalado*" }).Count -eq 1
     $resultado.abrirlo_otra_vez_la_enseña = [bool](VentanaDeMorgan $app.Id)
-    # 5.2: Ctrl+Alt+M abre la conversación desde cualquier sitio, y otra vez la esconde.
-    [System.Windows.Forms.SendKeys]::SendWait("^%m")
-    $limite = (Get-Date).AddSeconds(15)
-    while (-not (VentanaDeLaConversacion $app.Id) -and (Get-Date) -lt $limite) { Start-Sleep -Milliseconds 300 }
-    $conversacion = VentanaDeLaConversacion $app.Id
-    $resultado.el_atajo_abre_la_conversacion = [bool]$conversacion
-    Start-Sleep 2
-    # Con la conversación delante, la segunda pulsación la esconde (si no está delante, la
-    # trae: es lo que se espera de un atajo). Aquí se pone delante, por si Windows no le dio
-    # el primer plano a una ventana abierta desde una prueba.
-    $resultado.la_conversacion_estaba_delante = "$($conversacion -and $conversacion.Current.HasKeyboardFocus)"
-    if ($conversacion) { try { $conversacion.SetFocus() } catch { } }
+    # Ctrl+Alt+M: con Morgan delante, lo esconde; otra vez, lo enseña. Aquí se pone delante,
+    # por si Windows no le dio el primer plano a una ventana abierta desde una prueba.
+    $ventana = VentanaDeMorgan $app.Id
+    if ($ventana) { try { $ventana.SetFocus() } catch { } }
     Start-Sleep 1
     [System.Windows.Forms.SendKeys]::SendWait("^%m")
     Start-Sleep 2
-    $resultado.otra_vez_la_esconde = -not (VentanaDeLaConversacion $app.Id) -and -not $app.HasExited
+    $resultado.el_atajo_lo_esconde = -not (VentanaDeMorgan $app.Id) -and -not $app.HasExited
+    [System.Windows.Forms.SendKeys]::SendWait("^%m")
+    $limite = (Get-Date).AddSeconds(15)
+    while (-not (VentanaDeMorgan $app.Id) -and (Get-Date) -lt $limite) { Start-Sleep -Milliseconds 300 }
+    $resultado.y_otra_vez_lo_enseña = [bool](VentanaDeMorgan $app.Id)
+    # Antes había dos (la del programa y la de la conversación): ahora, la de Morgan y nada más.
+    # Las auxiliares del programa (la de la instancia única y la del bucle de eventos, de 16×16)
+    # no cuentan: medido en GitHub, son las únicas otras.
+    $A = [System.Windows.Automation.AutomationElement]
+    $todas = @($A::RootElement.FindAll([System.Windows.Automation.TreeScope]::Children,
+        (New-Object System.Windows.Automation.PropertyCondition($A::ProcessIdProperty, $app.Id))))
+    $todas | ForEach-Object { "  ventana: '{0}' {1} fuera={2} {3}" -f $_.Current.Name, $_.Current.ClassName,
+        $_.Current.IsOffscreen, $_.Current.BoundingRectangle }
+    $resultado.una_sola_ventana = @($todas | Where-Object { -not $_.Current.IsOffscreen -and
+        $_.Current.BoundingRectangle.Width -gt 100 }).Count -eq 1
 
     New-Item -ItemType Directory -Force (Join-Path $env:MORGAN_AGENTE_DIR "respaldos") | Out-Null
     "respaldo" | Set-Content (Join-Path $env:MORGAN_AGENTE_DIR "respaldos\r.txt")

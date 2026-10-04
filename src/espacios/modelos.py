@@ -16,6 +16,11 @@ MAX_NOMBRE = 60
 #: cambio de instrucciones que, de tan largas, el modelo sigue peor.
 MAX_INSTRUCCIONES = 2000
 
+#: Cuántos espacios puede tener una cuenta (4.22, revisión de los límites por cuenta). Sin tope,
+#: un script los creaba sin fin: no gastan cupo de mensajes. Holgado: la barra lateral los
+#: enseña en una lista, y con decenas ya no se encuentra nada.
+MAX_ESPACIOS = 50
+
 
 class EspacioInvalido(ValueError):
     """El nombre o las instrucciones no se pueden guardar así."""
@@ -24,6 +29,16 @@ class EspacioInvalido(ValueError):
 class EspacioDuplicado(ValueError):
     """Ya hay un espacio con ese nombre, y dos iguales en la barra lateral no se
     distinguen."""
+
+
+class EspaciosDemasiados(EspacioDuplicado):
+    """La cuenta ya tiene `MAX_ESPACIOS`. Hereda de `EspacioDuplicado` para que quien ya
+    trataba ese error (no se pudo crear, por un conflicto) lo trate igual."""
+
+
+def _demasiados() -> EspaciosDemasiados:
+    return EspaciosDemasiados(f"Ya tienes {MAX_ESPACIOS} espacios de trabajo, el máximo: borra alguno "
+                              "que no uses antes de crear otro.")
 
 
 @dataclass

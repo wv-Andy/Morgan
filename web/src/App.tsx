@@ -12,6 +12,7 @@ import {
 } from './components/Cuenta';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { SettingsView, type SeccionAjustes } from './components/SettingsView';
+import { EVENTO_DEL_PROGRAMA, pendienteDelPrograma } from './lib/programa';
 import { TareasView } from './components/Tareas';
 import { AutomatizacionesView } from './components/Automatizaciones';
 import { PlanesPendientes } from './components/Planes';
@@ -168,6 +169,15 @@ function AppAutenticada({
   // El panel de ajustes abierto, y en qué sección. `null` es cerrado.
   const [ajustes, setAjustes] = useState<SeccionAjustes | null>(null);
   const cerrarAjustes = useCallback(() => setAjustes(null), []);
+  // Dentro de Morgan para Windows (5.3), la bandeja puede pedir abrir Ajustes → Este PC («Lo
+  // último que hizo en este PC»). Si lo pidió antes de que la web escuchara, queda pendiente.
+  useEffect(() => {
+    const ir = (parte: string | null) => { if (parte === 'este-pc') setAjustes('este-pc'); };
+    ir(pendienteDelPrograma());
+    const alAviso = () => ir(pendienteDelPrograma());
+    window.addEventListener(EVENTO_DEL_PROGRAMA, alAviso);
+    return () => window.removeEventListener(EVENTO_DEL_PROGRAMA, alAviso);
+  }, []);
   const [sessionId, setSessionId] = useState<string>(defaultSessionId());
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   // El espacio de trabajo seleccionado (V2.2). `null` es «General». Se lee de lo

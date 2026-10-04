@@ -1,6 +1,6 @@
 [package]
 name = "morgan"
-version = "5.2.1"
+version = "5.3.0"
 description = "Morgan para Windows"
 edition = "2021"
 publish = false
@@ -15,8 +15,20 @@ tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-single-instance = "2"
 # El atajo Ctrl+Alt+M para abrir la conversación desde cualquier sitio (5.2).
 tauri-plugin-global-shortcut = "2"
+# Las actualizaciones (5.3): el actualizador de Tauri, y para guardar y comprobar el instalador
+# de la versión anterior (la vuelta atrás): bajarlo y su firma minisign.
+tauri-plugin-updater = "2"
+ureq = "2"
+base64 = "0.22"
+minisign-verify = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+[features]
+# Solo para la prueba de la ventana en GitHub (empaquetado/probar_ventana.ps1): abre el protocolo
+# de depuración de WebView2 en el puerto de MORGAN_DEPURAR_PUERTO. **Nunca en lo que se
+# publica**: el instalador se compila sin ella, y el código ni siquiera está en ese programa.
+depurar = []
 
 [profile.release]
 codegen-units = 1

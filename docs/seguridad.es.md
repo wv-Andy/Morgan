@@ -175,10 +175,26 @@ de amenazas y las evaluaciones en agente-local.md.
 una lista de patrones prohibidos: vale como red en tu equipo, con tu consola delante, pero
 una lista de lo prohibido se salta. Desde la nube solo existe la del agente.
 
-**Morgan para Windows (5.x)** añade dos más: la ventana de la conversación carga la web **sin
-ningún permiso sobre el programa** (no puede pausar, emparejar ni tocar el PC desde ahí) y solo
-navega por Morgan; y su desinstalador e instalador solo desemparejan el agente si lo emparejó el
-programa, y nunca al actualizar.
+**Morgan para Windows (5.x)** añade más:
+
+- **Una ventana, y la web solo pide lo inofensivo** (5.3). La ventana del programa carga la web
+  de Morgan, y la web solo puede pedirle al programa lo que no hace daño: el estado, pausar y
+  reanudar, lo último que hizo, abrir «Qué puede hacer y qué carpetas ve», ir a la pantalla de
+  emparejar, y la versión y su actualización (`capabilities/web.json`, solo para
+  `https://morgan-ia.vercel.app`). **Emparejar, no**: es lo único que da acceso al PC, así que
+  una web comprometida no podría conectarlo a otra cuenta; se hace en una pantalla del propio
+  programa, que pregunta de qué cuenta es el código antes de usarlo. Con la lista de órdenes de
+  `build.rs`, **ninguna** se puede pedir sin un permiso explícito. Medido desde dentro de la
+  ventana, en GitHub: `emparejar`, `consultar`, `desemparejar` y `estado` se rechazan desde la
+  web.
+- **En la ventana solo se carga Morgan**: la web por https y la pantalla del programa; cualquier
+  otro enlace se abre en el navegador, y `data:`, `javascript:` o `file:` ni se abren.
+- **Actualizaciones firmadas** (5.3): una versión nueva se instala solo al pulsar «Actualizar
+  ahora», solo si su firma cuadra con la clave que lleva el programa, y se guarda el instalador
+  de la versión de ahora (con su firma comprobada) para volver sola si la nueva no conecta el PC
+  en 3 minutos.
+- Su desinstalador e instalador solo desemparejan el agente si lo emparejó el programa, y nunca
+  al actualizar.
 
 ## 5 bis. Las automatizaciones: nadie delante (4.14)
 

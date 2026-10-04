@@ -29,7 +29,7 @@ Configurable con `MORGAN_API_HOST`, `MORGAN_API_PORT`, `MORGAN_API_RELOAD` y
 | `GET` | `/tools/{name}` | Metadatos y JSON Schema de una herramienta. |
 | `POST` | `/tools/{name}` | Ejecución directa de una herramienta (pasa por permisos y auditoría). |
 | `GET` | `/memory` | Lista recuerdos; filtros `?query=` y `?category=`. |
-| `POST` | `/memory` | Guarda o actualiza un recuerdo. |
+| `POST` | `/memory` | Guarda o actualiza un recuerdo. `409 MEMORIA_LLENA` con 500, o con más de 2000 caracteres (4.22). |
 | `DELETE` | `/memory/{key}` | Elimina un recuerdo por clave. |
 | `GET` | `/audit` | Registros de auditoría; `?limit=` entre 1 y 500 (por defecto 50). |
 | `GET` | `/sessions` | Lista las conversaciones por recencia; `?limit=` y `?offset=`. |
@@ -39,7 +39,7 @@ Configurable con `MORGAN_API_HOST`, `MORGAN_API_PORT`, `MORGAN_API_RELOAD` y
 | `DELETE` | `/sessions/{id}` | Elimina la conversación y todos sus mensajes. |
 | `PATCH` | `/sessions/{id}` | Renombra, archiva, fija o la mueve de espacio (`espacio_id`; `""` es General). Lo que no se envía no se toca. `404 ESPACIO_DESTINO_NO_ENCONTRADO` si el espacio no es tuyo. |
 | `GET` | `/espacios` | Los espacios de trabajo de quien pide, con `max_instrucciones`. |
-| `POST` | `/espacios` | Crea uno (`nombre`, `instrucciones`). `409 ESPACIO_DUPLICADO` si el nombre ya existe. |
+| `POST` | `/espacios` | Crea uno (`nombre`, `instrucciones`). `409 ESPACIO_DUPLICADO` si el nombre ya existe; `409 ESPACIOS_DEMASIADOS` con 50 (4.22). |
 | `GET` | `/espacios/{id}` | Un espacio. |
 | `PATCH` | `/espacios/{id}` | Cambia nombre o instrucciones. |
 | `DELETE` | `/espacios/{id}` | Lo borra; sus conversaciones, archivos y documentos vuelven a General. |

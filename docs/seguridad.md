@@ -173,10 +173,26 @@ with a list of forbidden patterns: it works as a net on your computer, with your
 front of you, but a list of what's forbidden can be bypassed. From the cloud only the agent's
 exists.
 
-**Morgan for Windows (5.x)** adds two more: the conversation window loads the web **without any
-permission over the program** (it can't pause, pair or touch the PC from there) and only
-navigates within Morgan; and its uninstaller and installer only unpair the agent if it was the
-program that paired it, and never when upgrading.
+**Morgan for Windows (5.x)** adds more:
+
+- **One window, and the web only asks for the harmless** (5.3). The program's window loads the
+  Morgan web, and the web can ask the program only for what does no harm: the status, pause
+  and resume, what it did last, open «What it can do and which folders it sees», go to the
+  pairing screen, and the version and its update (`capabilities/web.json`, only for
+  `https://morgan-ia.vercel.app`). **Pairing, no**: it's the only thing that gives access to
+  the PC, so a compromised web couldn't connect it to another account; it's done on a screen
+  of the program itself, which asks whose account the code belongs to before using it. With
+  the command list in `build.rs`, **no** command can be asked for without an explicit
+  permission. Measured from inside the window, in GitHub: `emparejar`, `consultar`,
+  `desemparejar` and `estado` are rejected from the web.
+- **Only Morgan loads in the window**: the web over https and the program's screen; any other
+  link opens in the browser, and `data:`, `javascript:` or `file:` don't open at all.
+- **Signed updates** (5.3): a new version is installed only when you press «Update now», only if
+  its signature matches the key the program carries, and the installer of the current version
+  is kept (with its signature checked) to go back on its own if the new one doesn't connect
+  the PC within 3 minutes.
+- Its uninstaller and installer only unpair the agent if it was the program that paired it, and
+  never when upgrading.
 
 ## 5 bis. Automations: nobody in front (4.14)
 

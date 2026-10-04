@@ -15,8 +15,9 @@ on:
             "requirements-agente.txt", ".github/workflows/escritorio.yml"]
   workflow_dispatch:
 
+# Escribir: la prueba de las actualizaciones (5.3) publica una versión de prueba y la borra.
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   instalador:
@@ -62,6 +63,10 @@ jobs:
           node-version: 24
       - name: El programa y su instalador
         working-directory: escritorio
+        # La clave que firma las actualizaciones (5.3): solo como secreto, nunca en el repositorio.
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           npm install --no-audit --no-fund
           npx tauri icon ../web/public/logo-512.png
@@ -88,8 +93,52 @@ jobs:
           powershell -ExecutionPolicy Bypass -File empaquetado/probar_actualizar.ps1 -Instalador $instalador.FullName -Mover
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
+      # Actualizar por GitHub con firma, y la vuelta atrás automática (5.3).
+      - name: Actualizar y volver atrás
+        if: ${{ !cancelled() }}
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $nsis = "escritorio/src-tauri/target/release/bundle/nsis"
+          $instalador = Get-ChildItem "$nsis/*.exe" | Select-Object -First 1
+          # Una versión «nueva» de verdad: el mismo programa con el número 9.9.9, firmada. Se
+          # aparta en otra carpeta: lo que se publica es solo el instalador de la versión de ahora.
+          $nueva = Join-Path $env:RUNNER_TEMP "nueva"
+          New-Item -ItemType Directory -Force $nueva | Out-Null
+          '{"version": "9.9.9"}' | Set-Content -Encoding ascii (Join-Path $env:RUNNER_TEMP "version-9.9.9.json")
+          Push-Location escritorio
+          npx tauri build --config (Join-Path $env:RUNNER_TEMP "version-9.9.9.json")
+          Pop-Location
+          Move-Item "$nsis/*9.9.9*" $nueva
+          $instaladorNuevo = Get-ChildItem "$nueva/*.exe" | Select-Object -First 1
+          powershell -ExecutionPolicy Bypass -File empaquetado/probar_actualizacion.ps1 -Instalador $instalador.FullName `
+            -NuevoInstalador $instaladorNuevo.FullName
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      # La ventana por dentro (5.3): una copia de prueba con la característica `depurar` (abre la
+      # depuración de WebView2), compilada después del instalador, que se publica sin ella.
+      - name: La ventana por dentro
+        # Aunque falle la de las actualizaciones: son independientes, y así se ven las dos.
+        if: ${{ !cancelled() }}
+        shell: powershell
+        run: |
+          python -m pip install websocket-client==1.8.0
+          Push-Location escritorio
+          npx tauri build --features depurar --no-bundle
+          Pop-Location
+          $instalador = Get-ChildItem escritorio/src-tauri/target/release/bundle/nsis/*.exe | Select-Object -First 1
+          powershell -ExecutionPolicy Bypass -File empaquetado/probar_ventana.ps1 -Instalador $instalador.FullName `
+            -Depurar (Resolve-Path escritorio/src-tauri/target/release/Morgan.exe).Path
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
       - uses: actions/upload-artifact@v7
         with:
           name: Morgan-instalador
-          path: escritorio/src-tauri/target/release/bundle/nsis/*.exe
+          # El instalador y su firma (.sig): lo que se publica en cada versión, con `latest.json`.
+          path: |
+            escritorio/src-tauri/target/release/bundle/nsis/*.exe
+            escritorio/src-tauri/target/release/bundle/nsis/*.exe.sig
           if-no-files-found: error

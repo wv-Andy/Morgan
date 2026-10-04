@@ -30,7 +30,7 @@ Configurable with `MORGAN_API_HOST`, `MORGAN_API_PORT`, `MORGAN_API_RELOAD` and
 | `GET` | `/tools/{name}` | Metadata and JSON Schema of a tool. |
 | `POST` | `/tools/{name}` | Runs a tool directly (goes through permissions and audit). |
 | `GET` | `/memory` | Lists memories; filters `?query=` and `?category=`. |
-| `POST` | `/memory` | Saves or updates a memory. |
+| `POST` | `/memory` | Saves or updates a memory. `409 MEMORIA_LLENA` with 500, or with more than 2000 characters (4.22). |
 | `DELETE` | `/memory/{key}` | Deletes a memory by key. |
 | `GET` | `/audit` | Audit records; `?limit=` between 1 and 500 (50 by default). |
 | `GET` | `/sessions` | Lists conversations by recency; `?limit=` and `?offset=`. |
@@ -40,7 +40,7 @@ Configurable with `MORGAN_API_HOST`, `MORGAN_API_PORT`, `MORGAN_API_RELOAD` and
 | `DELETE` | `/sessions/{id}` | Deletes the conversation and all its messages. |
 | `PATCH` | `/sessions/{id}` | Renames, archives, pins or moves it to another workspace (`espacio_id`; `""` is General). What isn't sent isn't touched. `404 ESPACIO_DESTINO_NO_ENCONTRADO` if the workspace isn't yours. |
 | `GET` | `/espacios` | The workspaces of whoever asks, with `max_instrucciones`. |
-| `POST` | `/espacios` | Creates one (`nombre`, `instrucciones`). `409 ESPACIO_DUPLICADO` if the name already exists. |
+| `POST` | `/espacios` | Creates one (`nombre`, `instrucciones`). `409 ESPACIO_DUPLICADO` if the name already exists; `409 ESPACIOS_DEMASIADOS` with 50 (4.22). |
 | `GET` | `/espacios/{id}` | One workspace. |
 | `PATCH` | `/espacios/{id}` | Changes name or instructions. |
 | `DELETE` | `/espacios/{id}` | Deletes it; its conversations, files and documents go back to General. |

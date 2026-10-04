@@ -683,6 +683,22 @@ código anterior. `tests/test_cupo_global.py`: 21 pruebas, 11 de 11 mutaciones.
 
 Ver [`src/identidad/cuotas.py`](../src/identidad/cuotas.py).
 
+### Lo que no cuesta cupo pero llena la base (4.22)
+
+Lo que gasta dinero ya tenía tope (mensajes, imágenes y transcripciones, el cupo global, los
+archivos, los tokens de API, los PC, las automatizaciones). La revisión de los límites por
+cuenta buscó lo que **no** gasta cupo pero ocupa la base, y que el modelo o un script pueden
+crear en bucle. Ahora tiene tope, holgado, y al llegar se dice qué hacer:
+
+| Qué | Tope por cuenta | Al llegar |
+|---|---|---|
+| Recuerdos (`remember_fact`, `POST /memory`) | **500**, y **2000 caracteres** cada uno | 409 `MEMORIA_LLENA`: «olvida alguno que ya no sirva». Actualizar uno que ya existe siempre se puede |
+| Espacios de trabajo | **50** | 409 `ESPACIOS_DEMASIADOS`: «borra alguno que no uses» |
+| Documentos de conocimiento, entre todos los espacios | **300** | La herramienta lo dice («borra alguno con `remove_knowledge`»). Reemplazar uno (mismo título y colección) siempre se puede |
+
+En la nube se cuentan solo las filas de la cuenta (con un `limit`, sin traer la tabla).
+`tests/test_limites_por_cuenta.py`: 10 pruebas, 11 de 11 mutaciones.
+
 ## Esquema
 
 Migración **v11**, espejada en Supabase.

@@ -6,9 +6,9 @@ A personal AI assistant that talks in plain language and takes controlled action
 computer: files, terminal, git, the web and persistent memory, all under a permission system
 based on risk levels and with a complete audit trail.
 
-**Status (5.2)**: **Morgan for Windows**, a double-click program that lives in the system
-tray, brings the conversation into its own window (Ctrl+Alt+M) and connects your PC without a
-console ([download](https://github.com/wv-Andy/Morgan/releases/latest)) · CLI + REST API + web ·
+**Status (5.3)**: **Morgan for Windows**, a double-click program that lives in the system
+tray, opens Morgan in a single window (Ctrl+Alt+M), connects your PC without a console and
+updates itself, signed and going back on its own if something fails ([download](https://github.com/wv-Andy/Morgan/releases/latest)) · CLI + REST API + web ·
 accounts with each person's data kept apart · workspaces · automations · deployed in the
 cloud · **local agent**: Morgan reads the folders you allow on your PC and, if you switch it
 on, **creates, edits, moves and deletes** in the folders you choose, always with a plan you
@@ -258,11 +258,12 @@ The module and folder names are in Spanish, like the code: `identidad` is identi
 - [x] V4.19 — The foundation: continuous integration, pinned and audited dependencies, coverage with a floor, and the public code in [wv-Andy/Morgan](https://github.com/wv-Andy/Morgan)
 - [x] V4.20 — Holding up in production and precise when searching: bounded requests, a dead provider doesn't cost its timeout, a backup really restored, errors reach the tray
 - [x] V4.21 — Several searches in one round: the three-part question, from 29.7 s to 4.9 s
-- [ ] V4.22–4.24 — The rest of the hardening for production, with a measurable gate
+- [ ] V4.22–4.24 — The rest of the hardening for production, **in parallel with 5.x** (the gate to start 5.0 was met with 4.21). Done: the web's security headers and no Supabase warning at WARN level. Also done: reviewing per-account limits (memories, workspaces and documents). Left: rotating the clock's secret, a newcomer's walkthrough with the real model, basic accessibility and a week of real use
 - [x] **V5.0 — Morgan for Windows**: a double-click installer, pairing without a console from a window ([download](https://github.com/wv-Andy/Morgan/releases/latest))
 - [x] V5.1 — Morgan in the tray: status, pause and resume instantly, what it did last, and upgrading without unpairing
 - [x] V5.2 — The conversation in its own window, Ctrl+Alt+M, and notices as Windows notifications
-- [ ] V5.3–5.5 — Signing, self-updates, the Microsoft Store and Morgan for anyone
+- [x] V5.3 — One window with the web (the program's things in Settings → This PC, and the web only asks for the harmless) and signed updates with automatic rollback
+- [ ] V5.4–5.5 — Windows signing, the Microsoft Store and Morgan for anyone
 
 ## License
 

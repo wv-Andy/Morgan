@@ -22,6 +22,8 @@ from src.espacios.modelos import (
     nuevo_id,
     validar_instrucciones,
     validar_nombre,
+    MAX_ESPACIOS,
+    _demasiados,
 )
 from src.identidad.contexto import usuario_actual
 from src.memory.db import guard
@@ -63,6 +65,8 @@ class RepositorioDeEspaciosSQLite:
         instrucciones = validar_instrucciones(instrucciones)
         if self._id_por_nombre(nombre):
             raise _duplicado(nombre)
+        if len(self.listar()) >= MAX_ESPACIOS:
+            raise _demasiados()
 
         ahora = time.time()
         espacio = Espacio(nuevo_id(), nombre, instrucciones, ahora, ahora)
@@ -177,6 +181,8 @@ class RepositorioDeEspaciosSupabase:
         instrucciones = validar_instrucciones(instrucciones)
         if self._id_por_nombre(nombre):
             raise _duplicado(nombre)
+        if len(self.listar()) >= MAX_ESPACIOS:
+            raise _demasiados()
 
         ahora = time.time()
         espacio = Espacio(nuevo_id(), nombre, instrucciones, ahora, ahora)

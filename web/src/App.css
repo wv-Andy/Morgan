@@ -3479,6 +3479,13 @@
 
 .ajustes-valor { font-size: 14px; color: var(--text-secondary); text-align: right; }
 
+/* Ajustes → Este PC (5.3): lo último que hizo Morgan en el PC. */
+.este-pc__lista { list-style: none; margin: 6px 0 4px; padding: 0; font-size: 13.5px; color: var(--text-primary); }
+.este-pc__lista li { padding: 8px 0; border-bottom: 1px solid var(--border-subtle); overflow-wrap: anywhere; }
+.este-pc__estado { display: inline-block; min-width: 76px; margin-right: 8px; font-size: 12px; color: var(--text-secondary); }
+.este-pc__cuando { margin-right: 8px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.este-pc__detalle { display: block; margin-top: 2px; font-size: 12.5px; color: var(--text-secondary); }
+
 .ajustes-enlace {
   display: inline-flex;
   align-items: center;

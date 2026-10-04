@@ -83,14 +83,65 @@ pub fn pausa(c: Clave) -> (bool, bool) {
     }
 }
 
-/// La web de Morgan, la única que se abre dentro de la ventana de la conversación (5.2).
+// --- La vuelta atrás de una actualización (5.3) --------------------------------------------
+
+/// Lo que tiene una versión recién instalada para volver a conectar el PC antes de volver a la
+/// anterior: 3 minutos **despierto** (decisión de 2026-10-04). Como el agente desde la 3.8.5.
+pub const PLAZO_ESTRENO: f64 = 180.0;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Veredicto {
+    /// Aún dentro del plazo: se sigue mirando.
+    Esperar,
+    /// La versión nueva vale: se borra la marca y se dice.
+    Confirmar,
+    /// No volvió a conectar en el plazo: se reinstala la anterior.
+    VolverAtras,
+}
+
+/// Qué hacer con una versión recién instalada. `antes_conectado`: si el PC estaba conectado al
+/// pulsar «Actualizar» (si no, no hay con qué comparar: se confirma, y no se castiga a una
+/// versión buena por una red caída). `despierto`: los segundos que lleva el programa mirando
+/// sin contar una suspensión del PC.
+pub fn veredicto(antes_conectado: bool, ahora: Clave, despierto: f64, plazo: f64) -> Veredicto {
+    if !antes_conectado {
+        return Veredicto::Confirmar;
+    }
+    match ahora {
+        Clave::Conectado => Veredicto::Confirmar,
+        // Pausarlo es cosa de la persona, no un fallo de la versión.
+        Clave::EnPausa => Veredicto::Confirmar,
+        _ if despierto >= plazo => Veredicto::VolverAtras,
+        _ => Veredicto::Esperar,
+    }
+}
+
+/// La web de Morgan, la única página de fuera que se abre en la ventana del programa.
 pub const ANFITRION_DE_MORGAN: &str = "morgan-ia.vercel.app";
 
-/// Si una dirección se queda en la ventana de Morgan. Todo lo demás (un enlace de una
-/// respuesta, GitHub, la ayuda) se abre en el navegador: la ventana no es un navegador, y
-/// así una página ajena nunca se carga con la sesión de Morgan al lado.
-pub fn se_queda_en_la_ventana(esquema: &str, anfitrion: Option<&str>) -> bool {
-    esquema == "https" && anfitrion == Some(ANFITRION_DE_MORGAN)
+/// Qué hacer cuando la ventana va a cargar una dirección (5.3: una sola ventana).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Navegacion {
+    /// Se carga en la ventana: la web de Morgan y la pantalla de emparejar del programa.
+    Queda,
+    /// Se abre en el navegador: un enlace de una respuesta, GitHub, la ayuda… La ventana no es
+    /// un navegador, y así una página ajena nunca se carga con la sesión de Morgan al lado.
+    AlNavegador,
+    /// Ni una cosa ni otra (`data:`, `javascript:`, `file:`…): no hay nada que abrir.
+    Nada,
+}
+
+/// La regla de la ventana. La pantalla del programa se sirve en `http://tauri.localhost` en
+/// Windows (`tauri://localhost` en los demás). `about:blank` es lo primero que carga WebView2:
+/// bloquearlo dejaba la ventana en negro (la conversación de la 5.2, en mi captura).
+pub fn navegacion(esquema: &str, anfitrion: Option<&str>) -> Navegacion {
+    match (esquema, anfitrion) {
+        ("https", Some(ANFITRION_DE_MORGAN)) => Navegacion::Queda,
+        ("http", Some("tauri.localhost")) | ("tauri", Some("localhost")) => Navegacion::Queda,
+        ("about", None) => Navegacion::Queda,
+        ("http" | "https" | "mailto", _) => Navegacion::AlNavegador,
+        _ => Navegacion::Nada,
+    }
 }
 
 #[cfg(test)]
@@ -98,14 +149,52 @@ mod pruebas {
     use super::*;
 
     #[test]
-    fn solo_morgan_por_https_se_queda_en_la_ventana() {
-        assert!(se_queda_en_la_ventana("https", Some("morgan-ia.vercel.app")));
-        assert!(!se_queda_en_la_ventana("http", Some("morgan-ia.vercel.app")));
-        assert!(!se_queda_en_la_ventana("https", Some("github.com")));
-        assert!(!se_queda_en_la_ventana("https", Some("morgan-ia.vercel.app.otro.com")));
-        assert!(!se_queda_en_la_ventana("https", Some("otro-morgan-ia.vercel.app")));
-        assert!(!se_queda_en_la_ventana("https", None));
-        assert!(!se_queda_en_la_ventana("file", None));
+    fn conectada_la_version_nueva_se_confirma() {
+        assert_eq!(veredicto(true, Clave::Conectado, 10.0, PLAZO_ESTRENO), Veredicto::Confirmar);
+    }
+
+    #[test]
+    fn sin_conectar_se_espera_y_pasado_el_plazo_se_vuelve() {
+        for c in [Clave::Desconectado, Clave::Conectando, Clave::Revocado, Clave::Rendido, Clave::SinEmparejar] {
+            assert_eq!(veredicto(true, c, 30.0, PLAZO_ESTRENO), Veredicto::Esperar, "{c:?}");
+            assert_eq!(veredicto(true, c, PLAZO_ESTRENO, PLAZO_ESTRENO), Veredicto::VolverAtras, "{c:?}");
+        }
+    }
+
+    #[test]
+    fn si_antes_no_estaba_conectado_no_se_castiga_a_la_nueva() {
+        assert_eq!(veredicto(false, Clave::Desconectado, 999.0, PLAZO_ESTRENO), Veredicto::Confirmar);
+    }
+
+    #[test]
+    fn en_pausa_no_es_un_fallo() {
+        assert_eq!(veredicto(true, Clave::EnPausa, 999.0, PLAZO_ESTRENO), Veredicto::Confirmar);
+    }
+
+    #[test]
+    fn el_plazo_son_tres_minutos() {
+        assert_eq!(PLAZO_ESTRENO, 180.0);
+        assert_eq!(veredicto(true, Clave::Desconectado, 179.0, PLAZO_ESTRENO), Veredicto::Esperar);
+    }
+
+    #[test]
+    fn en_la_ventana_solo_morgan_y_la_pantalla_del_programa() {
+        use Navegacion::*;
+        assert_eq!(navegacion("https", Some("morgan-ia.vercel.app")), Queda);
+        assert_eq!(navegacion("http", Some("tauri.localhost")), Queda);
+        assert_eq!(navegacion("tauri", Some("localhost")), Queda);
+        assert_eq!(navegacion("about", None), Queda);
+        assert_eq!(navegacion("http", Some("morgan-ia.vercel.app")), AlNavegador);
+        assert_eq!(navegacion("https", Some("github.com")), AlNavegador);
+        assert_eq!(navegacion("https", Some("morgan-ia.vercel.app.otro.com")), AlNavegador);
+        assert_eq!(navegacion("https", Some("otro-morgan-ia.vercel.app")), AlNavegador);
+        assert_eq!(navegacion("https", Some("tauri.localhost")), AlNavegador);
+        assert_eq!(navegacion("http", Some("localhost")), AlNavegador);
+        assert_eq!(navegacion("mailto", None), AlNavegador);
+        assert_eq!(navegacion("file", None), Nada);
+        assert_eq!(navegacion("data", None), Nada);
+        assert_eq!(navegacion("javascript", None), Nada);
+        assert_eq!(navegacion("about", Some("x")), Nada);
     }
 
     const AHORA: f64 = 1_000_000.0;

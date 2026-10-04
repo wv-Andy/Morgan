@@ -51,6 +51,16 @@ VACIAS = {
 MIN_LONGITUD_TERMINO = 2
 MAX_RESULTADOS = 20
 
+#: Cuántos documentos puede tener una cuenta, entre todos sus espacios (4.22, revisión de los
+#: límites por cuenta). Los añade el modelo (`add_knowledge`, `index_document`) y sin tope un
+#: bucle llenaba la base. Reemplazar uno (mismo título y colección) siempre se puede.
+MAX_DOCUMENTOS = 300
+
+
+def _demasiados() -> ValueError:
+    return ValueError(f"Ya hay {MAX_DOCUMENTOS} documentos guardados, el máximo: borra alguno que no "
+                      "uses (remove_knowledge) antes de añadir otro.")
+
 # A partir de esta longitud se busca por la raiz en lugar de por la palabra
 # entera. El espanol conjuga y declina mucho: sin esto, "configuro" no encuentra
 # "configurar" ni "configuracion", y quien busca casi nunca escribe la forma
@@ -123,6 +133,8 @@ class AlmacenDeConocimiento:
 
         ahora = time.time()
         existente = self._buscar_por_titulo(titulo.strip(), coleccion)
+        if existente is None and self._cuantos() >= MAX_DOCUMENTOS:
+            raise _demasiados()
 
         documento = Documento(
             id=existente or f"doc-{secrets.token_urlsafe(8)}",
@@ -175,6 +187,12 @@ class AlmacenDeConocimiento:
 
         logger.info("Documento indexado: %s (%s)", documento.titulo, documento.id)
         return documento
+
+    def _cuantos(self) -> int:
+        """Los documentos de quien pide, en todos sus espacios."""
+        with self.db.connect() as conn:
+            return conn.execute("SELECT COUNT(*) FROM conocimiento WHERE user_id = ?",
+                                (usuario_actual(),)).fetchone()[0]
 
     def _buscar_por_titulo(self, titulo: str, coleccion: str) -> str | None:
         with self.db.connect() as conn:
