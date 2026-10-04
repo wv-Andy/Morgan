@@ -19,10 +19,10 @@
  * aplicación de una pantalla de espera perpetua.
  */
 
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useCuenta } from './Cuenta';
+import { PantallaAcceso, PRIVACIDAD, useCuenta } from './Cuenta';
 import { morganAPI } from '../lib/api';
 
 const DENTRO = {
@@ -127,5 +127,19 @@ describe('cuando el backend dice que la sesión ya no vale', () => {
     });
 
     await waitFor(() => expect(yo.mock.calls.length).toBeGreaterThan(antes));
+  });
+});
+
+describe('la privacidad al crear la cuenta (4.20)', () => {
+  it('quien se registra ve las condiciones y la política, enlazadas', () => {
+    render(<PantallaAcceso alEntrar={() => {}} modoInicial="crear" />);
+    const enlace = screen.getByRole('link', { name: /condiciones y la política de privacidad/i });
+    expect(enlace.getAttribute('href')).toBe(PRIVACIDAD);
+    expect(PRIVACIDAD).toMatch(/^https:\/\/github\.com\/wv-Andy\/Morgan\/.*privacidad\.md$/);
+  });
+
+  it('al entrar, no', () => {
+    render(<PantallaAcceso alEntrar={() => {}} modoInicial="entrar" />);
+    expect(screen.queryByRole('link', { name: /privacidad/i })).toBeNull();
   });
 });

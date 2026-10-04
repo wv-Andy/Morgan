@@ -127,6 +127,9 @@ export function useCuenta(): EstadoCuenta {
 
 type Modo = 'entrar' | 'crear' | 'recuperar' | 'restablecer';
 
+/** Qué guarda Morgan, con quién lo comparte y las condiciones (4.20). */
+export const PRIVACIDAD = 'https://github.com/wv-Andy/Morgan/blob/main/docs/privacidad.md';
+
 /** Lee el token del enlace de recuperación, si se llegó desde un correo. */
 function tokenDeLaUrl(): string {
   try {
@@ -410,6 +413,15 @@ export function PantallaAcceso({ alEntrar, modoInicial, alCancelar, avisoExterno
           <button type="submit" className="acceso__boton" disabled={enviando}>
             {enviando ? 'Un momento…' : acciones[modo]}
           </button>
+          {modo === 'crear' && (
+            <p className="acceso__legal">
+              Al crear la cuenta aceptas{' '}
+              <a href={PRIVACIDAD} target="_blank" rel="noreferrer">
+                las condiciones y la política de privacidad
+              </a>
+              .
+            </p>
+          )}
         </form>
 
         <div className="acceso__enlaces">

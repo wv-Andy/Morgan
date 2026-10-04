@@ -1862,6 +1862,19 @@
   background: rgba(125, 211, 252, 0.1);
 }
 
+.acceso__legal {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.acceso__legal a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .acceso__enlaces {
   display: flex;
   flex-direction: column;

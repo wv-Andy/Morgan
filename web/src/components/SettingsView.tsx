@@ -7,6 +7,7 @@ import { PanelEquipos } from './PanelEquipos';
 import { PanelPermisos } from './PanelPermisos';
 import { PanelTokens } from './PanelTokens';
 import type { EstadoCuenta } from './Cuenta';
+import { PRIVACIDAD } from './Cuenta';
 import {
   IconAudit, IconClose, IconCore, IconDatabase, IconExternal, IconInfo, IconMemory, IconPlug, IconSearch, IconShield, IconSparkle, IconUser,
 } from './Icons';
@@ -377,6 +378,11 @@ export function SettingsView({
                 : 'En tu equipo: puede trabajar con tus archivos, bajo el sistema de permisos.'}
               >
                 <span className="ajustes-valor">{entorno === 'cloud' ? 'Nube' : entorno ? 'Tu equipo' : '—'}</span>
+              </Fila>
+              <Fila titulo="Privacidad y condiciones" ayuda="Qué guarda Morgan y con quién lo comparte.">
+                <a className="ajustes-enlace" href={PRIVACIDAD} target="_blank" rel="noreferrer">
+                  Leer <IconExternal />
+                </a>
               </Fila>
               <Fila titulo="Código fuente" ayuda="Morgan es un proyecto abierto.">
                 <a className="ajustes-enlace" href={REPOSITORIO} target="_blank" rel="noreferrer">
