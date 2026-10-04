@@ -18,6 +18,7 @@ import { PlanesPendientes } from './components/Planes';
 import { ArchivosView } from './components/Archivos';
 import { SelectorDeEspacio } from './components/Espacios';
 import { BarraCuenta } from './components/BarraCuenta';
+import { DescargaWindows } from './components/DescargaWindows';
 import { IntegracionesView } from './components/Integraciones';
 import { AuditView, MemoryView, StatusView, ToolsView } from './components/VistasDeConsulta';
 import { ChatView } from './components/Chat';
@@ -652,6 +653,7 @@ Esta acción no se puede deshacer. Si solo quieres quitarla de en medio, archív
         <div className="sidebar-footer">
           {/* Quién eres y cómo está Morgan, abajo del todo. El engranaje lleva a
               Ajustes; cerrar sesión está en el menú del avatar de arriba. */}
+          <DescargaWindows />
           <div className="tarjeta-usuario">
             <span className="tarjeta-usuario__avatar" aria-hidden="true">
               {cuenta.usuario?.avatar_url

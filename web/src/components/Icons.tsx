@@ -272,6 +272,14 @@ export function IconClose({ size = 18, className }: IconProps) {
   );
 }
 
+export function IconDescargar({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size, className)}>
+      <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+    </svg>
+  );
+}
+
 export function IconExternal({ size = 14, className }: IconProps) {
   return (
     <svg {...base(size, className)}>

@@ -21,6 +21,7 @@ terminar tus procesos.
 | Vía | Cómo | Para qué |
 |---|---|---|
 | **Web en la nube** | `https://morgan-ia.vercel.app` | Con cuenta, siempre disponible, 43 herramientas (14 de ellas actúan en tu PC con el agente conectado: cuatro de lectura, la copia de un archivo para descargarlo, cinco de escritura y cuatro de terminal y procesos, estas nueve apagadas hasta que las enciendes) |
+| **Morgan para Windows** (5.0) | El instalador: «Descargar Morgan para Windows» en el menú lateral de la web (desde Windows) o en Ajustes → Tu equipo | Lleva el agente dentro: lo empareja desde una ventana, sin consola, y lo deja arrancando con Windows. Lo recomendado para conectar un PC |
 | **CLI** | `.\venv\Scripts\python -m src.main` | El día a día en tu equipo, con las 49 |
 | **Web local** | `.\venv\Scripts\python -m src.api.server` → `http://127.0.0.1:8000` | La interfaz sobre tu equipo |
 | **API REST** | La misma que usa la web | [api.md](api.md) |

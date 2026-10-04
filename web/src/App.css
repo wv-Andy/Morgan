@@ -2256,6 +2256,22 @@
   min-width: 0;
 }
 
+/* «Descargar Morgan para Windows» (5.1): encima de la tarjeta, solo desde Windows. */
+.descarga-windows {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 13.5px;
+  text-decoration: none;
+}
+.descarga-windows:hover { background: var(--bg-raised); }
+.descarga-windows svg { flex-shrink: 0; color: var(--text-secondary); }
+
 .tarjeta-usuario__avatar {
   width: 36px;
   height: 36px;
