@@ -92,7 +92,7 @@ confirmación). **L** = solo local · **L+N** = local y nube.
 | `forget_fact` | 🟡 | Olvidar uno |
 | `search_knowledge`, `add_knowledge`, `list_knowledge_sources`, `index_document` | 🟢 | Documentos consultables → [datos.md](datos.md#4-conocimiento-v18) |
 | `remove_knowledge` | 🟡 | Borrar un documento |
-| `search_web`, `read_webpage` | 🟢 | Buscar con **Google** (vía Serper, `SERPER_API_KEY`, 4.8), Tavily, Brave y DuckDuckGo, en ese orden y cada uno solo con su clave; se puede pedir uno (`motor`) y cada resultado dice cuál contestó. Un buscador que no responde descansa 10 min y, sin ninguno, se dice a la primera (4.5). Y leer páginas, aisladas en `<untrusted_web_data>`, sin alcanzar la red interna |
+| `search_web`, `read_webpage` | 🟢 | Buscar con **Google** (vía Serper, `SERPER_API_KEY`, 4.8), Tavily, Brave y DuckDuckGo, en ese orden y cada uno solo con su clave; se puede pedir uno (`motor`) y cada resultado dice cuál contestó. **Varias búsquedas en una llamada** (`consultas`, hasta 4, a la vez; 4.21): una pregunta de varias partes ya no es una vuelta al modelo por cada parte. Un buscador que no responde descansa 10 min y, sin ninguno, se dice a la primera (4.5). Y leer páginas, aisladas en `<untrusted_web_data>`, sin alcanzar la red interna |
 | `list_uploads`, `read_upload`, `analyze_image`, `transcribe_audio` | 🟢 | Archivos subidos por la web (abajo) |
 | `copy_file` | 🟢 | **Solo con tu PC conectado** (3.1-E): trae una copia de un archivo tuyo y te da un enlace para descargarla en el móvil. Cualquier formato, hasta 20 MB; la copia se borra sola a las 24 h |
 | `delete_file` | 🔴 | Igual, y además **se confirma en el PC** con una notificación. Va a la Papelera; solo carpetas vacías |

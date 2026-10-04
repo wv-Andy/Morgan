@@ -17,6 +17,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import zlib
+from concurrent.futures import ThreadPoolExecutor
 from html.parser import HTMLParser
 from typing import Any
 
@@ -269,6 +270,9 @@ ORDEN_DE_BUSCADORES = ("google", "tavily", "brave", "duckduckgo")
 #: puede pasar de mil caracteres por resultado, y el modelo solo necesita saber si le
 #: interesa leer la página.
 MAX_FRAGMENTO = 400
+#: Búsquedas de una sola llamada (4.21), y cuántos resultados de cada una si no se dice.
+MAX_CONSULTAS = 4
+RESULTADOS_POR_CONSULTA = 3
 
 
 class _BuscadorCaido(Exception):
@@ -341,6 +345,12 @@ class SearchWebTool(Tool):
                     "type": "string",
                     "description": "Término o consulta de búsqueda en la web.",
                 },
+                "consultas": {
+                    "type": "array", "items": {"type": "string"}, "maxItems": MAX_CONSULTAS,
+                    "description": ("Varias búsquedas independientes a la vez (hasta "
+                                    f"{MAX_CONSULTAS}), en vez de llamar varias veces: una por "
+                                    "cada parte de la pregunta."),
+                },
                 "max_results": {
                     "type": "integer",
                     "description": "Número máximo de resultados a devolver (1 a 10). Por defecto 5.",
@@ -350,10 +360,39 @@ class SearchWebTool(Tool):
                     "description": "Solo si la persona pide un buscador concreto.",
                 },
             },
-            "required": ["query"],
+            "required": [],
         }
 
-    def execute(self, query: str, max_results: int = 5, motor: str | None = None, **kwargs: Any) -> dict:
+    def execute(self, query: str = "", max_results: int | None = None, motor: str | None = None,
+                consultas: list[str] | None = None, **kwargs: Any) -> dict:
+        """Una búsqueda, o varias a la vez (`consultas`, 4.21). Medido con el modelo real: una
+        pregunta de tres partes eran seis vueltas al modelo, una búsqueda en cada una, y cada
+        vuelta reenviaba todo lo anterior (16 s, y cerca del tope por minuto de Groq). Con las
+        tres en una llamada, en paralelo, es una vuelta."""
+        lista = [str(c).strip() for c in (consultas or []) if str(c).strip()]
+        if query and str(query).strip() not in lista:
+            lista.insert(0, str(query).strip())
+        lista = list(dict.fromkeys(lista))[:MAX_CONSULTAS]
+        if not lista:
+            return {"success": False, "data": None, "error": "Falta qué buscar (query o consultas)."}
+        if len(lista) == 1:
+            return self._buscar(lista[0], max_results if max_results is not None else 5, motor)
+        # Entre 3 y 5 por consulta, pida lo que pida (4.21). Medido: con varias, el modelo
+        # pedía 1 resultado de cada una, se quedaba corto y volvía a buscar cada dato por
+        # separado (7 llamadas al modelo, 24 s de 29,7). Y más de 5 por cada una solo engorda
+        # lo que se le manda.
+        try:
+            por_consulta = min(max(int(max_results or RESULTADOS_POR_CONSULTA), RESULTADOS_POR_CONSULTA), 5)
+        except (TypeError, ValueError):
+            por_consulta = RESULTADOS_POR_CONSULTA
+        with ThreadPoolExecutor(max_workers=len(lista)) as hilos:
+            respuestas = list(hilos.map(lambda q: self._buscar(q, por_consulta, motor), lista))
+        datos = [{"query": q, **(r["data"] or {"error": r["error"]})} for q, r in zip(lista, respuestas)]
+        if not any(r["success"] for r in respuestas):
+            return {"success": False, "data": None, "error": respuestas[0]["error"]}
+        return {"success": True, "data": {"consultas": datos}, "error": None}
+
+    def _buscar(self, query: str, max_results: int, motor: str | None) -> dict:
         try:
             max_results = max(1, min(int(max_results), 10))
         except (TypeError, ValueError):
