@@ -1,8 +1,10 @@
 // Morgan para Windows (5.0, decisión W1: Tauri). Una ventana para emparejar el PC sin abrir
 // la consola, el instalador y, desde la 5.1, **el icono en la bandeja**: el estado (conectado,
 // conectando, en pausa…), pausar y reanudar al momento, abrir Morgan y sus ajustes, lo último
-// que hizo en el PC y el aviso de versión nueva. El trabajo lo hace el agente de siempre,
-// congelado con PyInstaller (decisión W2), que va dentro: `agente/morgan-agente/`.
+// que hizo en el PC y el aviso de versión nueva. Desde la 5.2, **la conversación en su propia
+// ventana** (la web de Morgan en WebView2) y el atajo Ctrl+Alt+M para abrirla desde cualquier
+// sitio. El trabajo lo hace el agente de siempre, congelado con PyInstaller (decisión W2), que
+// va dentro: `agente/morgan-agente/`.
 // Ver docs/plan-5.0.md.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -17,7 +19,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Manager, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 use bandeja::{Clave, Lectura};
 
@@ -179,6 +182,73 @@ fn mirar_novedades(app: &AppHandle) {
     pintar(app, true);
 }
 
+// --- La conversación (5.2) ----------------------------------------------------------------
+
+/// El atajo para abrir (o esconder) la conversación desde cualquier sitio (decidido el 2026-10-04).
+const ATAJO: &str = "Ctrl+Alt+M";
+
+fn atajo() -> Shortcut {
+    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyM)
+}
+
+/// La ventana de la conversación: la web de Morgan, con la sesión guardada en el perfil de
+/// WebView2 del programa (se entra una vez). **No tiene ninguna capacidad de Tauri**: los
+/// permisos (`capabilities/default.json`) son solo de la ventana del programa, así que la web
+/// no puede pausar, emparejar ni nada del PC. Solo navega por Morgan; lo demás, al navegador.
+fn conversacion(app: &AppHandle) -> Result<(), String> {
+    if let Some(ventana) = app.get_webview_window("morgan") {
+        let _ = ventana.show();
+        let _ = ventana.unminimize();
+        let _ = ventana.set_focus();
+        return Ok(());
+    }
+    let url = WEB.parse::<tauri::Url>().map_err(|e| format!("{e}"))?;
+    let version = app.package_info().version.to_string();
+    WebviewWindowBuilder::new(app, "morgan", WebviewUrl::External(url))
+        .title("Morgan")
+        .inner_size(1100.0, 780.0)
+        .min_inner_size(420.0, 520.0)
+        // Que la web sepa que está dentro del programa (no ofrece descargarlo, por ejemplo).
+        .initialization_script(&format!("window.__MORGAN_PROGRAMA__ = {version:?};"))
+        // Soltar archivos en la conversación: si Tauri se queda el arrastre, la web no lo ve.
+        .disable_drag_drop_handler()
+        .on_navigation(|url| {
+            let queda = bandeja::se_queda_en_la_ventana(url.scheme(), url.host_str());
+            if !queda {
+                let _ = abrir_enlace(url.as_str());
+            }
+            queda
+        })
+        .build()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+#[link(name = "user32")]
+extern "system" {
+    fn GetForegroundWindow() -> isize;
+}
+
+/// Si la ventana está en primer plano. `is_focused()` dice que no cuando el foco está dentro de
+/// la web (lo tiene el control de WebView2, no la ventana): medido en GitHub, con la
+/// conversación delante y el foco en ella, el atajo no la escondía.
+fn delante(ventana: &tauri::WebviewWindow) -> bool {
+    let Ok(h) = ventana.hwnd() else { return false };
+    let primer_plano = unsafe { GetForegroundWindow() };
+    primer_plano == h.0 as isize
+}
+
+/// El atajo: si la conversación está delante, se esconde; si no, se enseña.
+fn alternar_conversacion(app: &AppHandle) {
+    if let Some(ventana) = app.get_webview_window("morgan") {
+        if ventana.is_visible().unwrap_or(false) && delante(&ventana) {
+            let _ = ventana.hide();
+            return;
+        }
+    }
+    let _ = conversacion(app);
+}
+
 fn mostrar(app: &AppHandle, seccion: Option<&str>) {
     if let Some(ventana) = app.get_webview_window("main") {
         let _ = ventana.show();
@@ -193,10 +263,10 @@ fn mostrar(app: &AppHandle, seccion: Option<&str>) {
 fn crear_bandeja(app: &AppHandle) -> tauri::Result<()> {
     let estado = MenuItem::with_id(app, "estado", "Comprobando…", false, None::<&str>)?;
     let pausa = MenuItem::with_id(app, "pausa", "Pausar Morgan en este PC", false, None::<&str>)?;
-    let web = MenuItem::with_id(app, "web", "Abrir Morgan", true, None::<&str>)?;
+    let web = MenuItem::with_id(app, "web", format!("Abrir Morgan ({ATAJO})"), true, None::<&str>)?;
     let ajustes = MenuItem::with_id(app, "ajustes", "Qué puede hacer y qué carpetas ve", true, None::<&str>)?;
     let ultimas = MenuItem::with_id(app, "ultimas", "Lo último que hizo en este PC", true, None::<&str>)?;
-    let ventana = MenuItem::with_id(app, "ventana", "Abrir la ventana del programa", true, None::<&str>)?;
+    let ventana = MenuItem::with_id(app, "ventana", "Este PC: estado y emparejar", true, None::<&str>)?;
     let novedad = MenuItem::with_id(app, "novedad", "Al día", false, None::<&str>)?;
     let salir = MenuItem::with_id(app, "salir", "Quitar de la bandeja (Morgan sigue)", true, None::<&str>)?;
     let menu = Menu::with_items(
@@ -222,7 +292,7 @@ fn crear_bandeja(app: &AppHandle) -> tauri::Result<()> {
         .on_menu_event(|app, evento| match evento.id().as_ref() {
             "pausa" => alternar_pausa(app),
             "web" => {
-                let _ = abrir_enlace(WEB);
+                let _ = conversacion(app);
             }
             "ajustes" => {
                 let _ = abrir_ajustes(app.clone());
@@ -243,7 +313,8 @@ fn crear_bandeja(app: &AppHandle) -> tauri::Result<()> {
             if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } =
                 evento
             {
-                mostrar(icono.app_handle(), None);
+                // Un clic: la conversación, que es para lo que se abre Morgan.
+                let _ = conversacion(icono.app_handle());
             }
         })
         .build(app)?;
@@ -352,9 +423,10 @@ fn abrir_ajustes(app: AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+/// «Abrir Morgan» en la ventana del programa: la conversación, en su ventana (5.2).
 #[tauri::command]
-fn abrir_web() -> Result<(), String> {
-    abrir_enlace(WEB)
+fn abrir_web(app: AppHandle) -> Result<(), String> {
+    conversacion(&app)
 }
 
 fn main() {
@@ -363,8 +435,21 @@ fn main() {
         .plugin(tauri_plugin_single_instance::init(|app, _argumentos, _carpeta| {
             mostrar(app, None);
         }))
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, atajo_pulsado, evento| {
+                    if atajo_pulsado == &atajo() && evento.state() == ShortcutState::Pressed {
+                        alternar_conversacion(app);
+                    }
+                })
+                .build(),
+        )
         .setup(|app| {
             crear_bandeja(app.handle())?;
+            // Si otro programa ya tiene el atajo, Morgan sigue sin él (desde la bandeja).
+            if let Err(e) = app.global_shortcut().register(atajo()) {
+                eprintln!("No se pudo reservar {ATAJO}: {e}");
+            }
             // Al iniciar sesión (la clave Run del instalador) arranca solo en la bandeja.
             if !std::env::args().any(|a| a == "--bandeja") {
                 mostrar(app.handle(), None);

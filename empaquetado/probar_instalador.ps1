@@ -36,6 +36,16 @@ function VentanaDeMorgan([int]$id) {
         (New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, "Morgan")))
     $A::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Children, $condicion)
 }
+# La de la conversación (5.2) es la grande: la del programa mide 480 de ancho.
+function VentanaDeLaConversacion([int]$id) {
+    $A = [System.Windows.Automation.AutomationElement]
+    $condicion = New-Object System.Windows.Automation.AndCondition(
+        (New-Object System.Windows.Automation.PropertyCondition($A::ProcessIdProperty, $id)),
+        (New-Object System.Windows.Automation.PropertyCondition($A::NameProperty, "Morgan")))
+    $A::RootElement.FindAll([System.Windows.Automation.TreeScope]::Children, $condicion) |
+        Where-Object { $_.Current.BoundingRectangle.Width -gt 800 } | Select-Object -First 1
+}
+Add-Type -AssemblyName System.Windows.Forms
 $instalado = Join-Path $raiz "programa"
 Remove-Item -Recurse -Force $raiz -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $raiz | Out-Null
@@ -90,6 +100,22 @@ try {
     $resultado.una_sola_instancia = $otra.HasExited -and @(Get-Process Morgan -ErrorAction SilentlyContinue |
         Where-Object { $_.Path -like "$instalado*" }).Count -eq 1
     $resultado.abrirlo_otra_vez_la_enseña = [bool](VentanaDeMorgan $app.Id)
+    # 5.2: Ctrl+Alt+M abre la conversación desde cualquier sitio, y otra vez la esconde.
+    [System.Windows.Forms.SendKeys]::SendWait("^%m")
+    $limite = (Get-Date).AddSeconds(15)
+    while (-not (VentanaDeLaConversacion $app.Id) -and (Get-Date) -lt $limite) { Start-Sleep -Milliseconds 300 }
+    $conversacion = VentanaDeLaConversacion $app.Id
+    $resultado.el_atajo_abre_la_conversacion = [bool]$conversacion
+    Start-Sleep 2
+    # Con la conversación delante, la segunda pulsación la esconde (si no está delante, la
+    # trae: es lo que se espera de un atajo). Aquí se pone delante, por si Windows no le dio
+    # el primer plano a una ventana abierta desde una prueba.
+    $resultado.la_conversacion_estaba_delante = "$($conversacion -and $conversacion.Current.HasKeyboardFocus)"
+    if ($conversacion) { try { $conversacion.SetFocus() } catch { } }
+    Start-Sleep 1
+    [System.Windows.Forms.SendKeys]::SendWait("^%m")
+    Start-Sleep 2
+    $resultado.otra_vez_la_esconde = -not (VentanaDeLaConversacion $app.Id) -and -not $app.HasExited
 
     New-Item -ItemType Directory -Force (Join-Path $env:MORGAN_AGENTE_DIR "respaldos") | Out-Null
     "respaldo" | Set-Content (Join-Path $env:MORGAN_AGENTE_DIR "respaldos\r.txt")

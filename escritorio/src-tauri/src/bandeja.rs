@@ -83,9 +83,30 @@ pub fn pausa(c: Clave) -> (bool, bool) {
     }
 }
 
+/// La web de Morgan, la única que se abre dentro de la ventana de la conversación (5.2).
+pub const ANFITRION_DE_MORGAN: &str = "morgan-ia.vercel.app";
+
+/// Si una dirección se queda en la ventana de Morgan. Todo lo demás (un enlace de una
+/// respuesta, GitHub, la ayuda) se abre en el navegador: la ventana no es un navegador, y
+/// así una página ajena nunca se carga con la sesión de Morgan al lado.
+pub fn se_queda_en_la_ventana(esquema: &str, anfitrion: Option<&str>) -> bool {
+    esquema == "https" && anfitrion == Some(ANFITRION_DE_MORGAN)
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
+
+    #[test]
+    fn solo_morgan_por_https_se_queda_en_la_ventana() {
+        assert!(se_queda_en_la_ventana("https", Some("morgan-ia.vercel.app")));
+        assert!(!se_queda_en_la_ventana("http", Some("morgan-ia.vercel.app")));
+        assert!(!se_queda_en_la_ventana("https", Some("github.com")));
+        assert!(!se_queda_en_la_ventana("https", Some("morgan-ia.vercel.app.otro.com")));
+        assert!(!se_queda_en_la_ventana("https", Some("otro-morgan-ia.vercel.app")));
+        assert!(!se_queda_en_la_ventana("https", None));
+        assert!(!se_queda_en_la_ventana("file", None));
+    }
 
     const AHORA: f64 = 1_000_000.0;
 
