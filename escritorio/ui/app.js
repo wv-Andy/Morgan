@@ -5,7 +5,7 @@ const { invoke } = window.__TAURI__.core;
 const $ = (id) => document.getElementById(id);
 
 function ver(seccion) {
-  for (const id of ["cargando", "sin-emparejar", "emparejado"]) {
+  for (const id of ["cargando", "sin-emparejar", "confirmar", "emparejado"]) {
     $(id).hidden = id !== seccion;
   }
 }
@@ -35,22 +35,47 @@ async function mirar() {
   }
 }
 
+// 1. De qué cuenta es el código (sin usarlo). 2. La persona dice que sí. 3. Emparejar.
 $("formulario").addEventListener("submit", async (evento) => {
   evento.preventDefault();
   const boton = $("emparejar");
   $("error").hidden = true;
+  boton.disabled = true;
+  boton.textContent = "Mirando…";
+  try {
+    $("cuenta").textContent = await invoke("consultar", { codigo: $("codigo").value });
+    $("error2").hidden = true;
+    ver("confirmar");
+    $("si").focus();
+  } catch (error) {
+    $("error").textContent = String(error).trim() || "No se pudo comprobar el código. Mira que sea el de ahora.";
+    $("error").hidden = false;
+  } finally {
+    boton.disabled = false;
+    boton.textContent = "Conectar";
+  }
+});
+
+$("si").addEventListener("click", async () => {
+  const boton = $("si");
   boton.disabled = true;
   boton.textContent = "Conectando…";
   try {
     await invoke("emparejar", { codigo: $("codigo").value });
     await mirar();
   } catch (error) {
-    $("error").textContent = String(error).trim() || "No se pudo conectar. Mira que el código sea el de ahora.";
-    $("error").hidden = false;
+    $("error2").textContent = String(error).trim() || "No se pudo conectar.";
+    $("error2").hidden = false;
   } finally {
     boton.disabled = false;
-    boton.textContent = "Conectar";
+    boton.textContent = "Sí, es mía: conectar";
   }
+});
+
+$("no").addEventListener("click", () => {
+  $("codigo").value = "";
+  ver("sin-emparejar");
+  $("codigo").focus();
 });
 
 $("ajustes").addEventListener("click", () => invoke("abrir_ajustes"));

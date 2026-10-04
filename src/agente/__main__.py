@@ -69,6 +69,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--nube", default=os.environ.get("MORGAN_NUBE") or "https://morgan-ia-2-0.onrender.com")
     p.add_argument("--nombre", default=socket.gethostname(), help="cómo se verá en la web")
     p.add_argument("--codigo", help="el código de la web (si no, se pregunta)")
+    # La ventana del programa de Windows (5.0) no tiene consola: primero pregunta de qué
+    # cuenta es el código (`--consultar`, sin usarlo), lo enseña, y si la persona dice que sí,
+    # empareja con `--si`. La confirmación sigue: la hace la ventana.
+    p.add_argument("--consultar", action="store_true", help="solo decir de qué cuenta es el código")
+    p.add_argument("--si", action="store_true", help="sin preguntar (ya se confirmó la cuenta)")
     ordenes.add_parser("conectar", help="conectar con la nube y atender peticiones (Ctrl+C para parar)")
     ordenes.add_parser("estado", help="si este PC está emparejado, y con quién")
     c = ordenes.add_parser("carpetas", help="ver, añadir o quitar las carpetas que Morgan puede leer")
@@ -118,7 +123,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.orden == "emparejar":
             codigo = args.codigo or input("Código de la web (Ajustes → Tu equipo): ")
-            return 0 if emparejar(args.nube, codigo, args.nombre) else 1
+            if args.consultar:
+                from src.agente.emparejar import consultar
+
+                print(f"CUENTA: {consultar(args.nube, codigo)}")
+                return 0
+            preguntar = (lambda _texto: "s") if args.si else input
+            return 0 if emparejar(args.nube, codigo, args.nombre, preguntar=preguntar) else 1
         if args.orden == "desemparejar":
             desemparejar()
             return 0

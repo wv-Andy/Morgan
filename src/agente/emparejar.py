@@ -40,6 +40,21 @@ def _error(respuesta) -> str:
         return f"la nube respondió {respuesta.status_code}"
 
 
+def consultar(nube: str, codigo: str, http=None) -> str:
+    """De qué cuenta es este código, **sin usarlo** (sigue valiendo hasta que caduque). Lo que
+    hay que enseñar a la persona antes de emparejar: alguien podría darle un código de SU
+    cuenta. La ventana del programa de Windows (5.0) lo pregunta con esto, y después empareja
+    con `--si`."""
+    import httpx
+
+    cliente = http or httpx.Client(timeout=90)
+    r = cliente.post(f"{nube.rstrip('/')}/agente/emparejar/consultar", json={"codigo": normalizar_codigo(codigo)})
+    if r.status_code != 200:
+        raise EmparejamientoFallido(_error(r))
+    cuenta = r.json()["cuenta"]
+    return cuenta["nombre"] + (f" ({cuenta['correo']})" if cuenta.get("correo") else "")
+
+
 def emparejar(
     nube: str,
     codigo: str,
@@ -59,12 +74,7 @@ def emparejar(
     nube = nube.rstrip("/")
     cliente = http or httpx.Client(timeout=90)
     codigo = normalizar_codigo(codigo)
-
-    r = cliente.post(f"{nube}/agente/emparejar/consultar", json={"codigo": codigo})
-    if r.status_code != 200:
-        raise EmparejamientoFallido(_error(r))
-    cuenta = r.json()["cuenta"]
-    etiqueta = cuenta["nombre"] + (f" ({cuenta['correo']})" if cuenta.get("correo") else "")
+    etiqueta = consultar(nube, codigo, http=cliente)
 
     decir(f"Este código empareja este PC con la cuenta de Morgan: {etiqueta}")
     decir("Desde esa cuenta se podrá pedir a este PC que haga cosas, siempre con sus propias reglas.")

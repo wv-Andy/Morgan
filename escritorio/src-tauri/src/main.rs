@@ -48,14 +48,34 @@ fn estado(app: tauri::AppHandle) -> Result<String, String> {
     agente(&app, &["estado"])
 }
 
-/// Empareja con el código de la web y deja el agente arrancando con Windows.
-#[tauri::command]
-fn emparejar(app: tauri::AppHandle, codigo: String) -> Result<String, String> {
+fn codigo_valido(codigo: &str) -> Result<String, String> {
     let codigo = codigo.trim().to_string();
     if codigo.is_empty() || codigo.len() > 64 || !codigo.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
         return Err("Escribe el código tal cual te lo da la web (Ajustes → Tu equipo).".into());
     }
-    let mut texto = agente(&app, &["emparejar", "--codigo", &codigo])?;
+    Ok(codigo)
+}
+
+/// De qué cuenta es el código, sin usarlo: la ventana lo enseña y pregunta antes de emparejar
+/// (alguien podría darte un código de SU cuenta). Medido en la primera prueba de punta a punta:
+/// el agente lo preguntaba en la consola, y la ventana no tiene, así que no emparejaba nunca.
+#[tauri::command]
+fn consultar(app: tauri::AppHandle, codigo: String) -> Result<String, String> {
+    let codigo = codigo_valido(&codigo)?;
+    let texto = agente(&app, &["emparejar", "--codigo", &codigo, "--consultar"])?;
+    texto
+        .lines()
+        .find_map(|l| l.strip_prefix("CUENTA: "))
+        .map(|c| c.trim().to_string())
+        .ok_or_else(|| texto.trim().to_string())
+}
+
+/// Empareja (la persona ya confirmó la cuenta en la ventana) y deja el agente arrancando con
+/// Windows.
+#[tauri::command]
+fn emparejar(app: tauri::AppHandle, codigo: String) -> Result<String, String> {
+    let codigo = codigo_valido(&codigo)?;
+    let mut texto = agente(&app, &["emparejar", "--codigo", &codigo, "--si"])?;
     texto.push_str(&agente(&app, &["arranque", "activar"])?);
     Ok(texto)
 }
@@ -84,7 +104,7 @@ fn abrir_web() -> Result<(), String> {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![estado, emparejar, abrir_ajustes, abrir_web])
+        .invoke_handler(tauri::generate_handler![estado, consultar, emparejar, abrir_ajustes, abrir_web])
         .run(tauri::generate_context!())
         .expect("Morgan no pudo arrancar");
 }

@@ -22,7 +22,8 @@ function Huella {
     $rutas = @("$env:LOCALAPPDATA\Morgan\agente\credencial.bin", "$env:LOCALAPPDATA\Morgan\agente\politica.json",
                "$env:LOCALAPPDATA\Morgan\agente\agente.json")
     $rutas += Get-ChildItem ([Environment]::GetFolderPath('Startup')), ([Environment]::GetFolderPath('Programs')) `
-        -Filter "Morgan*.lnk" -ErrorAction SilentlyContinue | ForEach-Object FullName
+        -Filter "Morgan*.lnk" -ErrorAction SilentlyContinue |
+        Where-Object Name -notlike "Morgan para Windows*" | ForEach-Object FullName   # el del programa, no
     $rutas | Where-Object { Test-Path $_ } | ForEach-Object {
         "$_|" + (Get-FileHash $_ -Algorithm SHA256).Hash
     }

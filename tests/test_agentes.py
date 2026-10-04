@@ -330,6 +330,42 @@ class TestEmparejarDeVerdad:
         r = TestClient(nube).post("/agente/emparejar/consultar", json={"codigo": codigo})
         assert r.status_code == 200
 
+    def test_consultar_dice_la_cuenta_y_no_gasta_el_codigo(self, nube):
+        """5.0: la ventana del programa de Windows no tiene consola. Primero pregunta de qué
+        cuenta es el código, lo enseña, y después empareja con `--si`."""
+        from src.agente.emparejar import consultar
+
+        web, csrf = _web(nube)
+        codigo = _codigo(web, csrf)
+        assert "ana" in consultar("http://testserver", codigo, http=TestClient(nube))
+        assert almacen.estado() is almacen.EstadoAgente.UNPAIRED
+        emparejar("http://testserver", codigo, "PC", preguntar=lambda _: "s",
+                  decir=lambda _: None, http=TestClient(nube))
+        assert almacen.estado() is almacen.EstadoAgente.PAIRED, "el código seguía valiendo"
+
+    def test_en_la_consola_consultar_no_empareja_y_si_no_pregunta(self, monkeypatch, capsys):
+        from src.agente import __main__ as consola
+        from src.agente import emparejar as modulo
+
+        monkeypatch.setattr(modulo, "consultar", lambda nube, codigo, http=None: "ana (a•••@ejemplo.co)")
+        llamadas = []
+        monkeypatch.setattr(consola, "emparejar", lambda *a, **k: llamadas.append(k) or True)
+        monkeypatch.setattr("builtins.input", lambda *_: (_ for _ in ()).throw(EOFError("sin consola")))
+
+        assert consola.main(["emparejar", "--codigo", "ABCD-EFGH", "--consultar"]) == 0
+        assert "CUENTA: ana" in capsys.readouterr().out and llamadas == []
+
+        assert consola.main(["emparejar", "--codigo", "ABCD-EFGH", "--si"]) == 0
+        assert llamadas[0]["preguntar"]("¿Es tu cuenta?") == "s", "sin consola, sin preguntar"
+
+    def test_sin_si_sigue_preguntando(self, monkeypatch):
+        from src.agente import __main__ as consola
+
+        llamadas = []
+        monkeypatch.setattr(consola, "emparejar", lambda *a, **k: llamadas.append(k) or True)
+        consola.main(["emparejar", "--codigo", "ABCD-EFGH"])
+        assert llamadas[0]["preguntar"] is input
+
     def test_un_pc_emparejado_no_se_empareja_otra_vez(self, nube):
         web, csrf = _web(nube)
         cliente = TestClient(nube)
