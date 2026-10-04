@@ -46,6 +46,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit 1 }
           & $exe actualizar
           if ($LASTEXITCODE -ne 2) { throw "el congelado no debe actualizarse solo" }
+          exit 0   # el 2 de arriba es lo esperado; sin esto, el paso acabaría con él
 
       - uses: actions/setup-node@v7
         with:
