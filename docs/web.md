@@ -1,308 +1,302 @@
-# La interfaz web
+# The web interface
 
-> Junta lo que antes eran cuatro documentos: el diseño de la interfaz, el control
-> del turno, las pruebas del frontend y los diez defectos que rompían la web en
-> producción. Última revisión: 2026-09-25, V3.5.0 (el agente local: descargas, planes y «Detener»).
+**English** · [Español](web.es.md)
 
-React 19 + TypeScript + Vite, publicada en Vercel (`morgan-ia.vercel.app`). Habla
-con el backend de Render por un proxy en el mismo origen, `/api/*`
-(despliegue.md).
+> Brings together what used to be four documents: the interface's design, control over the
+> turn, the frontend tests and the ten defects that broke the web in production. Last review:
+> 2026-09-25, V3.5.0 (the local agent: downloads, plans and «Stop»).
 
-## 1. Principios de diseño
+React 19 + TypeScript + Vite, published on Vercel (`morgan-ia.vercel.app`). It talks to the
+Render backend through a same-origin proxy, `/api/*` (despliegue.md, in
+Spanish). The interface is in Spanish.
 
-- **Un botón que no hace nada es peor que su ausencia.** No se copian de una
-  referencia visual controles sin función: ni píldoras de «deep think», ni un `+`
-  que en la portada estaba desactivado (se quitó en la 2.0.9). Del diseño de la
-  2.0.28 se dejaron fuera compartir, avisos, un selector de modelo y los datos de
-  consumo: en Morgan no harían nada.
-- **Ningún componente escribe un color a mano**; todos leen variables de
-  `web/src/index.css`, y `tests/test_tema_web.py` fija el contraste WCAG de los tres
-  temas, también del acento y de los dos tonos del botón de enviar. El color de
-  estado (riesgo, salud) sigue siendo información; el acento marca lo que se pulsa.
-- **Tipografía**: Outfit en toda la interfaz y en las respuestas; Instrument Serif (tipo Times)
-  en cursiva para la palabra destacada del saludo; JetBrains Mono para el código.
-- **Las sugerencias de la portada escriben en el compositor, no envían.** Con un
-  agente que ejecuta acciones reales, quien pulsa tiene que poder leer qué pide.
-- **Iconos SVG, no emoji**: los emoji cambian entre sistemas y no heredan color.
+## 1. Design principles
 
-### Temas
+- **A button that does nothing is worse than not having it.** Controls without a function
+  aren't copied from a visual reference: no "deep think" pills, no `+` that was disabled on
+  the home screen (removed in 2.0.9). From the 2.0.28 design, sharing, notifications, a model
+  picker and usage data were left out: in Morgan they wouldn't do anything.
+- **No component writes a color by hand**; all of them read variables from
+  `web/src/index.css`, and `tests/test_tema_web.py` pins the WCAG contrast of the three themes,
+  also for the accent and the two tones of the send button. Status color (risk, health) is
+  still information; the accent marks what can be pressed.
+- **Typography**: Outfit for the whole interface and the answers; Instrument Serif (a Times-like
+  face) in italics for the highlighted word in the greeting; JetBrains Mono for code.
+- **The home screen's suggestions write into the composer, they don't send.** With an agent
+  that takes real actions, whoever presses has to be able to read what they're asking.
+- **SVG icons, not emoji**: emoji change between systems and don't inherit color.
 
-Desde la 2.0.28 salen de mis capturas de diseño:
+### Themes
 
-| Tema | `data-tema` | Qué es |
+Since 2.0.28 they come from my design screenshots:
+
+| Theme | `data-tema` | What it is |
 |---|---|---|
-| **Azul noche** (defecto) | `oscuro` | Azul marino muy oscuro, acento azul claro, botones con degradado azul |
-| **Oscuro** | `negro` | Monocromo: grises neutros, acento blanco, enviar en blanco con texto negro |
-| **Claro** | `claro` | El azul noche de día: fondo gris azulado, tarjetas blancas con sombra suave |
-| Del sistema | — | Elige entre claro y azul noche |
+| **Night blue** (default) | `oscuro` | Very dark navy blue, light blue accent, buttons with a blue gradient |
+| **Dark** | `negro` | Monochrome: neutral grays, white accent, a white send button with black text |
+| **Light** | `claro` | The night blue by day: bluish gray background, white cards with a soft shadow |
+| From the system | — | Picks between light and night blue |
 
-Los identificadores no cambiaron (`oscuro` era el lima hasta la 2.0.27, `negro` el
-monocromo de la V1.2): renombrarlos devolvería al tema por defecto a todo el que ya
-tiene uno guardado.
+The identifiers didn't change (`oscuro` was the lime one until 2.0.27, `negro` the monochrome
+of V1.2): renaming them would send everyone who already has one saved back to the default
+theme.
 
-### El logo (V2.0.19)
+### The logo (V2.0.19)
 
-Mi espiral, vectorizada y comparada con el original. Es un componente,
-`LogoMorgan` (`web/src/components/Logo.tsx`), con `fill="currentColor"`: vale en los
-tres temas sin petición de red. Está en el favicon, la barra lateral, la barra de
-arriba, el acceso y la insignia de la portada, que **gira mientras se comprueba el
-servidor**. PNG de 180 y 512 px para iOS y para compartir el enlace.
+My spiral, vectorized and compared with the original. It's a component, `LogoMorgan`
+(`web/src/components/Logo.tsx`), with `fill="currentColor"`: it works in the three themes
+without a network request. It's in the favicon, the side bar, the top bar, the sign-in screen
+and the home screen's badge, which **spins while the server is being checked**. PNGs of 180
+and 512 px for iOS and for sharing the link.
 
-**El icono de la pestaña** (2.0.29) es la espiral en azul sobre un cuadrado azul
-noche, en SVG, PNG de 96 px y un `favicon.ico` de verdad. Se enlazan con `?v=`: el
-rayo morado que yo veía en la pestaña era el icono de la plantilla de Vite,
-**guardado por el navegador** desde antes de que existiera el logo (producción ya
-servía la espiral). Los navegadores guardan el icono por su dirección durante
-mucho tiempo, y `/favicon.ico` devolvía la página. Se borraron también los restos
-de la plantilla (`vite.svg`, `react.svg`, `hero.png`, `icons.svg`), que nada usaba.
+**The tab icon** (2.0.29) is the spiral in blue on a night blue square, in SVG, a 96 px PNG and
+a real `favicon.ico`. They're linked with `?v=`: the purple lightning bolt I saw in the tab was
+the Vite template's icon, **cached by the browser** since before the logo existed (production
+was already serving the spiral). Browsers cache the icon by its address for a long time, and
+`/favicon.ico` returned the page. The template's leftovers (`vite.svg`, `react.svg`,
+`hero.png`, `icons.svg`), which nothing used, were deleted too.
 
-**La pantalla de carga es solo la espiral girando en el centro** (2.0.28). Está dos
-veces a propósito: en línea en `web/index.html`, para verse desde el primer instante
-mientras se descarga la aplicación (con un script que aplica el tema guardado antes
-de pintar), y en `PantallaCargando`, idéntica, mientras se averigua la sesión. De
-una a otra no hay salto. Con el backend dormido la espera puede pasar del minuto: que
-la espiral siga girando es lo que dice que pasa algo. Con
-`prefers-reduced-motion` se queda quieta.
+**The loading screen is just the spiral spinning in the center** (2.0.28). It's there twice on
+purpose: inline in `web/index.html`, to be seen from the first instant while the app downloads
+(with a script that applies the saved theme before painting), and in `PantallaCargando`,
+identical, while the session is being figured out. There is no jump from one to the other.
+With the backend asleep the wait can go past a minute: the spiral still spinning is what says
+something is happening. With `prefers-reduced-motion` it stays still.
 
-### Cómo se comprobó el diseño de la 2.0.28
+### How the 2.0.28 design was checked
 
-Con capturas de la web compilada, servida por un backend **aislado** (datos
-temporales, sin claves de modelos ni Supabase):
+With screenshots of the built web, served by an **isolated** backend (temporary data, no model
+or Supabase keys):
 
-- Los tres temas en escritorio, contra las capturas de referencia.
-- 360 y 390 px dentro de un `iframe`, con el menú abierto y con el compositor a la
-  vista. Encontró tres fallos, corregidos antes de publicar: las tarjetas no pasaban
-  a una columna, la regla táctil de 40 px aplastaba «Adjuntar» y la barra de arriba
-  se amontonaba sin sesión.
-- La pantalla de carga sin JavaScript, y que la espiral **gira**: dos capturas en
-  instantes distintos dan imágenes distintas.
-- Una conversación con Markdown y código, y el acceso en modo nube.
-- Encontró también una incoherencia: la barra decía «Modo degradado» y la portada
-  «Operativo». Ahora las dos leen el mismo dato.
+- The three themes on desktop, against the reference screenshots.
+- 360 and 390 px inside an `iframe`, with the menu open and with the composer in view. It found
+  three bugs, fixed before publishing: the cards didn't switch to one column, the 40 px touch
+  rule squashed «Adjuntar» (Attach) and the top bar piled up without a session.
+- The loading screen without JavaScript, and that the spiral **spins**: two screenshots at
+  different moments give different images.
+- A conversation with Markdown and code, and the sign-in screen in cloud mode.
+- It also found an inconsistency: the bar said «Modo degradado» (degraded mode) and the home
+  screen «Operativo» (operational). Now both read the same data.
 
-## 2. Estructura
+## 2. Structure
 
-Barra lateral y lienzo con una barra arriba (2.0.28):
+A side bar and a canvas with a bar on top (2.0.28):
 
-- **Barra lateral**: la marca con el entorno (`Nube` o `Local`, de `/status`), el botón
-  de nueva conversación, las vistas, el espacio de trabajo y el historial. Abajo, la
-  **tarjeta de usuario**: nombre, estado de Morgan y el engranaje de Ajustes.
-- **Ajustes es un panel, no una vista** (2.0.29), como en la captura de referencia:
-  secciones a la izquierda con buscador (General, Personalización, Memoria, Datos y
-  privacidad, Cuenta, Acceso por API, Acerca de) y filas con nombre, una línea de
-  ayuda y el control.
-  Se abre desde el engranaje o desde el menú de la cuenta y se cierra con Escape o
-  pulsando fuera, sin perder dónde estabas. En 640 px o menos ocupa la pantalla y
-  las secciones pasan a pastillas que se desplazan de lado. Del diseño se quedaron
-  fuera el color de acento, la voz y Discord: aquí no harían nada. El idioma se
-  elige de una lista y se guarda al momento **sin pisar lo que se esté escribiendo
-  en el perfil**; el perfil se guarda con su botón, que solo se activa si cambió algo.
-- **Tu equipo, paso a paso** (4.17): la línea de instalación con su botón **Copiar**, cómo
-  abrir PowerShell y pegarla, y **aviso solo cuando el PC se conecta** (mira cada 3 s
-  mientras hay un código; el que ya estaba no cuenta como nuevo). En cada equipo
-  conectado, **«Abrir los ajustes en mi PC»**: abre allí «Morgan en tu PC» y no cambia nada
-  desde aquí. Y en «Acceso por API», al crear un token, la dirección de la API y ejemplos
-  que funcionan tal cual (PowerShell, curl, Python) con su botón Copiar (`ParaCopiar.tsx`).
-- **Tu equipo** (3.0-C): emparejar el PC con la cuenta para el
-  agente local (`PanelEquipos.tsx`). Pide un código de un solo uso y lo
-  enseña grande, con su cuenta atrás, porque se teclea a mano en el PC; uno caducado no
-  se enseña como si valiera. Advierte de lo que corta la amenaza H: *«si la cuenta que
-  ves no es la tuya, di que no»*. Lista los equipos con su sistema, versión y última
-  conexión, y revocar pide confirmación. Dice que al instalarlo el agente **no puede
-  hacer nada** hasta que la persona, en su PC, le da carpetas o enciende capacidades.
-  Desde la 3.8, con el código enseña **la línea de PowerShell que instala el agente** en
-  un PC nuevo (y cómo emparejar uno que ya lo tiene); desde la 3.7, de cada equipo, si
-  está conectado, qué ofrece y su historial (abajo).
-- **Acceso por API** (2.0.41, fase 2 del plan de la API):
-  crear, ver y revocar los [tokens personales](autenticacion.md#tokens-personales-de-api-v2040)
-  (`PanelTokens.tsx`). Está escrito para quien no ha visto nunca un token: explica
-  para qué sirve y dice «si no sabes qué es, no lo necesitas». Lo que lo hace seguro
-  de usar:
-  - **Por defecto, chatear y leer, 90 días**: nada que pueda borrar si no se marca.
-  - **El valor se enseña una vez**, en un área de texto donde se ve entero (en el
-    móvil, un campo de una línea lo cortaba), con «Copiar» y «Ya lo he guardado». La
-    caja **no se cierra sola**: perderlo por un cambio de sección obligaría a
-    revocarlo. Si el navegador no deja usar el portapapeles, lo deja seleccionado.
-  - **Revocar pide confirmación** («Sí, revocar»), uno a uno o todos.
-  - Avisa en color de los que **caducan en 7 días o menos**.
-  - En el Morgan de tu equipo explica que no hace falta token: sin cuenta, la API
-    ya es tuya.
+- **Side bar**: the brand with the environment (`Nube` or `Local`, from `/status`), the new
+  conversation button, the views, the workspace and the history. At the bottom, the **user
+  card**: name, Morgan's status and the Settings gear. Since 5.0.2, from Windows, above the
+  card, **«Descargar Morgan para Windows»** (download Morgan for Windows), which isn't shown on
+  a phone or inside the program itself.
+- **Settings is a panel, not a view** (2.0.29), as in the reference screenshot: sections on the
+  left with a search box (General, Personalization, Memory, Data and privacy, Account, API
+  access, About) and rows with a name, a line of help and the control. It opens from the gear
+  or from the account menu and closes with Escape or by clicking outside, without losing where
+  you were. At 640 px or less it takes the whole screen and the sections become pills that
+  scroll sideways. Accent color, voice and Discord were left out of the design: here they
+  wouldn't do anything. The language is picked from a list and saved at once **without
+  overwriting what's being typed in the profile**; the profile is saved with its button, which
+  is only enabled if something changed.
+- **Your computer, step by step** (4.17): the program to download (5.0) and, as an
+  alternative, the install line with its **Copy** button, how to open PowerShell and paste it,
+  and **a notice only when the PC connects** (it checks every 3 s while there is a code; the
+  one that was already there doesn't count as new). On each connected computer, **«Abrir los
+  ajustes en mi PC»** (open the settings on my PC): it opens «Morgan en tu PC» there and
+  changes nothing from here. And in «API access», when creating a token, the API's address and
+  examples that work as they are (PowerShell, curl, Python) with their Copy button
+  (`ParaCopiar.tsx`).
+- **Your computer** (3.0-C): pairing the PC with the account for the
+  local agent (in Spanish) (`PanelEquipos.tsx`). It asks for a single-use
+  code and shows it big, with its countdown, because it's typed by hand on the PC; an expired
+  one isn't shown as if it were valid. It warns about what threat H cuts: *"if the account you
+  see isn't yours, say no"*. It lists the computers with their system, version and last
+  connection, and revoking asks for confirmation. It says that once installed the agent **can't
+  do anything** until the person, on their PC, gives it folders or switches on capabilities.
+  Since 3.8, with the code it shows **the PowerShell line that installs the agent** on a new PC
+  (and how to pair one that already has it); since 3.7, for each computer, whether it's
+  connected, what it offers and its history (below).
+- **API access** (2.0.41, phase 2 of the API plan, in Spanish):
+  creating, seeing and revoking the [personal tokens](autenticacion.md#personal-api-tokens-v2040)
+  (`PanelTokens.tsx`). It's written for someone who has never seen a token: it explains what
+  it's for and says "if you don't know what it is, you don't need it". What makes it safe to
+  use:
+  - **By default, chatting and reading, 90 days**: nothing that can delete unless ticked.
+  - **The value is shown once**, in a text area where it's seen whole (on the phone, a one-line
+    field cut it), with «Copy» and «I've saved it». The box **doesn't close on its own**:
+    losing it by switching section would force you to revoke it. If the browser doesn't allow
+    the clipboard, it leaves it selected.
+  - **Revoking asks for confirmation** ("Yes, revoke"), one by one or all of them.
+  - It warns in color about the ones that **expire in 7 days or less**.
+  - On the Morgan on your computer it explains that no token is needed: without an account,
+    the API is already yours.
 
-  **Comprobado en el móvil** con la web compilada y un backend aislado, a 360 y
-  390 px: crear, ver, guardar y revocar sin que nada se salga de la pantalla, y el
-  token creado desde el móvil **funciona desde un script** (200) y deja de hacerlo
-  al revocarlo desde la web (401). La primera captura enseñó dos cosas, corregidas:
-  el título salía repetido y el valor se cortaba.
-- **Qué modelo contesta no se enseña** (2.0.29, decisión mía): ni en cada
-  mensaje ni debajo del compositor. Queda una sola pista, sin nombres: si contestó
-  el de reserva, el tiempo de la respuesta lo explica al pasar por encima. Debajo
-  del compositor, un aviso para cualquiera («Morgan puede equivocarse…»).
-- **La vista de estado habla en palabras de quien usa Morgan** (2.0.29): «Conversar
-  y razonar», «Internet», «Tus datos», «Correo», con «Funciona / Con problemas / No
-  disponible», y qué puede hacer Morgan donde corre. Nada de proveedores de modelos,
-  nombres de bases de datos, APIs de correo ni subsistemas. Las dos bases se enseñan
-  como «tus datos» con el **peor** de sus estados. El detalle sigue en la respuesta
-  de `/status` para diagnosticar: esto cambia lo que se pinta, no lo que el servidor
-  sabe.
-- **Barra de arriba**: dónde estás (Morgan · espacio), el estado real con el número de
-  herramientas, y el avatar con el menú de la cuenta. El botón del menú del móvil va
-  aquí, **dentro del flujo**: antes flotaba y se solapaba con lo primero de cada vista.
-- **Qué puede hacer Morgan, según dónde corre** (2.0.33): el texto de la portada
-  sale del entorno que dice `/status`, no de cómo se compiló la web. Y mientras
-  Morgan contesta, el campo dice «Morgan está respondiendo…»; antes decía «Morgan
-  API desconectada…», porque ocupado y caído compartían la misma variable.
-- **Portada**: insignia (dónde corre Morgan, o «Chat temporal»), el saludo «¿Qué
-  *hacemos* hoy?» con la palabra destacada, qué puede hacer Morgan aquí y **tres
-  tarjetas que dependen del entorno**: en la nube, buscar, leer una página y recordar;
-  en tu equipo, revisar un proyecto, planear y buscar. Ofrecer revisar un proyecto en
-  la nube sería prometer algo que ahí no puede hacer.
-- **Compositor**: el campo arriba y una fila debajo con adjuntar, dictar y enviar (solo la
-  flecha). Las tarjetas son solo icono, título y descripción: pulsarlas escribe.
-  Con mensajes se ancla abajo con 760 px de ancho máximo.
+  **Checked on the phone** with the built web and an isolated backend, at 360 and 390 px:
+  creating, seeing, saving and revoking without anything going off the screen, and the token
+  created from the phone **works from a script** (200) and stops working when revoked from the
+  web (401). The first screenshot showed two things, fixed: the title came out twice and the
+  value was cut.
+- **Which model answers isn't shown** (2.0.29, my decision): neither on each message nor under
+  the composer. A single hint is left, without names: if the backup answered, the answer's time
+  explains it when you hover. Under the composer, a notice for anyone ("Morgan can be wrong…").
+- **The status view speaks in the words of whoever uses Morgan** (2.0.29): «Conversar y
+  razonar» (talking and reasoning), «Internet», «Tus datos» (your data), «Correo» (email), with
+  «Funciona / Con problemas / No disponible» (works / has problems / not available), and what
+  Morgan can do where it runs. No model providers, database names, email APIs or subsystems.
+  The two databases are shown as "your data" with the **worst** of their states. The detail is
+  still in the `/status` response for diagnosing: this changes what is painted, not what the
+  server knows.
+- **Top bar**: where you are (Morgan · workspace), the real status with the number of tools,
+  and the avatar with the account menu. The phone's menu button goes here, **inside the
+  flow**: it used to float and overlap the first thing in each view.
+- **What Morgan can do, depending on where it runs** (2.0.33): the home screen's text comes
+  from the environment `/status` reports, not from how the web was built. And while Morgan
+  answers, the field says «Morgan está respondiendo…» (Morgan is answering); it used to say
+  «Morgan API desconectada…» (disconnected), because busy and down shared the same variable.
+- **Home screen**: a badge (where Morgan runs, or «Chat temporal»), the greeting «¿Qué
+  *hacemos* hoy?» (what shall we do today?) with the highlighted word, what Morgan can do here
+  and **three cards that depend on the environment**: in the cloud, searching, reading a page
+  and remembering; on your computer, reviewing a project, planning and searching. Offering to
+  review a project in the cloud would be promising something it can't do there.
+- **Composer**: the field on top and a row below with attach, dictate and send (just the
+  arrow). The cards are only an icon, a title and a description: pressing them writes. With
+  messages it anchors at the bottom with a maximum width of 760 px.
 
-- **Espacios**: un `<select>` nativo arriba de la barra lateral. Cambiar de espacio
-  empieza una conversación nueva ([datos.md](datos.md#5-espacios-de-trabajo-v2010)).
-- **La cuenta, arriba a la derecha**: con sesión, avatar y menú (cerrar sesión); sin
-  sesión (solo en local), «Iniciar sesión» y «Registrarse», que abren el acceso **por
-  encima** de Morgan para no tirar una conversación a medias.
-- **Qué está haciendo Morgan**: bajo el indicador de escritura, una frase sacada de
-  los eventos del turno («Buscando en internet…»). Sin evento no hay frase, y el
-  latido no la cambia: sería inventarse progreso ([agente.md](agente.md#el-streaming-post-chatstream)).
-- **Automatizaciones** (4.14): una vista con la **bandeja** arriba (lo que contó cada
-  ejecución, con lo que usó) y las **programadas** debajo, con pausar, reanudar y borrar.
-  Crearlas no: se piden en el chat. **Verla es leerla**: sin botón de «marcar como
-  leído». En la navegación, el número de avisos sin leer, que se mira cada minuto con
-  una ruta que no trae los textos. Cada petición manda la zona horaria del navegador
-  (`X-Morgan-Zona`), para que «a las 9» sean las 9 de quien la crea.
-- **Planes pendientes arriba del chat**, no en una pestaña: bloquean el trabajo.
-  **«Aprobar y ejecutar» ejecuta** (4.0): el chat manda solo el turno «✅ Plan aprobado:
-  …» con `ejecutar_plan`, sin que haya que escribir «adelante».
+- **Workspaces**: a native `<select>` at the top of the side bar. Changing workspace starts a
+  new conversation ([datos.md](datos.md#5-workspaces-v2010)).
+- **The account, top right**: with a session, avatar and menu (sign out); without a session
+  (only locally), «Iniciar sesión» and «Registrarse» (sign in, sign up), which open the access
+  screen **on top of** Morgan so as not to throw away a half-written conversation.
+- **What Morgan is doing**: under the typing indicator, a sentence taken from the turn's events
+  ("Searching the internet…"). With no event there is no sentence, and the heartbeat doesn't
+  change it: that would be making up progress
+  ([agente.md](agente.md#streaming-post-chatstream)).
+- **Automations** (4.14): a view with the **tray** on top (what each run reported, with what it
+  used) and the **scheduled** ones below, with pause, resume and delete. Not creating them:
+  they're asked for in the chat. **Seeing it is reading it**: no "mark as read" button. In the
+  navigation, the number of unread notices, checked every minute with a route that doesn't
+  bring the texts. Each request sends the browser's time zone (`X-Morgan-Zona`), so that "at 9"
+  means 9 for whoever creates it.
+- **Pending plans above the chat**, not in a tab: they block the work. **«Aprobar y ejecutar»
+  runs** (4.0): the chat sends on its own the turn «✅ Plan aprobado: …» with `ejecutar_plan`,
+  without having to type "go ahead".
 
-## 3. Control sobre el turno
+## 3. Control over the turn
 
-| Acción | Cómo, y por qué así |
+| Action | How, and why this way |
 |---|---|
-| **Detener** | Aborta la petición con `AbortController` y una excepción propia, para no confundirla con un tiempo agotado. El texto vuelve al compositor. El turno termina y se guarda en el servidor. **Desde la 3.4, además**, avisa a la nube (`POST /chat/parar` con el `turno` del evento `inicio`) para que **pare lo que se está haciendo en el PC**. Solo el botón: cambiar de aplicación en el móvil no cancela nada |
-| **Reintentar** | Conserva texto y archivos del último envío. **Desde la 4.5, no aparece si la conexión se cortó con el turno ya empezado**: ese turno sigue en el servidor, así que la web mira la conversación cada 4 s (hasta 200 s) y pinta la respuesta cuando está guardada. Medido en mi prueba desde el móvil: el reintento procesaba la misma pregunta otra vez con la primera aún en marcha. Si el servidor dice `TURNO_EN_CURSO`, el mensaje vuelve al compositor y se espera el anterior |
-| **Regenerar** | Corta el historial **antes** de la respuesta descartada: si Morgan la viera, tendería a repetirla |
-| **Editar y continuar** | En línea, solo el último mensaje propio; lo posterior se descarta |
-| **Arrastrar y soltar** | Por la misma ruta que el clip, de uno en uno, con el nombre del archivo en cada error |
-| **Voz** | `POST /uploads/{id}/transcripcion` devuelve el texto al compositor **para revisarlo antes de enviarlo**. Un intento de inyección por audio deja de ser invisible. Gasta cupo igual |
-| **Descargar una copia del PC** (3.1-E) | Cuando Morgan trae un archivo del PC, el turno emite `archivo_listo` y el chat pinta **un botón** bajo la respuesta, con nombre y tamaño. **No se lee el texto del modelo**: la primera versión dependía de que escribiera el enlace tal cual, y escribía la dirección a su manera, así que me salía «una especie de enlace» y ningún botón. Al recargar una conversación vieja el botón no está (el historial guarda el texto, no los eventos); el archivo sigue en Ajustes → Tus archivos |
+| **Stop** | Aborts the request with `AbortController` and its own exception, so it isn't confused with a timeout. The text goes back to the composer. The turn finishes and is saved on the server. **Since 3.4, also**, it tells the cloud (`POST /chat/parar` with the `turno` from the `inicio` event) to **stop what is being done on the PC**. Only the button: switching apps on the phone cancels nothing |
+| **Retry** | Keeps the text and files of the last send. **Since 4.5, it doesn't appear if the connection dropped with the turn already started**: that turn continues on the server, so the web checks the conversation every 4 s (up to 200 s) and paints the answer when it's saved. Measured in my test from the phone: the retry processed the same question again with the first one still running. If the server says `TURNO_EN_CURSO`, the message goes back to the composer and the previous one is awaited |
+| **Regenerate** | Cuts the history **before** the discarded answer: if Morgan saw it, it would tend to repeat it |
+| **Edit and continue** | Inline, only your last message; what came after is discarded |
+| **Drag and drop** | Through the same route as the paperclip, one by one, with the file's name in each error |
+| **Voice** | `POST /uploads/{id}/transcripcion` returns the text to the composer **so it can be reviewed before sending**. An injection attempt through audio stops being invisible. It spends quota the same |
+| **Download a copy from the PC** (3.1-E) | When Morgan brings a file from the PC, the turn emits `archivo_listo` and the chat paints **a button** under the answer, with name and size. **The model's text isn't read**: the first version depended on it writing the link as is, and it wrote the address its own way, so I got "a sort of link" and no button. When reloading an old conversation the button isn't there (the history keeps the text, not the events); the file is still in Settings → Your files |
 
-**Tus equipos** (Ajustes, 3.7): de cada PC, si está **conectado ahora** y qué ofrece
-(leer, escribir, terminal, procesos), y su historial de órdenes de 7 días, que se carga
-al abrirlo. Sin argumentos ni contenido: qué capacidad, cuándo, cómo acabó y cuánto tardó.
-Desde la 3.8, **si tiene una versión vieja** («Hay una versión nueva: …; el PC te
-preguntará si instalarla») y cuándo cambió su credencial. Al pedir un código, la web da
-**la línea de PowerShell que instala el agente** con él en un PC nuevo.
+**Your computers** (Settings, 3.7): for each PC, whether it's **connected now** and what it
+offers (reading, writing, terminal, processes), and its 7-day order history, loaded when you
+open it. Without arguments or content: which capability, when, how it ended and how long it
+took. Since 3.8, **whether it has an old version** ("There is a new version: …; the PC will ask
+you whether to install it") and when its credential changed. When asking for a code, the web
+gives **the PowerShell line that installs the agent** with it on a new PC.
 
-**Lo que se hace en el PC, contado.** El progreso del turno dice qué herramienta del PC
-corre («Creando el archivo en tu PC…», «Esperando a que lo confirmes en tu PC…») y,
-desde la 3.4, cómo va la orden allí (evento `equipo`): «En cola en tu PC», «Cancelando
-en tu PC…». Y un plan enseña los argumentos de cada paso con sus saltos de línea: lo que
-Morgan va a escribir se aprueba viéndolo tal cual (3.3).
+**What is done on the PC, told.** The turn's progress says which PC tool is running ("Creating
+the file on your PC…", "Waiting for you to confirm it on your PC…") and, since 3.4, how the
+order is going there (the `equipo` event): "Queued on your PC", "Cancelling on your PC…". And a
+plan shows each step's arguments with their line breaks: what Morgan is going to write is
+approved by seeing it as it is (3.3).
 
-**Los enlaces del chat.** El renderizador de Markdown no dibuja enlaces, a propósito: el
-texto lo escribe el modelo, que puede haber leído una página con instrucciones
-escondidas, y convertir cualquier dirección en botón sería regalar un sitio donde poner
-un enlace falso con la cara de Morgan. **La única excepción** es la ruta de descarga de
-este mismo servidor (`/api/uploads/{id}/contenido`, también escrita como dirección
-completa de la propia web). Cualquier otra dirección se sigue viendo como texto.
+**Links in the chat.** The Markdown renderer doesn't draw links, on purpose: the text is written
+by the model, which may have read a page with hidden instructions, and turning any address into
+a button would hand out a place to put a fake link with Morgan's face on it. **The only
+exception** is this same server's download route (`/api/uploads/{id}/contenido`, also written as
+the web's own full address). Any other address is still shown as text.
 
-Las cuatro primeras comparten una sola función de envío. Los botones aparecen al
-pasar por encima y solo si aplican; el de reintentar tras un error se ve siempre.
+The first four share a single send function. The buttons appear on hover and only if they
+apply; the retry one after an error is always visible.
 
-**Eliminar la cuenta** pide la contraseña aunque haya sesión, borra primero los
-datos y después la cuenta (un fallo a medias deja una cuenta vacía, no filas
-huérfanas), no acepta ningún identificador y no borra la auditoría.
+**Deleting the account** asks for the password even with a session, deletes the data first and
+the account afterwards (a failure halfway leaves an empty account, not orphan rows), accepts no
+identifier and doesn't delete the audit.
 
-## 4. El móvil
+## 4. The phone
 
-El 2026-09-10, abriendo la web en teléfonos simulados con la sesión abierta,
-**no había navegación**: una regla móvil puesta antes de la base ocultaba el botón
-del menú a todos los anchos. En un escritorio estrecho no se reproducía. El mismo
-recorrido (once vistas en tres teléfonos) encontró el compositor fuera de pantalla,
-iOS ampliando la página en campos de menos de 16 px, sugerencias desbordadas en
-320 px y `100vh` mintiendo sobre la altura. En producción, el aviso de confirmar el
-correo empujaba el chat entero fuera.
+On 2026-09-10, opening the web on simulated phones with the session open, **there was no
+navigation**: a mobile rule placed before the base one hid the menu button at every width. On a
+narrow desktop it didn't reproduce. The same walkthrough (eleven views on three phones) found
+the composer off screen, iOS zooming the page on fields under 16 px, suggestions overflowing at
+320 px and `100vh` lying about the height. In production, the confirm-your-email notice pushed
+the whole chat out.
 
-Reglas que quedaron:
-- **Todo lo móvil vive al final del CSS**; antes, cualquier regla posterior lo tapa
-  sin avisar. Lo fija `tests/test_movil_web.py`.
-- Nada flota encima del contenido: el botón del menú y la cuenta van en
-  `.barra-superior`, en el flujo (antes se reservaba un hueco de 52 px). En 620 px o
-  menos las tarjetas pasan a una columna y enviar se queda en el icono; en 480 px la
-  pastilla del espacio desaparece (está en la barra lateral).
-- Objetivos táctiles de 44 px, `100dvh` y `env(safe-area-inset-*)`.
+Rules that stayed:
+- **Everything mobile lives at the end of the CSS**; before it, any later rule covers it
+  without warning. `tests/test_movil_web.py` pins it.
+- Nothing floats over the content: the menu button and the account go in `.barra-superior`, in
+  the flow (a 52 px gap used to be reserved). At 620 px or less the cards switch to one column
+  and send stays as the icon; at 480 px the workspace pill disappears (it's in the side bar).
+- 44 px touch targets, `100dvh` and `env(safe-area-inset-*)`.
 
-> **Para medir el móvil, no vale una captura con una ventana estrecha**: Edge sin
-> ventana no baja de 492 px y recorta la imagen. Hay que medir `innerWidth` o meter
-> la web en un iframe. Así se comprobó en la auditoría 2.3 que a 360 y 400 px no se
-> sale nada.
+> **To measure the phone, a screenshot with a narrow window isn't enough**: headless Edge
+> doesn't go below 492 px and crops the image. You have to measure `innerWidth` or put the web
+> in an iframe. That's how the 2.3 audit checked that at 360 and 400 px nothing goes off.
 
-## 5. Lo que rompía la web en producción
+## 5. What broke the web in production
 
-El 2026-09-07, el chat de la web **no había funcionado nunca en la nube**. Diez
-defectos que convivían y se tapaban entre sí; ninguno se veía en local ni lo
-detectaba la suite. Se encontraron reproduciendo contra el despliegue real lo que
-hace el navegador.
+On 2026-09-07, the web's chat **had never worked in the cloud**. Ten defects that lived
+together and covered for each other; none was visible locally or caught by the suite. They were
+found by reproducing against the real deployment what the browser does.
 
-| # | Defecto | Arreglo |
+| # | Defect | Fix |
 |---|---|---|
-| 1 | El token CSRF no se podía leer desde otro dominio: toda la web en solo lectura | El token viaja también en el JSON de `/auth/*` |
-| 2 | **Supabase no filtraba por usuario en casi ninguna consulta**: 500 al crear conversaciones y, donde no fallaba, cada usuario veía lo de los demás | `_mio()` en las 32 operaciones de los 6 repositorios; el usuario nunca se pasa por parámetro |
-| 3 | Si `/auth/yo` fallaba, la interfaz suponía «este Morgan no pide cuentas» | Se reintenta, y si sigue fallando se enseña el acceso |
-| 4 | Botones que fallaban en silencio | El error se muestra |
-| 5 | La cookie caducada no se borraba entre dominios | Se borra con los mismos atributos con que se puso |
-| 6 | La función de cupo estaba fuera del alcance de PostgREST: 500 **solo para quien no era propietario** | Envoltorio en `public` solo para `service_role` |
-| 7 | Y esa función nunca había funcionado (`text` contra `date`) | Conversión dentro de la función |
-| 8 | **La memoria no persistía en la nube**: respondía 200 y la tabla estaba vacía | La memoria usa el repositorio del contenedor |
-| 9 | **En el iPhone la sesión se caía siempre**: Safari descarta las cookies de terceros | Proxy `/api/*` en Vercel: la API pasa a ser del mismo origen |
-| 10 | Subir un archivo llegaba sin sesión: tenía su propio `fetch`, copiado y desactualizado | **Un solo `fetch` en todo el frontend**, fijado por prueba |
+| 1 | The CSRF token couldn't be read from another domain: the whole web was read-only | The token also travels in the JSON of `/auth/*` |
+| 2 | **Supabase didn't filter by user in almost any query**: 500 when creating conversations and, where it didn't fail, each user saw everyone else's | `_mio()` in the 32 operations of the 6 repositories; the user is never passed as a parameter |
+| 3 | If `/auth/yo` failed, the interface assumed "this Morgan doesn't require accounts" | It retries, and if it keeps failing the sign-in screen is shown |
+| 4 | Buttons that failed silently | The error is shown |
+| 5 | The expired cookie wasn't deleted across domains | It's deleted with the same attributes it was set with |
+| 6 | The quota function was out of PostgREST's reach: 500 **only for whoever wasn't the owner** | A wrapper in `public` only for `service_role` |
+| 7 | And that function had never worked (`text` against `date`) | Conversion inside the function |
+| 8 | **Memory didn't persist in the cloud**: it answered 200 and the table was empty | Memory uses the container's repository |
+| 9 | **On the iPhone the session always dropped**: Safari discards third-party cookies | A `/api/*` proxy on Vercel: the API becomes same-origin |
+| 10 | Uploading a file arrived without a session: it had its own `fetch`, copied and outdated | **A single `fetch` in the whole frontend**, pinned by a test |
 
-Lo que enseñaron:
+What they taught:
 
-- **Una auditoría por lectura solo encuentra lo que se le ocurre buscar.** La de la
-  V1.8 buscó SQL sin filtrar; las consultas de Supabase son PostgREST y no aparecieron.
-- **Reproducir lo que hace el navegador no es usar un navegador.** `httpx` guarda
-  cualquier cookie; el 9 solo existía en Safari.
-- **Un fichero de configuración que no se aplica no avisa.** El proxy se escribió
-  primero en un `web/vercel.json` que Vercel no lee. Ahora una prueba exige un solo
-  `vercel.json`.
-- **Contar filas, no fiarse del 200.** El 8 cumplía en apariencia.
+- **An audit by reading only finds what it occurs to you to look for.** The V1.8 one looked for
+  unfiltered SQL; the Supabase queries are PostgREST and didn't show up.
+- **Reproducing what the browser does isn't using a browser.** `httpx` keeps any cookie; #9 only
+  existed in Safari.
+- **A configuration file that isn't applied doesn't warn.** The proxy was first written in a
+  `web/vercel.json` that Vercel doesn't read. Now a test requires a single `vercel.json`.
+- **Count rows, don't trust the 200.** #8 complied in appearance.
 
-### Los 120 segundos del proxy
+### The proxy's 120 seconds
 
-El borde de Vercel corta una respuesta **callada** a los 120,1 s (medido dos veces
-seguidas). Por eso `/chat` en la nube se rinde a los 85 s y **la petición contesta a
-los 100 s** aunque el turno siga: el turno no se mata, termina y se guarda, y el
-aviso dice «sigo trabajando en ello», no «error», para que nadie lo repita y pague
-dos veces. Desde la 2.0.14 la web usa `/chat/stream`, con latidos, y el corte deja
-de afectarle: el techo es de silencio, no de duración.
+Vercel's edge cuts a **silent** response at 120.1 s (measured twice in a row). That's why
+`/chat` in the cloud gives up at 85 s and **the request answers at 100 s** even though the turn
+continues: the turn isn't killed, it finishes and is saved, and the notice says "I'm still
+working on it", not "error", so nobody repeats it and pays twice. Since 2.0.14 the web uses
+`/chat/stream`, with heartbeats, and the cut stops affecting it: the ceiling is on silence, not
+duration.
 
-## 6. Pruebas del frontend
+## 6. Frontend tests
 
-Llegaron por un fallo que solo pasaba **cuando todo funcionaba**: un `return` dentro
-del primer `try` saltaba el `finally` del segundo, y la web se quedaba para siempre
-en «el servidor está arrancando» con el servidor respondiendo en 0,3 s. Ni las
-pruebas de Python, ni `tsc`, ni las verificaciones por HTTP podían verlo.
+They came because of a bug that only happened **when everything worked**: a `return` inside the
+first `try` skipped the second one's `finally`, and the web stayed forever on "the server is
+starting" with the server answering in 0.3 s. Neither the Python tests, nor `tsc`, nor the HTTP
+checks could see it.
 
-| Capa | Qué comprueba |
+| Layer | What it checks |
 |---|---|
-| **Vitest** (`npm test` en `web/`) | Comportamiento: `Cuenta.test.tsx` (el arranque siempre acaba), `api.test.ts` (CSRF, cancelar, sesión perdida, subidas, páginas HTML de error), `progreso.test.ts`, `Tokens.test.tsx` (el valor se ve una vez, revocar confirma, lo que se pide por defecto; 12 de 12 mutaciones) |
-| **Python**: `tests/test_frontend_estabilidad.py` | Invariantes de todo el código: **toda bandera de «ocupado» se apaga en un `finally`** y **un solo `fetch`** |
-| **Python**: `test_contrato_web.py`, `test_movil_web.py`, `test_tema_web.py`, `test_proxy_mismo_origen.py` | Que cada ruta que llama la web existe, las reglas móviles, el contraste y el proxy |
+| **Vitest** (`npm test` in `web/`) | Behavior: `Cuenta.test.tsx` (startup always finishes), `api.test.ts` (CSRF, cancelling, lost session, uploads, HTML error pages), `progreso.test.ts`, `Tokens.test.tsx` (the value is seen once, revoking confirms, what is asked for by default; 12 of 12 mutations), `DescargaWindows.test.tsx` (only from Windows and not inside the program) |
+| **Python**: `tests/test_frontend_estabilidad.py` | Invariants of all the code: **every "busy" flag is turned off in a `finally`** and **a single `fetch`** |
+| **Python**: `test_contrato_web.py`, `test_movil_web.py`, `test_tema_web.py`, `test_proxy_mismo_origen.py`, `test_cabeceras_web.py` | That every route the web calls exists, the mobile rules, the contrast, the proxy and the security headers |
 
 ```bash
 cd web
-npm run build   # lo que ejecuta Vercel; empieza por tsc -b, que NO es tsc --noEmit
+npm run build   # what Vercel runs; it starts with tsc -b, which is NOT tsc --noEmit
 npm test
 npm run lint
 ```
 
-La configuración de Vitest vive en `vitest.config.ts` y no en `vite.config.ts`:
-puesta ahí, `tsc -b` fallaba y **Vercel dejaba de desplegar** sin avisar.
+The Vitest configuration lives in `vitest.config.ts` and not in `vite.config.ts`: put there,
+`tsc -b` failed and **Vercel stopped deploying** without warning.
 
-**Falta cubrir** la lógica del chat (detener, regenerar, editar) con pruebas de
-comportamiento.
+**Still to cover**: the chat's logic (stop, regenerate, edit) with behavior tests.

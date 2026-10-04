@@ -8,6 +8,9 @@ otro proyecto.
 
 Un README desfasado no rompe nada, y por eso se queda desfasado: nadie se entera
 hasta que alguien lo lee y saca conclusiones falsas sobre qué puede hacer Morgan.
+
+Desde el 2026-10-04 hay dos: `README.md` en inglés (la portada) y `README.es.md` en español.
+Las cifras se vigilan en los dos: si solo se mirase uno, el otro se quedaría atrás.
 """
 
 import json
@@ -48,37 +51,62 @@ def _catalogo(entorno: str) -> tuple[int, set[str]]:
 
 @pytest.fixture(scope="module")
 def readme() -> str:
+    return (RAIZ / "README.es.md").read_text(encoding="utf-8")
+
+
+@pytest.fixture(scope="module")
+def readme_en() -> str:
     return (RAIZ / "README.md").read_text(encoding="utf-8")
 
 
+@pytest.fixture(scope="module")
+def catalogo_local():
+    return _catalogo("local")
+
+
+@pytest.fixture(scope="module")
+def catalogo_nube():
+    return _catalogo("cloud")
+
+
 class TestElReadmeCuentaBien:
-    def test_las_herramientas_de_tu_equipo(self, readme):
-        cuantas, _ = _catalogo("local")
+    def test_las_herramientas_de_tu_equipo(self, readme, readme_en, catalogo_local):
+        cuantas, _ = catalogo_local
 
         assert re.search(rf"\*\*{cuantas} en tu equipo", readme), (
-            f"En local hay {cuantas} herramientas y el README no lo dice"
+            f"En local hay {cuantas} herramientas y el README en español no lo dice"
+        )
+        assert re.search(rf"\*\*{cuantas} on your computer", readme_en), (
+            f"En local hay {cuantas} herramientas y el README en inglés no lo dice"
         )
 
-    def test_las_de_la_nube(self, readme):
-        cuantas, _ = _catalogo("cloud")
+    def test_las_de_la_nube(self, readme, readme_en, catalogo_nube):
+        cuantas, _ = catalogo_nube
 
         assert re.search(rf"\*\*{cuantas} en la nube", readme), (
-            f"En la nube hay {cuantas} herramientas y el README no lo dice"
+            f"En la nube hay {cuantas} herramientas y el README en español no lo dice"
+        )
+        assert re.search(rf"\*\*{cuantas} in the cloud", readme_en), (
+            f"En la nube hay {cuantas} herramientas y el README en inglés no lo dice"
         )
 
-    def test_los_dominios(self, readme):
-        _, dominios = _catalogo("local")
+    def test_los_dominios(self, readme, readme_en, catalogo_local):
+        _, dominios = catalogo_local
 
         assert f"{len(dominios)} dominios" in readme, (
-            f"Hay {len(dominios)} dominios ({sorted(dominios)}) y el README dice otra cosa"
+            f"Hay {len(dominios)} dominios ({sorted(dominios)}) y el README en español dice otra cosa"
+        )
+        assert f"{len(dominios)} domains" in readme_en, (
+            f"Hay {len(dominios)} dominios ({sorted(dominios)}) y el README en inglés dice otra cosa"
         )
 
-    def test_el_enlace_de_descarga_es_el_de_verdad(self, readme):
+    def test_el_enlace_de_descarga_es_el_de_verdad(self, readme, readme_en):
         """Estuvo con `tu-usuario` de plantilla: `git clone` fallaba tal cual."""
-        assert "tu-usuario" not in readme, (
-            "El README sigue con la URL de plantilla: quien copie el comando de "
-            "instalación se lleva un error"
-        )
+        for texto in (readme, readme_en):
+            assert "tu-usuario" not in texto, (
+                "El README sigue con la URL de plantilla: quien copie el comando de "
+                "instalación se lleva un error"
+            )
 
 
 class TestLaCifraDePruebasSoloViveEnElReadme:
@@ -98,7 +126,7 @@ class TestLaCifraDePruebasSoloViveEnElReadme:
     vigila desde aquí.
     """
 
-    def test_el_readme_dice_un_suelo_que_se_cumple(self, readme):
+    def test_el_readme_dice_un_suelo_que_se_cumple(self, readme, readme_en):
         """Un **suelo** redondeado, no la cifra exacta, y hay una razón dura.
 
         La primera versión de esta prueba exigía el número exacto. Al añadirla,
@@ -119,6 +147,9 @@ class TestLaCifraDePruebasSoloViveEnElReadme:
 
         suelos = [int(s.replace(".", "")) for s in re.findall(r"más de ([\d.]+)", readme)]
         assert suelos, "El README ya no dice cuántas pruebas hay, ni siquiera un suelo"
+        suelos_en = [int(s.replace(",", "")) for s in re.findall(r"more than ([\d,]+)", readme_en)]
+        assert suelos_en, "El README en inglés ya no dice cuántas pruebas hay, ni siquiera un suelo"
+        suelos += suelos_en
 
         anunciado = max(suelos)
         assert cuantas >= anunciado, (

@@ -1,95 +1,94 @@
-# Cómo trabaja el agente: el turno, tareas, planes y verificación
+# How the agent works: the turn, tasks, plans and verification
 
-> Junta lo que antes eran cuatro documentos: tareas (V1.5), planificación (V1.6),
-> verificación (V1.7) y el streaming del turno (V2.0.14). Última revisión:
-> 2026-09-25, V3.5.0.
+**English** · [Español](agente.es.md)
+
+> Brings together what used to be four documents: tasks (V1.5), planning (V1.6),
+> verification (V1.7) and the turn's streaming (V2.0.14). Last review: 2026-09-25, V3.5.0.
 
 ```
-Petición → (plan, si hace falta aprobarlo) → herramientas → verificación → respuesta
-                                   └─ todo queda anotado en una tarea ─┘
+Request → (plan, if it needs approving) → tools → verification → answer
+                                  └─ everything is recorded in a task ─┘
 ```
 
-## 1. El turno
+## 1. The turn
 
-El agente no ejecuta una herramienta por mensaje: **itera**. Pide una herramienta,
-lee el resultado, decide si necesita otra y encadena hasta tener la respuesta. Corta
-al terminar, al repetir la misma llamada con los mismos argumentos tres veces, o al
-agotar el tiempo del turno.
+The agent doesn't run one tool per message: **it iterates**. It asks for a tool, reads the
+result, decides whether it needs another one and chains them until it has the answer. It stops
+when it's done, when it repeats the same call with the same arguments three times, or when the
+turn's time runs out.
 
-**Lo que ya falló no se repite** (3.1). Una llamada con la misma herramienta y los
-mismos argumentos que acaba de fallar **no se vuelve a ejecutar**: se le devuelve al
-modelo el error de la primera vez y que pruebe otro camino. Otros argumentos, u otra
-herramienta, sí se intentan; y lo que sale bien se puede repetir cuantas veces haga
-falta. Medido en mi PC el 2026-09-19: `copy_file` falló por un error interno y el
-modelo la repitió **cuatro veces** con los mismos argumentos hasta agotar las vueltas y
-contestar «he alcanzado el límite máximo de pasos». Repetir lo que acaba de fallar da el
-mismo error; decírselo le deja vueltas para buscar otra salida.
+**What already failed isn't repeated** (3.1). A call with the same tool and the same arguments
+that has just failed **isn't run again**: the model gets back the error from the first time and
+is told to try another way. Other arguments, or another tool, are tried; and what works can be
+repeated as many times as needed. Measured on my PC on 2026-09-19: `copy_file` failed with an
+internal error and the model repeated it **four times** with the same arguments until it ran
+out of rounds and answered "I have reached the maximum number of steps". Repeating what has
+just failed gives the same error; telling it so leaves it rounds to look for another way out.
 
-| Plazo | Local | Nube, `/chat` | Nube, `/chat/stream` (la web) |
+| Time limit | Local | Cloud, `/chat` | Cloud, `/chat/stream` (the web) |
 |---|---|---|---|
-| Tope del turno | 180 s | 85 s | **170 s** |
-| Por qué | — | Una respuesta callada tiene que caber en los 120 s que tolera el proxy de Vercel | Con latidos no hay silencio, y lo medido llega a 180 s |
+| Turn cap | 180 s | 85 s | **170 s** |
+| Why | — | A silent answer has to fit in the 120 s that Vercel's proxy tolerates | With heartbeats there is no silence, and what was measured reaches 180 s |
 
-**Hay un solo agente para todos los usuarios.** Por eso todo lo que es «de este
-turno» —el usuario, la medición del tiempo, el canal de eventos— vive en una
-`ContextVar`, y el hilo del turno la recibe con `copy_context()`. Conectarlo al
-agente compartido haría que los eventos de Ana salieran en la respuesta de Bea.
+**There is a single agent for every user.** That's why everything that belongs to "this
+turn" —the user, the time measurement, the event channel— lives in a `ContextVar`, and the
+turn's thread receives it with `copy_context()`. Attaching it to the shared agent would make
+Ana's events show up in Bea's answer.
 
-### «Detener» (3.4)
+### «Stop» (3.4)
 
-El turno **no se para** porque nadie escuche: termina en su hilo y se guarda (decisión B
-del streaming). Pero el botón «Detener» de la web sí para **lo que el turno esté haciendo
-en el PC**: el evento `inicio` trae un `turno`, y `POST /chat/parar` con él cancela la
-orden en marcha en su siguiente punto seguro y no deja salir órdenes nuevas de ese turno
-hacia el PC (`src/canal/paradas.py`). Solo el botón: una conexión que se cae (cambiar de
-aplicación en el móvil) no para nada.
+The turn **doesn't stop** because nobody is listening: it finishes in its thread and is saved
+(decision B of the streaming). But the web's «Stop» button does stop **what the turn is doing
+on the PC**: the `inicio` event brings a `turno`, and `POST /chat/parar` with it cancels the
+running order at its next safe point and lets no new orders from that turn go out to the PC
+(`src/canal/paradas.py`). Only the button: a connection that drops (switching apps on your
+phone) stops nothing.
 
-**Un turno a la vez por conversación (4.5).** Como el turno sigue aunque nadie escuche, un
-reintento tras un corte lanzaba otro turno de lo mismo con el primero en marcha (medido en
-mi prueba: una pregunta procesada 3 veces). `/chat` y `/chat/stream` marcan la
-conversación como ocupada **antes** de contar el mensaje en el cupo, y la liberan cuando el
-turno termina de verdad (no cuando se deja de esperarlo); mientras, otro turno en ella es
-`409 TURNO_EN_CURSO`. La web espera la respuesta en vez de reintentar (web.md §3).
+**One turn at a time per conversation (4.5).** Since the turn continues even if nobody is
+listening, a retry after a drop launched another turn of the same thing with the first one
+running (measured in my test: one question processed 3 times). `/chat` and `/chat/stream`
+mark the conversation as busy **before** counting the message against the quota, and free it
+when the turn really ends (not when someone stops waiting for it); meanwhile, another turn in
+it gets `409 TURNO_EN_CURSO`. The web waits for the answer instead of retrying (web.md §3).
 
-### El streaming: `POST /chat/stream`
+### Streaming: `POST /chat/stream`
 
-Lo aprobé con tres decisiones: tope de 170 s en la nube, «Detener» deja de
-mirar pero el turno termina y se guarda, y **sin texto palabra a palabra** (el
-tiempo largo está en las herramientas, no en escribir la respuesta).
+I approved it with three decisions: a 170 s cap in the cloud, «Stop» stops watching but the
+turn finishes and is saved, and **no word-by-word text** (the long time is in the tools, not
+in writing the answer).
 
-Una línea JSON por evento (NDJSON). Se descartaron SSE (solo admite `GET`) y
-WebSocket (no está medido que el proxy de Vercel los reenvíe).
+One JSON line per event (NDJSON). SSE (it only allows `GET`) and WebSocket (it isn't measured
+that Vercel's proxy forwards them) were ruled out.
 
-| Evento | Cuándo |
+| Event | When |
 |---|---|
-| `inicio` | Nada más empezar, **antes de cualquier espera**: si no llega enseguida, hay un búfer en medio |
-| `pensando` | Cada vuelta al modelo |
-| `herramienta` | Al empezar y terminar cada una. **Solo el nombre**: un argumento puede llevar un secreto |
-| `respaldo` | Cuando contesta un modelo que no es el principal |
-| `latido` | Tras 10 s sin otro evento |
-| `fin` / `error` | El resultado, o `code` y `message` **sin** el texto de la excepción |
+| `inicio` | Right at the start, **before any wait**: if it doesn't arrive straight away, there is a buffer in the middle |
+| `pensando` | Every round to the model |
+| `herramienta` | When each one starts and ends. **Only the name**: an argument might carry a secret |
+| `respaldo` | When a model other than the main one answers |
+| `latido` | After 10 s without another event |
+| `fin` / `error` | The result, or `code` and `message` **without** the exception's text |
 
-Medido con un turno real: cada evento llega ~50 ms después de emitirse y los
-latidos salen cada 10 s exactos. Esa medición destapó otro defecto: una página
-comprimida con gzip se leía como texto y pesaba 25.789 tokens (arreglado en la
-2.0.15; el mismo turno pasó de 34,5 s y un fallo a 5,1 s).
+Measured with a real turn: each event arrives ~50 ms after being emitted and the heartbeats go
+out every 10 s exactly. That measurement uncovered another defect: a gzip-compressed page was
+read as text and weighed 25,789 tokens (fixed in 2.0.15; the same turn went from 34.5 s and a
+failure to 5.1 s).
 
-**Quien escucha no ocupa un hilo** (V2.0.27). El generador del stream es asíncrono:
-espera en el bucle de eventos y el hilo del turno lo despierta al encolar
-(`CanalDelTurno.al_poner`). Cuando era síncrono, Starlette lo iteraba en su reserva
-de 40 hilos —la de todas las rutas síncronas— y cada turno abierto retenía uno. La
-prueba de carga lo midió: con 60 turnos largos, `/health` tardaba 9,7 s y el
-`inicio` de un turno nuevo 11,5 s; después, 0,2 y 3,3 s
-(mediciones.md).
+**Whoever listens doesn't hold a thread** (V2.0.27). The stream's generator is asynchronous: it
+waits in the event loop and the turn's thread wakes it up when it enqueues
+(`CanalDelTurno.al_poner`). When it was synchronous, Starlette iterated it in its pool of 40
+threads —the one for every synchronous route— and each open turn held one. The load test
+measured it: with 60 long turns, `/health` took 9.7 s and the `inicio` of a new turn 11.5 s;
+afterwards, 0.2 and 3.3 s (mediciones.md, in Spanish).
 
-La web usa **un solo `fetch`** para todo, y traduce el nombre de la herramienta a
-una frase («Buscando en internet…»). Si el stream falla, enseña el error: no
-reintenta con `/chat` a escondidas, porque pagaría el modelo dos veces.
+The web uses **a single `fetch`** for everything, and translates the tool's name into a sentence
+("Searching the internet…"). If the stream fails, it shows the error: it doesn't secretly retry
+with `/chat`, because it would pay for the model twice.
 
-## 2. Tareas
+## 2. Tasks
 
-Un encargo largo deja registro: qué se intentó, con qué herramienta, qué devolvió y
-qué falló. Es lo que permite a Morgan decir «no pude» en lugar de «listo».
+A long job leaves a record: what was tried, with which tool, what it returned and what failed.
+That's what lets Morgan say "I couldn't" instead of "done".
 
 ```
 pending ──► running ──► completed
@@ -98,169 +97,161 @@ pending ──► running ──► completed
              └──► cancelled ─► retry ──► running
 ```
 
-- **Las transiciones se validan.** Sin eso, reintentar una tarea completada la
-  reabriría. Máximo **tres intentos**: una tarea que falla siempre tiene que acabar
-  diciéndolo.
-- **Los pasos se anotan solos.** Antes el modelo los pedía con `advance_task`, y
-  cada paso costaba un viaje al proveedor: un encargo de tres pasos tardaba 126 s.
-  El agente ya sabe qué ejecutó; quitándolo, bajó a 106 s.
-- **El progreso se calcula, no se guarda.** Una tarea completada está al 100 %
-  aunque le sobraran pasos previstos.
-- **Las huérfanas se cierran solas**: una tarea viva sin novedades en diez minutos
-  (el turno murió) se cierra como fallida al listar.
-- **No hay `update_task` genérica** ni se crean tareas por la API: permitirían
-  escribir estados que no corresponden a nada ejecutado. Un conflicto de estado
-  devuelve 409.
+- **Transitions are validated.** Without that, retrying a completed task would reopen it.
+  At most **three attempts**: a task that always fails has to end up saying so.
+- **Steps record themselves.** The model used to ask for them with `advance_task`, and each
+  step cost a round trip to the provider: a three-step job took 126 s. The agent already knows
+  what it ran; removing it brought it down to 106 s.
+- **Progress is computed, not stored.** A completed task is at 100 % even if it had planned
+  steps left over.
+- **Orphans close themselves**: a live task with no news in ten minutes (the turn died) is
+  closed as failed when listing.
+- **There is no generic `update_task`** and tasks aren't created through the API: they would
+  allow writing states that don't match anything that ran. A state conflict returns 409.
 
-Herramientas: `create_task`, `get_task`, `list_tasks`, `complete_task`,
-`fail_task`, `cancel_task`, `retry_task`. La vista **Tareas** se refresca sola
-mientras hay alguna viva.
+Tools: `create_task`, `get_task`, `list_tasks`, `complete_task`, `fail_task`, `cancel_task`,
+`retry_task`. The **Tasks** view refreshes itself while any is alive.
 
-## 3. Planes: decir qué se va a hacer antes de hacerlo
+## 3. Plans: saying what will be done before doing it
 
-**Aprobar es la orden** (4.0-A, decisión mía). Al aprobar en la web, se manda solo el
-turno con `ejecutar_plan`, y **el agente ejecuta los pasos**, no el modelo: en orden, con
-los argumentos aprobados, por el mismo camino que cualquier llamada (`_ejecutar_una`:
-permisos, autorización del plan, verificación, anotación). **Se para en el primer paso
-que no sale** (4.0.5). Si todo salió, el resumen lo escribe el núcleo («Listo: crear las
-notas (comprobado).») y no se llama al modelo (4.1.5, decisión mía); si algo falló o
-queda algo que explicar o preguntar, el modelo recibe el informe («1. crear las notas
-(create_file): hecho, y comprobado») y se lo cuenta a la persona. Solo un plan de esta
-conversación y aprobado. **Al proponerlo** pasa lo mismo (4.2): si `create_plan` deja un
-plan pendiente y sin avisos, el turno lo cierra el núcleo («Te propongo este plan…»), porque
-la web ya lo enseña entero encima del chat.
+**Approving is the order** (4.0-A, my decision). When you approve in the web, the turn is sent
+on its own with `ejecutar_plan`, and **the agent runs the steps**, not the model: in order, with
+the approved arguments, along the same path as any call (`_ejecutar_una`: permissions, the
+plan's authorization, verification, recording). **It stops at the first step that doesn't
+work** (4.0.5). If everything worked, the summary is written by the core ("Done: create the
+notes (checked).") and the model isn't called (4.1.5, my decision); if something failed or
+there is something to explain or ask, the model receives the report ("1. create the notes
+(create_file): done, and checked") and tells the person. Only a plan from this conversation
+and approved. **When proposing it** the same happens (4.2): if `create_plan` leaves a pending
+plan with no warnings, the core closes the turn ("I propose this plan…"), because the web
+already shows it in full above the chat.
 
-**El riesgo lo pone el registro de herramientas, no el modelo.** Si viniera en la
-propuesta, bastaría con escribir `"riesgo": "safe"` junto a un `delete_file`. Una
-herramienta desconocida cuenta como **crítica**.
+**The risk is set by the tool registry, not by the model.** If it came in the proposal,
+writing `"riesgo": "safe"` next to a `delete_file` would be enough. An unknown tool counts as
+**critical**.
 
-| Plan | Qué pasa |
+| Plan | What happens |
 |---|---|
-| Todo lectura | Nace **aprobado** y se ejecuta ya. Hacer aprobar «voy a leer tres archivos» enseña a aprobar sin mirar |
-| Algún paso moderado o más | **Pendiente**: aparece arriba del chat hasta que la persona decide |
+| All reading | Born **approved** and runs right away. Making people approve "I'm going to read three files" teaches them to approve without looking |
+| Some step moderate or above | **Pending**: it shows up above the chat until the person decides |
 
 ```
-borrador ──► pendiente ──► aprobado ──► ejecutando ──► completado / fallido
-                 └──────────────┴──► rechazado
+draft ──► pending ──► approved ──► running ──► completed / failed
+              └──────────────┴──► rejected
 ```
 
-- **Se aprueba en la interfaz** porque en la web no hay consola a la que
-  preguntar. Y se decide sobre el trabajo entero, no sobre preguntas sueltas.
-- **A quien decide se le enseñan los argumentos enmascarados** (secretos a
-  `********`, recortados a 120 caracteres), pero se guardan enteros: ejecutar
-  con argumentos truncados sería un fallo silencioso.
-- **La conversación del plan la pone el agente**, no el modelo, que no la conoce.
-  Pedírsela hacía que el plan quedara huérfano y que el turno siguiente ya no
-  ofreciera `get_plan`.
-- **Una regla en el prompt es una sugerencia; una respuesta en el momento del fallo
-  es un camino.** El gate de la V1.6 vio a un modelo ir directo a borrar e
-  ignorar la regla del prompt. Lo que funciona es que, al denegarse la
-  herramienta, el sistema le diga «usa `create_plan` con estos pasos».
-- Rechazado, se le dice al modelo **que no proponga uno equivalente**.
-- **Un paso puede no usar herramienta** («preguntar a la persona»): los campos
-  opcionales del paso admiten `null` (2.0.32). Con el esquema en solo `string`,
-  Groq rechazaba la llamada entera con un 400 y el turno caía al respaldo:
-  24-35 s por plan, medido (mediciones.md).
-- **Si un paso usa una herramienta que aquí no existe**, se guarda igual (cuenta
-  como crítica), pero `create_plan` le devuelve al modelo cuáles son para que
-  rehaga el plan o lo explique. En la nube proponía `move_file` y `mkdir`.
-- **En la nube el prompt dice que no hay equipo** (2.0.33): cuando el catálogo no
-  tiene herramientas del equipo, se añade «Dónde trabajas: en la nube». Sin ella, a
-  una persona nueva le prometía comandos «con tu autorización» y procesar CSV con
-  pandas. Se decide por el catálogo, como el resto del prompt.
-- **El prompt pide proponer el plan sin explorar antes**: medido, el modelo miraba
-  archivos, conocimiento, memoria y repositorios «por si acaso» y encadenaba hasta
-  siete llamadas.
+- **It's approved in the interface** because in the web there is no console to ask. And the
+  decision is about the whole job, not about loose questions.
+- **The decider is shown masked arguments** (secrets as `********`, cut at 120 characters),
+  but they're stored whole: running with truncated arguments would be a silent failure.
+- **The plan's conversation is set by the agent**, not the model, which doesn't know it.
+  Asking the model for it left the plan orphaned and the next turn no longer offered
+  `get_plan`.
+- **A rule in the prompt is a suggestion; an answer at the moment of failure is a path.** The
+  V1.6 gate saw a model go straight to deleting and ignore the prompt's rule. What works is
+  that, when the tool is denied, the system tells it "use `create_plan` with these steps".
+- When rejected, the model is told **not to propose an equivalent one**.
+- **A step may use no tool** ("ask the person"): the step's optional fields accept `null`
+  (2.0.32). With the schema as `string` only, Groq rejected the whole call with a 400 and the
+  turn fell back: 24-35 s per plan, measured
+  (mediciones.md, in Spanish).
+- **If a step uses a tool that doesn't exist here**, it's stored anyway (it counts as
+  critical), but `create_plan` tells the model which ones exist so it redoes the plan or
+  explains it. In the cloud it proposed `move_file` and `mkdir`.
+- **In the cloud the prompt says there is no computer** (2.0.33): when the catalog has no tools
+  for the computer, "Where you work: in the cloud" is added. Without it, it promised a new
+  person commands "with your authorization" and processing CSVs with pandas. It's decided from
+  the catalog, like the rest of the prompt.
+- **The prompt asks to propose the plan without exploring first**: measured, the model looked
+  at files, knowledge, memory and repositories "just in case" and chained up to seven calls.
 
-### Lo que actúa fuera de Morgan exige plan (V2.0.16)
+### What acts outside Morgan requires a plan (V2.0.16)
 
-Una herramienta con `exige_plan = True` se ejecuta **solo** si en esta conversación
-hay un plan aprobado con un paso de esa herramienta, **con los mismos argumentos**
-y **sin ejecutar todavía**. Vale para todos, propietario incluido. La aprobación se
-gasta solo si la herramienta funciona, y una herramienta que exige plan nunca
-cuenta como segura (si no, su plan se aprobaría solo). Lo usan **las que cambian cosas
-en el PC de la persona**: las cinco de escritura (3.3), `run_change_command` y
-`kill_process` (3.5). Calendar, que lo estrenó, está aparcado. Probado en
-`tests/test_exige_plan.py` (10 de 10 mutaciones). La web enseña los argumentos de cada
-paso tal cual, con sus saltos de línea: lo que se va a escribir se aprueba viéndolo.
+A tool with `exige_plan = True` runs **only** if in this conversation there is an approved
+plan with a step for that tool, **with the same arguments** and **not run yet**. It applies to
+everyone, the owner included. The approval is only used up if the tool works, and a tool that
+requires a plan never counts as safe (otherwise its plan would approve itself). It's used by
+**the ones that change things on the person's PC**: the five for writing (3.3),
+`run_change_command` and `kill_process` (3.5). Calendar, which introduced it, is parked.
+Tested in `tests/test_exige_plan.py` (10 of 10 mutations). The web shows each step's arguments
+as they are, with their line breaks: what is going to be written is approved by seeing it.
 
-Rutas: `GET /planes`, `GET /planes/{id}`, `POST /planes/{id}/aprobar`,
-`POST /planes/{id}/rechazar`. Uno ajeno da **404**, no 403: decir «existe pero no
-es tuyo» delataría que existe.
+Routes: `GET /planes`, `GET /planes/{id}`, `POST /planes/{id}/aprobar`,
+`POST /planes/{id}/rechazar`. Someone else's gives **404**, not 403: saying "it exists but it
+isn't yours" would reveal that it exists.
 
-## 4. Verificación: comprobar que pasó de verdad
+## 4. Verification: checking that it really happened
 
-`success: True` significa que **la llamada no falló**, no que el objetivo se
-cumpliera. Así que tras cada herramienta el agente mira el efecto **contra el mundo
-real**, sin preguntarle al modelo:
+`success: True` means that **the call didn't fail**, not that the goal was met. So after each
+tool the agent looks at the effect **against the real world**, without asking the model:
 
-| Herramienta | Se comprueba |
+| Tool | What is checked |
 |---|---|
-| `create_file` | ¿Existe? ¿Tiene contenido? |
-| `delete_file` | ¿Desapareció? |
-| `patch_file` | ¿Está el texto nuevo? |
-| `run_tests` | ¿La salida dice «failed»? |
+| `create_file` | Does it exist? Does it have content? |
+| `delete_file` | Did it disappear? |
+| `patch_file` | Is the new text there? |
+| `run_tests` | Does the output say "failed"? |
 
-| Veredicto | ¿Bloquea completar la tarea? |
+| Verdict | Does it block completing the task? |
 |---|---|
-| `correcto` | No |
-| `incorrecto` | **Sí**, y el mensaje dice qué paso y por qué |
-| `no_verificable` | No. **Y no es «correcto»**: un sistema que llama verificado a lo que no comprobó es peor que uno que no verifica |
+| `correcto` (correct) | No |
+| `incorrecto` (incorrect) | **Yes**, and the message says which step and why |
+| `no_verificable` (not verifiable) | No. **And it isn't "correct"**: a system that calls verified what it didn't check is worse than one that doesn't verify |
 
-**Si la herramienta dice éxito y el efecto dice que no, gana el efecto**: el
-resultado pasa a `success: False` y el modelo puede reaccionar. En la interfaz solo
-lleva sello lo comprobado.
+**If the tool says success and the effect says no, the effect wins**: the result becomes
+`success: False` and the model can react. In the interface, only what was checked gets a seal.
 
-**Copiar, mover y renombrar** también se verifican (4.0-B): la copia existe y mide lo
-mismo que el original; lo movido o renombrado ya no está en el origen y sí en el destino.
+**Copying, moving and renaming** are verified too (4.0-B): the copy exists and has the same
+size as the original; what was moved or renamed is no longer at the source and is at the
+destination.
 
-**Lo que se hace en el PC de la persona se comprueba allí** (4.0.0-dev). Las herramientas
-del agente local llevan `en_el_pc`, y su veredicto sale de lo que comprobó el agente en su
-disco: la huella sha256 de lo escrito o la Papelera. **Nunca del disco de la nube**: hasta
-entonces se miraba con `os.path.exists` en el servidor, y en producción (Render, Linux) un
-archivo creado bien en el PC se daba por no creado. Desde la 4.0-B, además, el agente
-dice qué comprobó (`comprobado`) al crear una carpeta, mover, ejecutar un comando que
-cambia algo o terminar un proceso.
+**What is done on the person's PC is checked there** (4.0.0-dev). The local agent's tools carry
+`en_el_pc`, and their verdict comes from what the agent checked on its disk: the sha256
+fingerprint of what was written, or the Recycle Bin. **Never from the cloud's disk**: until
+then it was checked with `os.path.exists` on the server, and in production (Render, Linux) a
+file correctly created on the PC was reported as not created. Since 4.0-B, the agent also says
+what it checked (`comprobado`) when creating a folder, moving, running a command that changes
+something or ending a process.
 
-Verificado con el modelo real: ante una unidad inexistente, Morgan respondió «No
-pude crear el archivo. La unidad `Z:\` no existe», en lugar de «listo».
+Verified with the real model: given a drive that doesn't exist, Morgan answered "I couldn't
+create the file. Drive `Z:\` doesn't exist", instead of "done".
 
-### Corregir, con tope (4.0-C)
+### Correcting, with a cap (4.0-C)
 
-Decidí que, si algo que cambia cosas no sale —la herramienta falla o la verificación
-dice que el efecto no está—, el modelo tiene **un** intento con otro camino, y se le dice en
-ese momento. Si ese intento tampoco sale, **ningún otro cambio se ejecuta en el turno** y se
-le pide que se lo cuente a la persona con lo que intentó. Consultar sigue pudiéndose, y un
-intento que sale cierra el asunto. «Cambiar» es lo de riesgo moderado o más y lo que exige
-plan (que sigue sin ejecutarse sin aprobarlo). Lo idéntico ya se bloqueaba desde la 3.1.
-Probado en `tests/test_corregir.py`.
+I decided that, if something that changes things doesn't work —the tool fails or the
+verification says the effect isn't there—, the model gets **one** attempt with another way,
+and it's told so at that moment. If that attempt doesn't work either, **no other change runs in
+the turn** and it's asked to tell the person what it tried. Querying is still possible, and an
+attempt that works closes the matter. "Changing" means moderate risk or above and whatever
+requires a plan (which still doesn't run without approval). Identical calls were already
+blocked since 3.1. Tested in `tests/test_corregir.py`.
 
-### El contexto en el plan (4.0-D)
+### Context in the plan (4.0-D)
 
-Un plan aprobado se ejecuta tal cual, así que **lo que hace falta para escribirlo se lee
-antes**, sin plan: un adjunto, un archivo, un documento de su conocimiento. `create_plan`
-rechaza un plan con una consulta antes de un cambio (`CONSULTAS` en
-`src/tools/planificacion.py`): el cambio esperaría un dato que nunca le llega, y el modelo
-rellenaba el hueco con un marcador que acababa en el disco. Una consulta después de los
-cambios, o un plan solo de consultas, no se tocan. Y en el turno que ejecuta un plan
-aprobado que salió entero bien, no se puede proponer otro: se repetía lo ya hecho.
-Probado en `tests/test_contexto_en_el_plan.py`; medido en `mediciones.md`.
+An approved plan runs as it is, so **what's needed to write it is read beforehand**, without a
+plan: an attachment, a file, a document from its knowledge. `create_plan` rejects a plan with a
+query before a change (`CONSULTAS` in `src/tools/planificacion.py`): the change would be
+waiting for data that never arrives, and the model filled the gap with a placeholder that
+ended up on the disk. A query after the changes, or a plan of queries only, are left alone.
+And in the turn that runs an approved plan that went entirely well, another one can't be
+proposed: it repeated what was already done. Tested in `tests/test_contexto_en_el_plan.py`;
+measured in `mediciones.md`.
 
-## Lo que aún no hace
+## What it doesn't do yet
 
-- **No aprende de los rechazos** de una conversación a otra.
+- **It doesn't learn from rejections** from one conversation to another.
 
-## Pruebas
+## Tests
 
-| Fichero | Qué fija |
+| File | What it pins down |
 |---|---|
-| `tests/test_tareas.py` | Estados, transiciones, anotación automática |
-| `tests/test_planificacion.py` | Que el riesgo escrito por el modelo se ignora, estados, aprobación |
-| `tests/test_planes_de_la_conversacion.py` | Que el agente ata el plan a su conversación, por el bucle real |
-| `tests/test_exige_plan.py` | Mismos argumentos, una vez, esta conversación |
-| `tests/test_verificacion.py` | Que no verificable no es correcto ni fallo |
-| `tests/test_ejecutar_plan.py` | El plan aprobado se ejecuta solo, con sus argumentos (4.0-A) |
-| `tests/test_corregir.py` | Un intento con otro camino, y ni uno más (4.0-C) |
-| `tests/test_contexto_en_el_plan.py` | Consultar antes de planificar; ningún plan repetido tras ejecutar (4.0-D) |
-| `tests/test_memoria_por_persona.py` | La memoria de una cuenta nunca va en los turnos de otra (4.0) |
-| `tests/test_chat_stream.py` | Orden de eventos, latido, aislamiento entre dos usuarios, error sin excepción |
+| `tests/test_tareas.py` | States, transitions, automatic recording |
+| `tests/test_planificacion.py` | That the risk written by the model is ignored, states, approval |
+| `tests/test_planes_de_la_conversacion.py` | That the agent ties the plan to its conversation, through the real loop |
+| `tests/test_exige_plan.py` | Same arguments, once, this conversation |
+| `tests/test_verificacion.py` | That not verifiable is neither correct nor failed |
+| `tests/test_ejecutar_plan.py` | The approved plan runs on its own, with its arguments (4.0-A) |
+| `tests/test_corregir.py` | One attempt with another way, and not one more (4.0-C) |
+| `tests/test_contexto_en_el_plan.py` | Query before planning; no repeated plan after running (4.0-D) |
+| `tests/test_memoria_por_persona.py` | One account's memory never goes into another's turns (4.0) |
+| `tests/test_chat_stream.py` | Event order, heartbeat, isolation between two users, error without the exception |

@@ -1,72 +1,61 @@
-# Migraciones de Supabase
+# Supabase migrations
 
-El esquema de la nube. **Está aquí porque no estarlo salió caro.**
+**English** · [Español](README.es.md)
 
-Hasta la V1.8, estas migraciones se aplicaban directamente sobre el proyecto de
-Supabase y no quedaba rastro en el repositorio. Nadie las revisaba, no aparecían
-en ningún *diff*, y el resultado fue una función de cuota que llevaba una versión
-entera **rota y fuera del alcance de PostgREST** sin que nada lo delatara: solo
-fallaba para usuarios que no fueran el propietario, que es exactamente el caso
-que no se prueba a mano.
+The cloud schema. **It's here because not having it here turned out to be expensive.**
 
-## La regla
+Until V1.8, these migrations were applied directly on the Supabase project and left no trace in
+the repository. Nobody reviewed them, they didn't show up in any *diff*, and the result was a quota
+function that had been **broken and out of PostgREST's reach** for a whole version without anything
+giving it away: it only failed for users who weren't the owner, which is exactly the case nobody
+tests by hand.
 
-Toda migración aplicada a Supabase se escribe también aquí, con el mismo nombre
-que se le dio, **en el mismo commit**. Un fichero de aquí que no esté aplicado, o
-una migración aplicada que no esté aquí, son las dos formas de que esto deje de
-servir para nada.
+## The rule
 
-Para ver qué hay aplicado de verdad:
+Every migration applied to Supabase is also written here, with the same name it was given, **in the
+same commit**. A file here that isn't applied, or an applied migration that isn't here, are the two
+ways for this to stop being useful at all.
+
+To see what is really applied:
 
 ```sql
 select version, name from supabase_migrations.schema_migrations order by version;
 ```
 
-## Lo que hay que mirar al escribir una
+## What to check when writing one
 
-Las tres cosas que han fallado, por orden de lo caras que salieron:
+The three things that have failed, in order of how expensive they turned out:
 
-1. **¿La va a llamar el backend a través de PostgREST?** Entonces tiene que
-   estar en `public`. PostgREST no ve `morgan_priv`, y una función que no
-   encuentra responde 404 — que llega al navegador convertido en un 500 sin
-   explicación. Las funciones de las políticas RLS son el caso contrario: esas
-   sí van en `morgan_priv`, porque se usan *dentro* de la política.
-2. **¿Los tipos coinciden con los de las columnas?** Postgres convierte un
-   literal de texto a fecha, pero **no un parámetro**. `dia` es `date`, y
-   recibirlo como `text` da `42804` la primera vez que se ejecuta.
-3. **¿Quién puede ejecutarla?** `CREATE FUNCTION` concede `EXECUTE` a `PUBLIC`
-   por defecto. Si no se revoca, queda al alcance de cualquiera con la clave
-   publicable.
+1. **Will the backend call it through PostgREST?** Then it has to be in `public`. PostgREST doesn't
+   see `morgan_priv`, and a function it can't find answers 404 — which reaches the browser turned
+   into a 500 with no explanation. The functions used by RLS policies are the opposite case: those
+   do go in `morgan_priv`, because they're used *inside* the policy.
+2. **Do the types match the columns'?** Postgres converts a text literal to a date, but **not a
+   parameter**. `dia` is `date`, and receiving it as `text` gives `42804` the first time it runs.
+3. **Who can execute it?** `CREATE FUNCTION` grants `EXECUTE` to `PUBLIC` by default. If it isn't
+   revoked, it's within reach of anyone with the publishable key.
 
-## Histórico anterior
+## Earlier history
 
-Las migraciones de la v1 a la v14 se aplicaron antes de esta regla y viven solo
-en Supabase. Se pueden recuperar de `supabase_migrations.schema_migrations`, que
-guarda su SQL. No se copian aquí a posteriori a propósito: escribir ficheros que
-nadie ha verificado que coincidan con lo aplicado sería peor que no tenerlos.
+Migrations v1 to v14 were applied before this rule and lived only in Supabase. Since 4.20 they're in
+[`v01_v14_esquema_inicial.sql`](v01_v14_esquema_inicial.sql), recovered from
+`supabase_migrations.schema_migrations` and checked one by one against the MD5 Postgres keeps of
+each: written down from what was really applied, not from memory.
 
-## Recrear el esquema en un proyecto nuevo
+## Recreating the schema in a new project
 
-Se hizo el 2026-09-18 para el proyecto de prueba de carga (`morgan-carga`), y el
-procedimiento sirve para cualquier copia:
+It was done on 2026-09-18 for the load-test project (`morgan-carga`), and the procedure works for
+any copy:
 
-1. **De la v1 a la v14**, que no están en ficheros: se leen de producción, **solo el
-   SQL de las migraciones**, sin tocar datos:
+1. **v1 to v14**: [`v01_v14_esquema_inicial.sql`](v01_v14_esquema_inicial.sql). (Before 4.20 they
+   were read from production, **only the migrations' SQL**, without touching data:
+   `select version, name, array_to_string(statements, E';\n') as sql from supabase_migrations.schema_migrations order by version;`.)
+2. **From v15 on**, the files in this folder, in order.
+3. **It's checked** with [`huella_esquema.sql`](huella_esquema.sql) on both projects: seven
+   fingerprints (columns, constraints, indexes, policies, RLS, functions and buckets) that have to
+   match one by one.
 
-   ```sql
-   select version, name, array_to_string(statements, E';
-') as sql
-   from supabase_migrations.schema_migrations order by version;
-   ```
-
-   y se aplican en ese orden, con el mismo nombre.
-2. **De la v15 en adelante**, los ficheros de esta carpeta, en orden.
-3. **Se comprueba** con [`huella_esquema.sql`](huella_esquema.sql) en los dos proyectos:
-   siete huellas (columnas, restricciones, índices, políticas, RLS, funciones y
-   buckets) que tienen que coincidir una a una.
-
-La primera vez no coincidieron las funciones, y era cosa de la copia: se habían
-aplicado los ficheros sin sus comentarios, y **en una función los comentarios forman
-parte del código guardado**. Mismo comportamiento, distinta huella. Se reaplicaron
-las dos funciones con `pg_get_functiondef` de producción y las siete coincidieron.
-
+The first time the functions didn't match, and it was the copy's fault: the files had been applied
+without their comments, and **in a function the comments are part of the stored code**. Same
+behavior, different fingerprint. The two functions were reapplied with `pg_get_functiondef` from
+production and all seven matched.

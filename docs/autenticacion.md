@@ -1,780 +1,726 @@
-# Autenticación y cuentas
+# Authentication and accounts
 
-> Cómo entra la gente en Morgan, cómo se guardan las contraseñas y qué separa los
-> datos de una persona de los de otra. **Identidad, de la V2.0 adelantada.**
+**English** · [Español](autenticacion.es.md)
 
-Morgan tiene su **propio** sistema de acceso: nombre de usuario o correo, y
-contraseña. No hay proveedor externo de identidad.
+> How people get into Morgan, how passwords are stored and what keeps one person's data apart
+> from another's. **Identity, brought forward from V2.0.**
 
-## Por qué propio y no «entrar con Google»
+Morgan has its **own** access system: username or email, and a password. There is no external
+identity provider.
 
-Se evaluó Supabase Auth con Google y GitHub y se descartó por complejidad: obliga
-a registrar aplicaciones en dos paneles ajenos, a mantener secretos en tres
-sitios, a lidiar con URLs de retorno que fallan con mensajes que no explican nada,
-y a que el arranque del proyecto dependa de pantallas de verificación de Google.
-Para un asistente personal que quiere abrirse a unos cuantos usuarios, es mucho
-aparato.
+## Why its own and not "sign in with Google"
 
-**Esto no cierra la puerta a Google ni a GitHub.** Al contrario, y conviene
-insistir porque es la confusión más cara de este terreno:
+Supabase Auth with Google and GitHub was evaluated and ruled out for complexity: it forces you
+to register applications in two outside dashboards, to keep secrets in three places, to deal
+with return URLs that fail with messages that explain nothing, and to have the project's startup
+depend on Google's verification screens. For a personal assistant that wants to open up to a
+few users, it's a lot of machinery.
 
-| | Qué significa | Estado |
+**This doesn't close the door to Google or GitHub.** On the contrary, and it's worth insisting
+because it's the most expensive confusion in this area:
+
+| | What it means | Status |
 |---|---|---|
-| **Login con GitHub** | GitHub confirma quién eres, y esa es tu forma de entrar | Descartado |
-| **Conectar GitHub a Morgan** | Morgan lee tus repos, tus *issues* y tus PRs | ✅ Hecho en la V1.9, y en uso: [integraciones.md](integraciones.md) |
+| **Sign in with GitHub** | GitHub confirms who you are, and that's how you get in | Ruled out |
+| **Connecting GitHub to Morgan** | Morgan reads your repos, your *issues* and your PRs | ✅ Done in V1.9, and in use: [integraciones.md](integraciones.md) |
 
-Son cosas distintas y se diseñan por separado. La segunda será una **integración**:
-su propia tabla, sus propios permisos, colgando de tu cuenta de Morgan. Mezclarlas
-—que tu identidad *sea* tu cuenta de GitHub— es lo que obliga después a rehacerlo
-todo cuando alguien quiere entrar con correo, o conectar dos servicios, o
-desconectar uno sin perder el acceso.
+They're different things and they're designed separately. The second is an **integration**:
+its own table, its own permissions, hanging from your Morgan account. Mixing them —your
+identity *being* your GitHub account— is what later forces you to redo everything when someone
+wants to sign in with an email, or connect two services, or disconnect one without losing
+access.
 
-## Las piezas
+## The pieces
 
 ```
-Navegador                     API                        Almacén
-─────────                     ───                        ───────
-cookie morgan_sesion  ──►  identidad_middleware  ──►  auth_sessions
-(HttpOnly)                        │                    (id = hash del token)
+Browser                       API                        Storage
+───────                       ───                        ───────
+morgan_sesion cookie  ──►  identidad_middleware  ──►  auth_sessions
+(HttpOnly)                        │                    (id = hash of the token)
                                   ▼
-cookie morgan_csrf    ──►  fijar_usuario(id)      ──►  ContextVar
-(legible)                         │
+morgan_csrf cookie    ──►  fijar_usuario(id)      ──►  ContextVar
+(readable)                        │
                                   ▼
-X-Morgan-CSRF         ──►  toda consulta filtra por usuario
+X-Morgan-CSRF         ──►  every query filters by user
 ```
 
-| Fichero | Qué hace |
+| File | What it does |
 |---|---|
-| [`src/identidad/password.py`](../src/identidad/password.py) | Hasheo y validación de contraseñas e identificadores |
-| [`src/identidad/cuentas.py`](../src/identidad/cuentas.py) | La política: registro, acceso, sesiones, recuperación |
-| [`src/identidad/repositorio.py`](../src/identidad/repositorio.py) | Dónde se guarda: SQLite o Supabase |
-| [`src/identidad/correo.py`](../src/identidad/correo.py) | Envío real del enlace de recuperación |
-| [`src/api/sesion_web.py`](../src/api/sesion_web.py) | Cookies, CSRF, origen de la petición |
-| [`src/api/identidad_middleware.py`](../src/api/identidad_middleware.py) | Quién hace cada petición, y qué pasa si nadie |
-| [`src/api/routes/cuentas.py`](../src/api/routes/cuentas.py) | Las rutas `/auth/*` |
-| [`src/identidad/tokens.py`](../src/identidad/tokens.py) | Tokens personales de API: crear, resolver, alcances y lo que un token no puede nunca |
-| [`web/src/components/Cuenta.tsx`](../web/src/components/Cuenta.tsx) | Pantalla de acceso y estado de sesión |
-| [`web/src/components/PanelCuenta.tsx`](../web/src/components/PanelCuenta.tsx) | Cuenta, contraseña y sesiones, dentro de Ajustes |
+| [`src/identidad/password.py`](../src/identidad/password.py) | Hashing and validation of passwords and identifiers |
+| [`src/identidad/cuentas.py`](../src/identidad/cuentas.py) | The policy: sign-up, sign-in, sessions, recovery |
+| [`src/identidad/repositorio.py`](../src/identidad/repositorio.py) | Where it's stored: SQLite or Supabase |
+| [`src/identidad/correo.py`](../src/identidad/correo.py) | Really sending the recovery link |
+| [`src/api/sesion_web.py`](../src/api/sesion_web.py) | Cookies, CSRF, the request's origin |
+| [`src/api/identidad_middleware.py`](../src/api/identidad_middleware.py) | Who makes each request, and what happens if nobody |
+| [`src/api/routes/cuentas.py`](../src/api/routes/cuentas.py) | The `/auth/*` routes |
+| [`src/identidad/tokens.py`](../src/identidad/tokens.py) | Personal API tokens: creating, resolving, scopes and what a token can never do |
+| [`web/src/components/Cuenta.tsx`](../web/src/components/Cuenta.tsx) | Sign-in screen and session state |
+| [`web/src/components/PanelCuenta.tsx`](../web/src/components/PanelCuenta.tsx) | Account, password and sessions, inside Settings |
 
-## Contraseñas
+## Passwords
 
-Se usa **`scrypt`**, de `hashlib`, estandarizado en el RFC 7914. Es un algoritmo
-pensado para contraseñas: costoso en memoria además de en tiempo, que es lo que
-encarece los ataques con tarjetas gráficas.
+It uses **`scrypt`**, from `hashlib`, standardized in RFC 7914. It's an algorithm designed for
+passwords: expensive in memory as well as in time, which is what makes attacks with graphics
+cards costly.
 
-Se eligió frente a `bcrypt` y `argon2-cffi` por no añadir una dependencia con
-extensión en C. Las tres son defendibles; esta no obliga a compilar nada ni en
-Windows ni en el contenedor de Render.
+It was chosen over `bcrypt` and `argon2-cffi` so as not to add a dependency with a C extension.
+All three are defensible; this one doesn't force compiling anything on Windows or in Render's
+container.
 
-El formato guarda los parámetros junto al hash:
+The format stores the parameters next to the hash:
 
 ```
-scrypt$16384$8$1$<sal en base64>$<hash en base64>
+scrypt$16384$8$1$<salt in base64>$<hash in base64>
 ```
 
-Así, si dentro de dos años hay que subir el coste, las contraseñas antiguas siguen
-verificándose con sus parámetros originales y **se rehashean solas al entrar**,
-aprovechando el único momento en que la contraseña está en claro.
+That way, if in two years the cost has to go up, old passwords are still verified with their
+original parameters and **rehash themselves when signing in**, taking advantage of the only
+moment the password is in plain text.
 
-Medido en el equipo de desarrollo: **44 ms por hash**. Suficiente para encarecer
-un ataque por fuerza bruta sin que iniciar sesión se note lento.
+Measured on the development computer: **44 ms per hash**. Enough to make a brute-force attack
+expensive without signing in feeling slow.
 
-**Como mucho 4 hashes a la vez** (V2.0.27). Cada uno reserva 16 MB, y la prueba de
-carga midió 498 MB con 25 altas simultáneas: el plan gratuito de Render tiene 512.
-Un pico de inicios de sesión —también fallidos— habría tumbado el servicio, y los
-frenos no lo evitan porque cuentan intentos, no simultaneidad. Con el semáforo el
-techo de los hashes es 64 MB, y el pico medido del servidor con 60 altas a la vez,
-176 MB. No cuesta tiempo: el cálculo es de CPU, y más en paralelo solo repartía la
-misma CPU (mediciones.md).
+**At most 4 hashes at a time** (V2.0.27). Each one reserves 16 MB, and the load test measured
+498 MB with 25 simultaneous sign-ups: Render's free plan has 512. A peak of sign-ins —failed
+ones too— would have brought the service down, and the throttles don't prevent it because they
+count attempts, not concurrency. With the semaphore the ceiling for hashes is 64 MB, and the
+server's measured peak with 60 sign-ups at once, 176 MB. It costs no time: the computation is
+CPU-bound, and more in parallel just shared the same CPU
+(mediciones.md, in Spanish).
 
-Requisitos: mínimo 8 caracteres, máximo 200. **No se exigen mayúsculas, números ni
-símbolos**: esas reglas empujan a la gente hacia contraseñas cortas y predecibles
-del tipo `Passw0rd!`. La longitud es lo que importa.
+Requirements: at least 8 characters, at most 200. **Uppercase, numbers or symbols aren't
+required**: those rules push people towards short, predictable passwords like `Passw0rd!`.
+Length is what matters.
 
-## Sesiones
+## Sessions
 
-- Viven en una cookie **`HttpOnly`**. Guardarlas en `localStorage` las pondría al
-  alcance de cualquier script inyectado, y en una aplicación que renderiza texto
-  de un modelo eso no es una hipótesis remota.
-- En la base se guarda el **hash** del identificador, no el valor. Quien lea la
-  base no debe poder suplantar a nadie, igual que con las contraseñas.
-- Duran **30 días**. Pedir la contraseña cada semana no aporta seguridad real y
-  empuja a elegir contraseñas más simples.
-- Se invalidan **en el servidor** al salir. Borrar la cookie sin más dejaría la
-  sesión viva treinta días para quien tuviera copia del token.
-- Cambiar o recuperar la contraseña **cierra las demás sesiones**. Si alguien te
-  la había robado, cambiarla no serviría de nada mientras su sesión siguiera viva.
+- They live in an **`HttpOnly`** cookie. Storing them in `localStorage` would put them within
+  reach of any injected script, and in an application that renders a model's text that isn't a
+  remote hypothesis.
+- The database stores the **hash** of the identifier, not the value. Whoever reads the database
+  mustn't be able to impersonate anyone, just like with passwords.
+- They last **30 days**. Asking for the password every week brings no real security and pushes
+  people to pick simpler passwords.
+- They're invalidated **on the server** when signing out. Just deleting the cookie would leave
+  the session alive for thirty days for whoever had a copy of the token.
+- Changing or recovering the password **closes the other sessions**. If someone had stolen it,
+  changing it would be useless while their session stayed alive.
 
-## Dónde vive la API, y por qué importa para la cookie
+## Where the API lives, and why it matters for the cookie
 
-**El navegador tiene que ver la API en el mismo origen que la página.** No es una
-preferencia de arquitectura: es la condición para que la sesión exista.
+**The browser has to see the API on the same origin as the page.** It isn't an architectural
+preference: it's the condition for the session to exist.
 
-El frontend está en Vercel y la API en Render, que son dominios distintos. Con la
-web llamando directamente a Render, la cookie de sesión es una **cookie de
-terceros**, y Safari en iPhone las descarta sin excepción. El efecto era exacto:
-te registrabas y la web te devolvía al login para siempre, sin ningún error en
-ninguna parte. Está contado entero en
+The frontend is on Vercel and the API on Render, which are different domains. With the web
+calling Render directly, the session cookie is a **third-party cookie**, and Safari on iPhone
+discards them without exception. The effect was exact: you signed up and the web sent you back
+to the sign-in screen forever, without any error anywhere. The whole story is in
 [web.md](web.md).
 
-Por eso `vercel.json` reenvía `/api/*` a Render **desde el mismo
-origen**. La página llama a `morgan-ia.vercel.app/api/auth/yo`, y la cookie
-que vuelve pertenece a `morgan-ia.vercel.app`: primera parte, y ningún
-navegador la discute.
+That's why `vercel.json` forwards `/api/*` to Render **from the same origin**. The page calls
+`morgan-ia.vercel.app/api/auth/yo`, and the cookie that comes back belongs to
+`morgan-ia.vercel.app`: first party, and no browser argues with it.
 
-Lo que hay que saber si se toca esto:
+What you need to know if you touch this:
 
-- El proxy va **antes** que la regla comodín de la SPA en `vercel.json`.
-  Detrás, no se aplica nunca.
-- El borde **no cachea** `/api` (`x-vercel-enable-rewrite-caching: 0`).
-  Una respuesta de sesión cacheada y servida a otra persona sería una fuga entre
-  cuentas.
-- El frontend decide su URL **en el build**, no en el panel de Vercel.
-- Lo fija [`test_proxy_mismo_origen.py`](../tests/test_proxy_mismo_origen.py).
+- The proxy goes **before** the SPA's catch-all rule in `vercel.json`. After it, it's never
+  applied.
+- The edge **doesn't cache** `/api` (`x-vercel-enable-rewrite-caching: 0`). A cached session
+  response served to another person would be a leak between accounts.
+- The frontend decides its URL **at build time**, not in Vercel's dashboard.
+- [`test_proxy_mismo_origen.py`](../tests/test_proxy_mismo_origen.py) pins it.
 
 ## CSRF
 
-En la nube la cookie se sigue marcando `SameSite=None; Secure`. Ya no hace falta
-para cruzar dominios —el proxy los unificó— pero se mantiene: la API también se
-alcanza directamente, y una cookie que solo funcione a través de Vercel ata la
-sesión a un despliegue concreto.
+In the cloud the cookie is still marked `SameSite=None; Secure`. It's no longer needed to cross
+domains —the proxy unified them— but it's kept: the API can also be reached directly, and a
+cookie that only works through Vercel ties the session to a specific deployment.
 
-`SameSite=None` significa que la cookie viaja también en peticiones que provoque
-otra web, así que **la protección contra CSRF tiene que estar en otro sitio**.
+`SameSite=None` means the cookie also travels in requests caused by another website, so **the
+protection against CSRF has to be somewhere else**.
 
-La defensa es el **doble envío**: además de la cookie de sesión hay un token
-CSRF que el cliente repite en la cabecera `X-Morgan-CSRF`. Una web ajena puede
-provocar la petición, pero no puede **conseguir** el token para rellenar la
-cabecera, ni ponerla sin disparar un *preflight* que CORS rechaza.
+The defense is the **double submit**: besides the session cookie there is a CSRF token that the
+client repeats in the `X-Morgan-CSRF` header. Someone else's website can cause the request, but
+it can't **get** the token to fill in the header, nor set it without triggering a *preflight*
+that CORS rejects.
 
-En local se usa `SameSite=Lax` y las cookies no se marcan `Secure`: `http://localhost`
-no es HTTPS y el navegador las descartaría, con el efecto de no poder entrar en
-desarrollo.
+Locally, `SameSite=Lax` is used and the cookies aren't marked `Secure`: `http://localhost` isn't
+HTTPS and the browser would discard them, with the effect of not being able to sign in during
+development.
 
-### De dónde saca el cliente el token
+### Where the client gets the token from
 
-De dos sitios, y el segundo existe por un fallo que dejó **la web entera en solo
-lectura durante toda la V1.8**:
+From two places, and the second exists because of a bug that left **the whole web read-only
+during all of V1.8**:
 
-1. **La cookie `morgan_csrf`**, si puede leerla. Es la fuente directa y siempre
-   está al día.
-2. **El JSON de `/auth/login`, `/auth/registro` y `/auth/yo`**, que lo devuelven
-   en el campo `csrf`. El cliente lo guarda en `localStorage`.
+1. **The `morgan_csrf` cookie**, if it can read it. It's the direct source and always up to date.
+2. **The JSON of `/auth/login`, `/auth/registro` and `/auth/yo`**, which return it in the `csrf`
+   field. The client stores it in `localStorage`.
 
-El primer camino **solo funciona cuando la web y la API comparten dominio**.
-Hoy lo comparten, gracias al proxy; durante toda la V1.8 no, y ahí estuvo el
-fallo: la cookie pertenecía a `morgan-api.onrender.com` y el JavaScript
-corría en `morgan-ia.vercel.app`. El navegador *enviaba* la cookie en cada
-petición —así que desde el backend todo parecía correcto— pero
-`document.cookie` **no podía leerla desde otro dominio**. La cabecera nunca
-se ponía, y **todos** los POST se rechazaban con 403.
+The first path **only works when the web and the API share a domain**. Today they do, thanks
+to the proxy; during all of V1.8 they didn't, and that's where the bug was: the cookie belonged
+to `morgan-api.onrender.com` and the JavaScript ran on `morgan-ia.vercel.app`. The browser *sent*
+the cookie on every request —so from the backend everything looked right— but `document.cookie`
+**couldn't read it from another domain**. The header was never set, and **every** POST was
+rejected with 403.
 
-El segundo camino se queda aunque el primero ya funcione. Cuesta poco, y es lo
-que sostiene la sesión cuando un navegador limpia la cookie legible por su
-cuenta — que es justo el caso que dejó la web en solo lectura.
+The second path stays even though the first already works. It costs little, and it's what holds
+the session up when a browser clears the readable cookie on its own — which is exactly the case
+that left the web read-only.
 
-El síntoma no se parecía a la causa. La sesión estaba abierta, `/auth/yo`
-respondía bien, los GET funcionaban y la pantalla mostraba tu nombre. Solo fallaba
-*hacer* cosas: enviar un mensaje, crear una conversación, subir un archivo,
-renombrar. Desde fuera se leía como «Morgan cree que no he iniciado sesión».
+The symptom didn't look like the cause. The session was open, `/auth/yo` answered fine, the GETs
+worked and the screen showed your name. Only *doing* things failed: sending a message, creating
+a conversation, uploading a file, renaming. From the outside it read as "Morgan thinks I haven't
+signed in".
 
-**Devolver el token por `/auth/yo` no debilita la defensa.** El doble envío
-protege porque una web ajena no puede conseguir el token, y sigue sin poder:
-`/auth/yo` responde únicamente a los orígenes de la lista de CORS —comprobado en
-vivo: a cualquier otro no le devuelve la cabecera `Access-Control-Allow-Origin`,
-y sin ella el navegador le impide leer la respuesta—. Es la misma política de
-mismo origen que hacía ilegible la cookie, aplicada un escalón más arriba.
+**Returning the token through `/auth/yo` doesn't weaken the defense.** The double submit protects
+because someone else's website can't get the token, and it still can't: `/auth/yo` only answers
+the origins in the CORS list —checked live: to any other it doesn't return the
+`Access-Control-Allow-Origin` header, and without it the browser stops it from reading the
+response—. It's the same same-origin policy that made the cookie unreadable, applied one step
+higher.
 
-`/auth/yo` **emite un token nuevo** si hay sesión viva y falta la cookie. Pasa de
-verdad: los navegadores que limpian cookies de terceros se llevan esta y dejan la
-de sesión, y sin reponerla la sesión quedaba en solo lectura hasta volver a
-entrar. A quien no tiene sesión no se le da ninguno: si bastara con pedirlo, el
-doble envío no protegería de nada.
+`/auth/yo` **issues a new token** if there is a live session and the cookie is missing. It
+really happens: browsers that clear third-party cookies take this one and leave the session one,
+and without replacing it the session stayed read-only until signing in again. Whoever has no
+session gets none: if asking for it were enough, the double submit wouldn't protect against
+anything.
 
-### Lo que este diseño no cubre
+### What this design doesn't cover
 
-Las rutas de entrada —`/auth/login`, `/auth/registro`, `/auth/recuperar`,
-`/auth/restablecer`, `/auth/logout`— están **exentas** de la comprobación CSRF.
-Tienen que estarlo: exigir un token que solo se obtiene teniendo sesión impediría
-iniciar sesión, y dejaba atrapado a quien volvía con una cookie caducada.
+The entry routes —`/auth/login`, `/auth/registro`, `/auth/recuperar`, `/auth/restablecer`,
+`/auth/logout`— are **exempt** from the CSRF check. They have to be: requiring a token that can
+only be obtained with a session would make signing in impossible, and it trapped whoever came
+back with an expired cookie.
 
-El precio es el **«login CSRF»**: una web ajena puede forzar que entres en *la
-cuenta del atacante* sin que te des cuenta. Se acepta a sabiendas. Evitarlo exige
-emitir un token antes de que exista sesión, con su propio almacén y su propia
-caducidad, y el daño —trabajar sin querer en una cuenta ajena— es visible en
-cuanto se mira el nombre en pantalla, a diferencia de un robo de datos.
+The price is the **"login CSRF"**: someone else's website can force you to sign into *the
+attacker's account* without you noticing. It's accepted knowingly. Avoiding it requires issuing
+a token before a session exists, with its own storage and its own expiry, and the harm —working
+unknowingly in someone else's account— is visible as soon as you look at the name on the screen,
+unlike data theft.
 
-## Fuerza bruta
+## Brute force
 
-Dos topes en la misma ventana de quince minutos, y los bloqueos se levantan solos:
+Two caps in the same fifteen-minute window, and the lockouts lift themselves:
 
-| Tope | Cuenta | Para qué |
+| Cap | Counted | What for |
 |---|---|---|
-| **5 fallos** | por cuenta **y origen** | Que alguien que se equivoca no bloquee a los demás desde otro sitio |
-| **20 fallos** | por cuenta, **de cualquier origen** (V2.0.22) | Que no se pueda esquivar el de arriba |
+| **5 failures** | per account **and origin** | So someone who gets it wrong doesn't lock out everyone else from another place |
+| **20 failures** | per account, **from any origin** (V2.0.22) | So the one above can't be dodged |
 
-El origen se toma de `X-Forwarded-For` cuando existe, porque detrás de Render o
-Vercel `request.client.host` es el proxy y sería el mismo para todo el mundo —
-contar por él bloquearía a todos los usuarios a la vez.
+The origin is taken from `X-Forwarded-For` when it exists, because behind Render or Vercel
+`request.client.host` is the proxy and would be the same for everyone — counting by it would lock
+out every user at once.
 
-> **Aquí decía que falsear esa cabecera «solo sirve para no acumular intentos,
-> que es el peor caso de esta protección, no un fallo nuevo».** No acumular
-> intentos es no tener freno. La auditoría de la 2.3 lo midió: con un
-> `X-Forwarded-For` distinto en cada intento, 20 contraseñas equivocadas seguidas
-> dieron 401 —ninguna 429— y la correcta entró después. Por eso existe el segundo
-> tope, que no depende de ninguna cabecera.
+> **This used to say that faking that header "only serves to not accumulate attempts, which is
+> the worst case of this protection, not a new flaw".** Not accumulating attempts is having no
+> brake. The 2.3 audit measured it: with a different `X-Forwarded-For` on each attempt, 20 wrong
+> passwords in a row gave 401 —not one 429— and the right one got in afterwards. That's why the
+> second cap exists, which doesn't depend on any header.
 
-**Los fallos se apuntan a la cuenta, no a lo tecleado.** Con el nombre de usuario y
-el correo como claves separadas, alternarlos daba el doble de intentos.
+**Failures are recorded against the account, not against what was typed.** With the username
+and the email as separate keys, alternating them gave twice the attempts.
 
-**El precio, aceptado a sabiendas:** quien ataque una cuenta puede dejarla
-bloqueada quince minutos, también para su dueño. Es un bloqueo temporal y no un
-robo, y **restablecer la contraseña lo levanta** en el acto.
+**The price, accepted knowingly:** whoever attacks an account can leave it locked for fifteen
+minutes, also for its owner. It's a temporary lockout and not a theft, and **resetting the
+password lifts it** on the spot.
 
-Acertar borra los intentos previos de ese origen. Sin eso, quien falla cuatro veces
-y acierta quedaría a un solo fallo del bloqueo para siempre.
+Getting it right clears the previous attempts from that origin. Without that, whoever fails four
+times and gets it right would stay one failure away from the lockout forever.
 
-> **Un defecto que solo apareció ejercitándolo.** La primera versión apuntaba el
-> intento fallido y lanzaba la excepción dentro del mismo bloque `with`, y
-> `Database.connect` solo confirma la transacción si el bloque termina bien: cada
-> apunte se revertía con su propio fallo, el contador nunca pasaba de cero y **el
-> freno no frenaba nada**. Leyendo el código parecía correcto. Está fijado en
-> `TestElFrenoALaFuerzaBruta`.
+> **A defect that only appeared by exercising it.** The first version recorded the failed attempt
+> and raised the exception inside the same `with` block, and `Database.connect` only commits the
+> transaction if the block ends well: each record was rolled back with its own failure, the
+> counter never went past zero and **the brake braked nothing**. Reading the code it looked
+> correct. It's pinned in `TestElFrenoALaFuerzaBruta`.
 
-## Altas: el registro está abierto, y frenado (V2.0.22)
+## Sign-ups: registration is open, and throttled (V2.0.22)
 
-Decidí que cualquiera con el enlace puede crear una cuenta. La auditoría de
-la 2.3 midió qué podía hacer un script con eso: **30 cuentas en 4 segundos** desde
-el mismo origen, cada una con su cupo diario de mensajes. Bastan para agotar en
-minutos la cuota gratuita de todos y empujar el resto al proveedor de pago.
+I decided that anyone with the link can create an account. The 2.3 audit measured what a script
+could do with that: **30 accounts in 4 seconds** from the same origin, each with its daily message
+quota. Enough to use up everyone's free quota in minutes and push the rest to the paid provider.
 
-| Tope, en 15 minutos | Por qué ese |
+| Cap, in 15 minutes | Why that one |
 |---|---|
-| **3 altas por origen** | Una familia o una clase detrás de la misma IP puede crear sus cuentas |
-| **20 altas en total** | No depende de ninguna cabecera: es el que acota a un script que cambie de origen |
+| **3 sign-ups per origin** | A family or a class behind the same IP can create their accounts |
+| **20 sign-ups in total** | Doesn't depend on any header: it's the one that bounds a script that changes origin |
 
-Solo cuentan las altas que salen bien: un formulario mal rellenado no gasta el cupo
-de nadie. Se apuntan en `login_intentos` con la clave `#registro`, que no puede ser
-ni usuario ni correo, y el inicio de sesión la rechaza sin apuntar nada: si no,
-veinte fallos tecleándola cerrarían el registro a todo el mundo. (La primera versión
-usaba `__registro__`, que sí es un nombre de usuario válido.)
+Only successful sign-ups count: a badly filled form doesn't spend anyone's quota. They're recorded
+in `login_intentos` with the key `#registro`, which can be neither a username nor an email, and
+sign-in rejects it without recording anything: otherwise, twenty failures typing it would close
+registration for everyone. (The first version used `__registro__`, which is a valid username.)
 
-Si se alcanza, la web recibe `429 DEMASIADOS_REGISTROS` con un mensaje que dice
-cuánto esperar.
+If it's reached, the web receives `429 DEMASIADOS_REGISTROS` with a message that says how long to
+wait.
 
-## No se puede averiguar quién tiene cuenta
+## You can't find out who has an account
 
-La enumeración de usuarios se cuela con facilidad porque el sistema «funciona»
-igual de bien con ella dentro.
+User enumeration slips in easily because the system "works" just as well with it inside.
 
-- **Al entrar**, «esa cuenta no existe» y «la contraseña es incorrecta» dan el
-  mismo error y el mismo mensaje.
-- **Al recuperar**, la respuesta es idéntica exista o no la cuenta, y el token
-  nunca viaja en ella: solo llega al correo. Ni siquiera un fallo de envío cambia
-  la respuesta, porque decir «no se pudo enviar» también delataría que existe.
-- **Al registrarse sí se distingue** entre usuario y correo duplicados. Es
-  inevitable: la persona necesita saber cuál de los dos cambiar, y la fuga es la
-  misma que produce cualquier formulario de alta.
+- **When signing in**, "that account doesn't exist" and "the password is wrong" give the same
+  error and the same message.
+- **When recovering**, the answer is identical whether the account exists or not, and the token
+  never travels in it: it only reaches the email. Not even a sending failure changes the answer,
+  because saying "it couldn't be sent" would also reveal that it exists.
+- **When signing up a duplicate username or email are told apart.** It's unavoidable: the person
+  needs to know which of the two to change, and the leak is the same that any sign-up form
+  produces.
 
-## Recuperación de contraseña
+## Password recovery
 
-El token es aleatorio de 256 bits, se guarda **hasheado** (SHA-256 a secas: no es
-una contraseña elegida por una persona, no hay nada que adivinar por fuerza
-bruta), **caduca en 30 minutos**, sirve **una sola vez**, y pedir uno nuevo
-invalida el anterior — que puede estar en un correo viejo.
+The token is 256 random bits, stored **hashed** (plain SHA-256: it isn't a password chosen by a
+person, there is nothing to guess by brute force), **expires in 30 minutes**, works **only once**,
+and asking for a new one invalidates the previous one — which may be in an old email.
 
-### El correo es una dependencia real
+### Email is a real dependency
 
-**No hay sistema de correo simulado.** O hay un servidor SMTP configurado y el
-correo sale de verdad, o no sale y se dice claramente. Un `enviar()` que devuelve
-`True` sin mandar nada convierte la recuperación en una función rota que parece
-funcionar, y el fallo se descubre el día que alguien pierde su contraseña.
+**There is no simulated email system.** Either there is a configured server and the email really
+goes out, or it doesn't go out and that's said clearly. An `enviar()` that returns `True` without
+sending anything turns recovery into a broken feature that looks like it works, and the failure is
+discovered the day someone loses their password.
 
-| Variable | Para qué |
+| Variable | What for |
 |---|---|
-| `MORGAN_EMAIL_API` | `brevo` o `resend`. **Lo que funciona en la nube** |
-| `MORGAN_EMAIL_API_KEY` | La clave del proveedor |
-| `MORGAN_EMAIL_FROM` | Remitente; en Brevo, una dirección verificada |
-| `MORGAN_SMTP_HOST/PORT/USER/PASSWORD/FROM` | SMTP, para local |
-| `MORGAN_WEB_URL` | Base de la web, para construir el enlace |
+| `MORGAN_EMAIL_API` | `brevo` or `resend`. **What works in the cloud** |
+| `MORGAN_EMAIL_API_KEY` | The provider's key |
+| `MORGAN_EMAIL_FROM` | Sender; in Brevo, a verified address |
+| `MORGAN_SMTP_HOST/PORT/USER/PASSWORD/FROM` | SMTP, for local |
+| `MORGAN_WEB_URL` | The web's base, to build the link |
 
-Hay dos transportes: **API HTTP** (Brevo, Resend) y **SMTP**. La API manda cuando
-están las dos.
+There are two transports: **HTTP API** (Brevo, Resend) and **SMTP**. The API wins when both are
+there.
 
-> **SMTP no funciona en la nube.** Render y la mayoría de planes gratuitos
-> bloquean los puertos SMTP salientes, y el envío muere con
-> `Network is unreachable` **aunque las credenciales sean correctas**. Se
-> descubrió en producción, con Gmail bien configurado. La API HTTP va por el 443
-> y ningún hosting la bloquea.
+> **SMTP doesn't work in the cloud.** Render and most free plans block outgoing SMTP ports, and
+> sending dies with `Network is unreachable` **even if the credentials are correct**. It was
+> discovered in production, with Gmail correctly configured. The HTTP API goes through 443 and no
+> hosting blocks it.
 
-Y el proveedor lo decide otra restricción: **Brevo escribe a cualquiera
-verificando solo tu dirección**; Resend, sin un dominio propio, solo escribe a la
-tuya. Para Morgan, donde el correo tiene que llegarle a otras personas, esa
-diferencia es la que importa.
+And another restriction decides the provider: **Brevo writes to anyone verifying only your own
+address**; Resend, without its own domain, only writes to yours. For Morgan, where the email has
+to reach other people, that's the difference that matters.
 
-`/status` incluye un servicio `correo` que dice qué transporte usa y qué pasó en
-el último envío. Existe porque el fallo es invisible desde fuera: pedir un enlace
-responde igual salga o no salga el correo.
+`/status` includes a `correo` (email) service that says which transport it uses and what happened
+on the last send. It exists because the failure is invisible from outside: asking for a link
+answers the same whether the email goes out or not.
 
-**Sin configurar** no se envía nada y se registra un error: la recuperación no
-funciona hasta que se configure, que es justo lo que conviene que se note.
+**Without configuration** nothing is sent and an error is logged: recovery doesn't work until it's
+configured, which is exactly what should be noticed.
 
-El enlace **no** queda escrito en el log, ni siquiera en local. Se intentó «para
-poder probar en desarrollo» y no servía: el filtro de secretos del log enmascara
-todo lo que parece `token=`, así que lo que quedaba era `?token=***`. Burlar ese
-filtro sería publicar un secreto en el log a propósito. Para probar sin proveedor,
-`solicitar_recuperacion()` devuelve el token directamente.
+The link is **not** written in the log, not even locally. It was tried "to be able to test in
+development" and it didn't work: the log's secret filter masks anything that looks like `token=`,
+so what was left was `?token=***`. Getting around that filter would be publishing a secret in the
+log on purpose. To test without a provider, `solicitar_recuperacion()` returns the token directly.
 
-## Verificación del correo
+## Email verification
 
-**Verificar no es una puerta.** La cuenta funciona desde el primer momento sin
-confirmar nada, y eso es una decisión, no una carencia: obligar a abrir el correo
-antes de dejar probar Morgan es la forma más rápida de perder a alguien.
+**Verifying isn't a gate.** The account works from the first moment without confirming anything,
+and that's a decision, not a shortcoming: forcing people to open their email before letting them
+try Morgan is the fastest way to lose someone.
 
-Lo que se pierde sin confirmar es concreto y acotado, y el aviso lo dice tal cual
-en vez de amenazar en abstracto:
+What you lose without confirming is concrete and bounded, and the notice says it as it is instead
+of threatening in the abstract:
 
-> Puedes seguir usando Morgan, pero **no podrás recuperar tu contraseña** si la
-> olvidas hasta que abras el enlace que te enviamos.
+> You can keep using Morgan, but **you won't be able to recover your password** if you forget it
+> until you open the link we sent you.
 
-Es literalmente cierto: el enlace de recuperación va a esa dirección. Si estaba
-mal escrita, no hay a dónde mandarlo.
+It's literally true: the recovery link goes to that address. If it was mistyped, there is nowhere
+to send it.
 
-### Los dos tipos de token comparten tabla, pero no valen lo mismo
+### The two kinds of token share a table, but aren't worth the same
 
-Un token de verificación y uno de recuperación son la misma cosa desde el punto
-de vista del almacén —un secreto de un solo uso, atado a un usuario, con
-caducidad—, así que **comparten tabla**. Duplicarla habría duplicado también su
-limpieza, su comprobación de caducidad y sus propiedades de seguridad, que son
-justo las cosas que no conviene tener por duplicado.
+A verification token and a recovery token are the same thing from the storage's point of view —a
+single-use secret, tied to a user, with an expiry—, so **they share a table**. Duplicating it would
+also have duplicated its cleanup, its expiry check and its security properties, which are exactly
+the things you don't want twice.
 
-Lo que **no** comparten es lo que conceden, y por eso todas las consultas filtran
-por `tipo`:
+What they **don't** share is what they grant, and that's why every query filters by `tipo`:
 
-| Tipo | Qué abre | Dura |
+| Type | What it opens | Lasts |
 |---|---|---|
-| `reset` | La cuenta: permite cambiar la contraseña | 30 minutos |
-| `verificacion` | Solo confirma una dirección | 24 horas |
+| `reset` | The account: it allows changing the password | 30 minutes |
+| `verificacion` | Only confirms an address | 24 hours |
 
-Si el tipo no se filtrara, un enlace de «confirma tu correo» valdría para entrar
-en la cuenta. Y ese enlace se manda a una dirección que **puede no ser de quien
-se registró** — que es precisamente lo que la verificación existe para averiguar.
-Hay pruebas de los dos sentidos.
+If the type weren't filtered, a "confirm your email" link would work to get into the account. And
+that link is sent to an address that **may not belong to whoever signed up** — which is precisely
+what verification exists to find out. There are tests in both directions.
 
-La duración distinta también sale de ahí: quien intercepte un enlace de
-recuperación se lleva la cuenta; quien intercepte uno de verificación solo
-consigue marcar como verificada una dirección que ya controla.
+The different duration also comes from there: whoever intercepts a recovery link takes the
+account; whoever intercepts a verification one only manages to mark as verified an address they
+already control.
 
-### Confirmar es público; reenviar exige sesión
+### Confirming is public; resending requires a session
 
-| Ruta | Sesión | Por qué |
+| Route | Session | Why |
 |---|---|---|
-| `POST /auth/verificar` | **No** | Quien abre el enlace puede estar en otro navegador o en el móvil. Pedirle que inicie sesión convertiría un clic en un trámite |
-| `POST /auth/verificar/reenviar` | **Sí** | Aquí se manda un correo. Una ruta abierta que dispara correos a partir de una dirección es una herramienta para molestar a terceros |
+| `POST /auth/verificar` | **No** | Whoever opens the link may be in another browser or on their phone. Asking them to sign in would turn a click into a chore |
+| `POST /auth/verificar/reenviar` | **Yes** | An email is sent here. An open route that fires emails from an address is a tool to pester third parties |
 
-### Un fallo del correo no impide registrarse
+### An email failure doesn't stop you signing up
 
-El envío va en segundo plano y envuelto: si el proveedor no responde, la cuenta
-se crea igual y el token queda guardado para reintentarlo desde Ajustes. El envío
-es lo accesorio.
+Sending happens in the background and wrapped: if the provider doesn't answer, the account is
+created anyway and the token stays stored to retry from Settings. Sending is the accessory part.
 
-Cambiar la contraseña invalida los enlaces de recuperación pendientes —que es lo
-correcto— pero **no** el de verificación, que no tiene nada que ver y obligaría a
-pedirlo otra vez sin motivo.
+Changing the password invalidates pending recovery links —which is right— but **not** the
+verification one, which has nothing to do with it and would force asking for it again for no
+reason.
 
-## Llevarte tus datos, o borrarlos
+## Taking your data with you, or deleting it
 
-Las dos operaciones existen, y **juntas** son lo que convierte «tus datos» en
-algo real. Por separado cada una es media promesa: si solo se pudiera borrar, la
-única forma de conservar una conversación sería copiarla a mano; si solo se
-pudiera exportar, irse significaría dejarlo todo ahí.
+Both operations exist, and **together** they're what turns "your data" into something real.
+Separately each is half a promise: if you could only delete, the only way to keep a conversation
+would be copying it by hand; if you could only export, leaving would mean leaving everything there.
 
-| | Ruta | Qué hace |
+| | Route | What it does |
 |---|---|---|
-| Descargar | `GET /auth/datos` | Un JSON con todo lo que has generado |
-| Borrar | `DELETE /auth/cuenta` | La cuenta y sus datos. Sin deshacer |
+| Download | `GET /auth/datos` | A JSON with everything you've generated |
+| Delete | `DELETE /auth/cuenta` | The account and its data. No undo |
 
-### Lo que la exportación NO lleva dentro
+### What the export does NOT carry
 
-Un fichero de exportación acaba en la carpeta de descargas, se comparte por
-correo y se sube a sitios. Meter ahí una credencial es regalar material para
-atacarla sin prisa y sin que nadie se entere.
+An export file ends up in the downloads folder, is shared by email and uploaded to places. Putting
+a credential there is handing out material to attack it at leisure and without anyone noticing.
 
-| Fuera | Por qué |
+| Out | Why |
 |---|---|
-| El hash de la contraseña | No es un dato tuyo que sirva de algo: es una credencial |
-| Los tokens de servicios conectados | Peor: abren cuentas **ajenas a Morgan** |
-| Los identificadores de sesión | Cada uno es una llave viva |
+| The password hash | It isn't data of yours that's useful for anything: it's a credential |
+| The tokens of connected services | Worse: they open accounts **outside Morgan** |
+| The session identifiers | Each one is a live key |
 
-Sí se dice **qué** tienes conectado y con qué cuenta —saber que tu Morgan tiene
-acceso a tu GitHub es un dato tuyo, y de los que importan—. Lo que no pinta ahí
-es la llave.
+It does say **what** you have connected and with which account —knowing that your Morgan has
+access to your GitHub is data of yours, and of the kind that matters—. What has no place there is
+the key.
 
-Hay cuatro pruebas dedicadas solo a esto, porque es lo que costaría caro
-equivocar.
+There are four tests devoted just to this, because it's what would be expensive to get wrong.
 
-### Un fallo parcial se dice
+### A partial failure is said
 
-Cada bloque se lee por separado y un fallo en uno no impide exportar los demás.
-Lo que no se pudo leer se marca en `incompleto`: una exportación incompleta
-que **parece** completa es peor que ninguna, porque quien la guarda cree tener
-sus conversaciones y no las tiene.
+Each block is read separately and a failure in one doesn't stop exporting the others. What couldn't
+be read is marked in `incompleto`: an incomplete export that **looks** complete is worse than none,
+because whoever saves it believes they have their conversations and doesn't.
 
-### En la interfaz, descargar va antes que borrar
+### In the interface, downloading comes before deleting
 
-No es casualidad del orden de los apartados. Quien llega a esa parte de los
-ajustes pensando en irse debería tropezarse primero con la opción de llevarse
-sus cosas; al revés, la exportación la encontraría solo quien ya decidió
-quedarse.
+It isn't a coincidence of the sections' order. Whoever reaches that part of the settings thinking
+of leaving should stumble first on the option to take their things; the other way round, only
+someone who had already decided to stay would find the export.
 
-## Tokens personales de API (V2.0.40)
+## Personal API tokens (V2.0.40)
 
-Lo que usa un cliente **que no es el navegador** —un script, una extensión de
-editor, el agente local de la 3.0— para hablar con Morgan. Es la fase 1 del
-plan de la API, aprobado el 2026-09-17.
+What a client **that isn't the browser** —a script, an editor extension, the 3.0 local agent—
+uses to talk to Morgan. It's phase 1 of the API plan (in Spanish),
+approved on 2026-09-17.
 
-### El hueco, medido (fase 0)
+### The gap, measured (phase 0)
 
-Antes de construir nada se midió cómo entraba un script, **aislado**: base SQLite
-temporal, sin Supabase y sin token compartido (el intento del 2026-09-16 quedó
-invalidado por las dos cosas). Salida real, antes y después:
+Before building anything, how a script got in was measured, **isolated**: a temporary SQLite
+database, without Supabase and without a shared token (the 2026-09-16 attempt was invalidated by
+both things). Real output, before and after:
 
 ```
-ANTES (solo sesión): un script sin navegador
-  GET /sessions sin nada                                -> 401 SIN_SESION
-  POST /auth/login con la CONTRASEÑA                    -> 200
-    cookies que hay que guardar: ['morgan_csrf', 'morgan_sesion']
-  GET /sessions con la cookie                           -> 200
-  POST /sessions con la cookie, sin copiar el CSRF      -> 403 CSRF
-  POST /sessions con cookie + cabecera x-morgan-csrf    -> 200
+BEFORE (session only): a script without a browser
+  GET /sessions with nothing                            -> 401 SIN_SESION
+  POST /auth/login with the PASSWORD                    -> 200
+    cookies that have to be kept: ['morgan_csrf', 'morgan_sesion']
+  GET /sessions with the cookie                         -> 200
+  POST /sessions with the cookie, without copying CSRF  -> 403 CSRF
+  POST /sessions with cookie + x-morgan-csrf header     -> 200
 
-DESPUÉS (token personal): se crea una vez desde la web con sesión
-  POST /auth/tokens (con sesión)                        -> 200
-    valor: mgn_7VXm… (47 caracteres, se enseña una vez)
-  GET /sessions con Authorization: Bearer mgn_…         -> 200
-  POST /sessions con el token, sin CSRF                 -> 200
-  POST /auth/tokens con el token                        -> 403 TOKEN_NO_PERMITIDO
-  DELETE /auth/cuenta con el token                      -> 403 TOKEN_NO_PERMITIDO
+AFTER (personal token): created once from the web with a session
+  POST /auth/tokens (with a session)                    -> 200
+    value: mgn_7VXm… (47 characters, shown once)
+  GET /sessions with Authorization: Bearer mgn_…        -> 200
+  POST /sessions with the token, without CSRF           -> 200
+  POST /auth/tokens with the token                      -> 403 TOKEN_NO_PERMITIDO
+  DELETE /auth/cuenta with the token                    -> 403 TOKEN_NO_PERMITIDO
 ```
 
-Es decir: hasta ahora, un script tenía que **guardar la contraseña**, iniciar
-sesión, conservar dos cookies y copiar una de ellas a una cabecera en cada
-petición que cambiara algo. Y la sesión caduca a los 30 días. Con un token, es una
-cabecera.
+That is: until then, a script had to **store the password**, sign in, keep two cookies and copy
+one of them into a header on every request that changed something. And the session expires after
+30 days. With a token, it's one header.
 
-### Cómo es un token
+### What a token looks like
 
-| Qué | Cómo | Por qué |
+| What | How | Why |
 |---|---|---|
-| Forma | `mgn_` + 32 bytes aleatorios en base64url (47 caracteres) | El prefijo lo hace reconocible en un registro o en un escáner de secretos, y lo distingue del token compartido `MORGAN_API_TOKEN`, que es de la instalación y no de una persona |
-| Se guarda | Solo el **SHA-256**, como las sesiones | Quien lea la base no obtiene nada usable |
-| Se enseña | **Una vez**, en la respuesta de `POST /auth/tokens` | Morgan no puede volver a enseñarlo. Perdido, se revoca y se crea otro |
-| Se presenta | `Authorization: Bearer mgn_...` y **solo así** | `X-Morgan-Token` es del token compartido: una sola forma de presentar un token personal es una cosa menos que auditar |
-| Caduca | **Siempre**: 90 días por defecto, un año como mucho | Un token olvidado en un portátil viejo no puede valer para siempre |
-| Cuántos | 20 vivos por cuenta | Un cliente por token; sin tope, un bucle roto llenaría la tabla |
-| CSRF | **No se exige** | El CSRF protege lo que el navegador manda solo (las cookies). Una cabecera no viaja sola |
-| Auditoría | Cada entrada hecha con token lleva `"token": "tok-…"`, su id | Para saber qué cliente hizo qué, y revocar ese |
+| Shape | `mgn_` + 32 random bytes in base64url (47 characters) | The prefix makes it recognizable in a log or a secret scanner, and tells it apart from the shared token `MORGAN_API_TOKEN`, which belongs to the installation and not to a person |
+| Stored | Only the **SHA-256**, like sessions | Whoever reads the database gets nothing usable |
+| Shown | **Once**, in the response of `POST /auth/tokens` | Morgan can't show it again. If lost, it's revoked and another is created |
+| Presented | `Authorization: Bearer mgn_...` and **only that way** | `X-Morgan-Token` belongs to the shared token: a single way of presenting a personal token is one thing less to audit |
+| Expires | **Always**: 90 days by default, one year at most | A token forgotten on an old laptop can't be valid forever |
+| How many | 20 alive per account | One client per token; without a cap, a broken loop would fill the table |
+| CSRF | **Not required** | CSRF protects what the browser sends on its own (cookies). A header doesn't travel on its own |
+| Audit | Every entry made with a token carries `"token": "tok-…"`, its id | To know which client did what, and revoke that one |
 
-### Alcances, y lo que un token no puede nunca
+### Scopes, and what a token can never do
 
-Cada token lleva uno o varios alcances, y cada petición pide uno:
+Each token carries one or more scopes, and each request asks for one:
 
-| Alcance | Qué deja hacer |
+| Scope | What it allows |
 |---|---|
-| `chat` | `POST /chat` y `POST /chat/stream`. Va aparte porque es lo que pide casi cualquier cliente, y dar `escritura` para chatear sería dar de más |
-| `lectura` | Cualquier `GET` o `HEAD`: listar conversaciones, leer mensajes, memoria, tareas… |
-| `escritura` | Todo lo demás: crear, cambiar y borrar conversaciones, recuerdos, archivos, espacios… |
+| `chat` | `POST /chat` and `POST /chat/stream`. It's separate because it's what almost every client asks for, and giving `escritura` to chat would be giving too much |
+| `lectura` (read) | Any `GET` or `HEAD`: listing conversations, reading messages, memory, tasks… |
+| `escritura` (write) | Everything else: creating, changing and deleting conversations, memories, files, workspaces… |
 
-**Lo que no puede ningún token**, tenga los alcances que tenga: todo `/auth` salvo
-`GET /auth/yo` —crear o revocar tokens, cambiar la contraseña, borrar la cuenta,
-descargar todos los datos, ver o cerrar sesiones—, `/admin`, `/integraciones` y
-`/diagnostico`. **Robar un token no puede convertirse en robar la cuenta.** La
-comparación es por segmento: `/authors` no es `/auth`.
+**What no token can do**, whatever its scopes: all of `/auth` except `GET /auth/yo` —creating or
+revoking tokens, changing the password, deleting the account, downloading all the data, seeing or
+closing sessions—, `/admin`, `/integraciones` and `/diagnostico`. **Stealing a token can't turn
+into stealing the account.** The comparison is by segment: `/authors` isn't `/auth`.
 
-`GET /auth/yo` sí, porque saber de quién es el token es lo primero que hace un
-cliente. Con token responde `csrf: ""`: no hay cookie que proteger.
+`GET /auth/yo` is allowed, because knowing whose token it is is the first thing a client does.
+With a token it answers `csrf: ""`: there is no cookie to protect.
 
-### Dónde entra, y por qué no abre nada a la web
+### Where it comes in, and why it opens nothing to the web
 
-En `identidad_middleware`, **antes** que nada más: si llega `Bearer mgn_...` y la
-petición **no trae cookie de sesión**, se resuelve el token, se comprueba el
-alcance y se fija usuario y rol en el contexto, igual que con una sesión. A partir
-de ahí todo lo que filtra por usuario —conversaciones, memoria, archivos,
-espacios— queda aislado sin tocar una ruta.
+In `identidad_middleware`, **before** anything else: if `Bearer mgn_...` arrives and the request
+**carries no session cookie**, the token is resolved, the scope is checked and the user and role
+are set in the context, just like with a session. From there on everything that filters by user
+—conversations, memory, files, workspaces— stays isolated without touching a route.
 
-- **Con cookie, se sigue el camino de siempre, con su CSRF**, traiga la cabecera que
-  traiga. Si la cabecera bastara para saltarse el CSRF, una web ajena podría mandar
-  la cookie de la víctima con un `Bearer mgn_` cualquiera. Hay una prueba para eso.
-- **Un `mgn_` que no vale se rechaza siempre**, también en el Morgan de tu equipo,
-  donde sin sesión se es el usuario local (que es el propietario). Por eso va antes
-  de mirar si hay capa de cuentas: un token malo no puede heredar eso.
-- **El token compartido lo deja pasar** (`src/api/auth.py`): la identidad va por
-  dentro y lo comprueba. Pararlo allí haría imposible usar tokens personales en un
-  despliegue con token compartido. Lo que no empieza por `mgn_` sigue necesitando el
-  compartido.
+- **With a cookie, the usual path is followed, with its CSRF**, whatever header it carries. If the
+  header were enough to skip CSRF, someone else's website could send the victim's cookie with any
+  `Bearer mgn_`. There is a test for that.
+- **An invalid `mgn_` is always rejected**, also on the Morgan on your computer, where without a
+  session you're the local user (who is the owner). That's why it goes before checking whether
+  there is an account layer: a bad token can't inherit that.
+- **The shared token lets it through** (`src/api/auth.py`): the identity goes inside and checks
+  it. Stopping it there would make it impossible to use personal tokens on a deployment with a
+  shared token. Whatever doesn't start with `mgn_` still needs the shared one.
 
-| Respuesta | Código | Qué significa para quien integra |
+| Response | Code | What it means for whoever integrates |
 |---|---|---|
-| 401 + `WWW-Authenticate: Bearer` | `TOKEN_INVALIDO` | No existe, caducó, se revocó o la cuenta está suspendida: crear otro |
-| 401 | `TOKENS_DESACTIVADOS` | Este Morgan tiene los tokens apagados |
-| 403 | `TOKEN_NO_PERMITIDO` | Esto no se hace con un token, solo desde la web |
-| 403 | `ALCANCE_INSUFICIENTE` | El token vale, pero no tiene el alcance que pide la ruta |
+| 401 + `WWW-Authenticate: Bearer` | `TOKEN_INVALIDO` | It doesn't exist, expired, was revoked or the account is suspended: create another |
+| 401 | `TOKENS_DESACTIVADOS` | This Morgan has tokens switched off |
+| 403 | `TOKEN_NO_PERMITIDO` | This isn't done with a token, only from the web |
+| 403 | `ALCANCE_INSUFICIENTE` | The token is valid, but it doesn't have the scope the route asks for |
 
-### Desde la web
+### From the web
 
-En **Ajustes → Acceso por API** (V2.0.41): crear con nombre, qué puede hacer y
-caducidad; el valor se enseña una vez; revocar uno o todos. Descrito en
-[web.md](web.md). Por defecto propone **chatear y leer, 90 días**: lo que pide casi
-cualquier programa y nada que pueda borrar.
+In **Settings → API access** (V2.0.41): create with a name, what it can do and an expiry; the value
+is shown once; revoke one or all. Described in [web.md](web.md). By default it proposes **chatting
+and reading, 90 days**: what almost any program asks for and nothing that can delete.
 
-### Revocar
+### Revoking
 
-- **Uno**: `DELETE /auth/tokens/{id}`. Deja de valer **en la petición siguiente**: no
-  hay caché. Uno de otra persona responde 404, igual que uno que no existe.
-- **Todos**: `POST /auth/tokens/revocar-todos`.
-- **Solos**: al **cambiar** o **restablecer** la contraseña caen todos, que es lo que
-  espera quien la cambia porque sospecha algo. Y al borrar la cuenta. **Y el PC
-  conectado** (3.1): esas tres cosas cierran también la conexión de su agente local al
-  momento; al volver, la nube comprueba su credencial otra vez.
-- **El interruptor**: `MORGAN_TOKENS_API=false` los apaga todos al momento, sin
-  borrarlos, y no deja crear más. Es el freno de emergencia; por defecto están
-  activos (aprobado para todas las cuentas).
+- **One**: `DELETE /auth/tokens/{id}`. It stops working **on the next request**: there is no cache.
+  Someone else's answers 404, just like one that doesn't exist.
+- **All**: `POST /auth/tokens/revocar-todos`.
+- **On their own**: when **changing** or **resetting** the password all of them fall, which is what
+  whoever changes it because they suspect something expects. And when deleting the account. **And
+  the connected PC** (3.1): those three things also close their local agent's connection at once;
+  when it comes back, the cloud checks its credential again.
+- **The switch**: `MORGAN_TOKENS_API=false` turns them all off at once, without deleting them, and
+  doesn't let more be created. It's the emergency brake; by default they're on (approved for every
+  account).
 
-La limpieza periódica borra los revocados y los caducados.
+The periodic cleanup deletes the revoked and expired ones.
 
-### Comprobado contra un Supabase de verdad
+### Checked against a real Supabase
 
-Las pruebas de la suite ejercitan la implementación de Supabase con un cliente falso,
-que comprueba la forma de las consultas pero no que PostgREST las entienda (el
-usuario viaja embebido en la misma consulta que el token). Por eso se repitió el
-recorrido contra el despliegue de prueba `morgan-carga`, con su propio Supabase y el
-modelo simulado (2026-09-18): alta, crear token, `GET /auth/yo`, chatear, listar la
-conversación, `403 ALCANCE_INSUFICIENTE` sin `escritura`, `403 TOKEN_NO_PERMITIDO`
-al crear tokens o borrar la cuenta, revocar y `401 TOKEN_INVALIDO` en la petición
-siguiente. **Todo igual que en local.** En producción, un token inventado responde 401.
+The suite's tests exercise the Supabase implementation with a fake client, which checks the shape
+of the queries but not that PostgREST understands them (the user travels embedded in the same query
+as the token). That's why the walkthrough was repeated against the `morgan-carga` test deployment,
+with its own Supabase and the simulated model (2026-09-18): sign-up, create a token,
+`GET /auth/yo`, chat, list the conversation, `403 ALCANCE_INSUFICIENTE` without `escritura`,
+`403 TOKEN_NO_PERMITIDO` when creating tokens or deleting the account, revoke and
+`401 TOKEN_INVALIDO` on the next request. **Everything the same as locally.** In production, a
+made-up token answers 401.
 
-### Lo que no hace todavía
+### What it doesn't do yet
 
-- **Freno por minuto por token** (fase 5). Hoy un token gasta del cupo diario de su
-  dueño como cualquier mensaje suyo, y el cupo es el límite.
-- **Aviso antes de caducar** por correo: la web lo marca en color a 7 días, pero
-  nadie avisa a quien no entra.
-- Los agentes locales **no usan tokens de API**: desde la 3.0 tienen su propia
-  credencial (`mga_`, distinta de `mgn_`), que se consigue emparejando el PC desde la
-  web (agente-local.md).
+- **A per-minute throttle per token** (phase 5). Today a token spends from its owner's daily quota
+  like any of their messages, and the quota is the limit.
+- **A notice before expiring** by email: the web marks it in color at 7 days, but nobody warns
+  whoever doesn't come in.
+- Local agents **don't use API tokens**: since 3.0 they have their own credential (`mga_`, distinct
+  from `mgn_`), obtained by pairing the PC from the web (agente-local.md, in
+  Spanish).
 
-## Cuándo se exige cuenta
+## When an account is required
 
-`MORGAN_REQUIRE_AUTH` decide, y su valor por defecto **sigue al entorno**: en la
-nube sí, en local no.
+`MORGAN_REQUIRE_AUTH` decides, and its default value **follows the environment**: in the cloud yes,
+locally no.
 
-No es un capricho. El Morgan de escritorio corre en tu equipo con tus claves, y
-obligarte a inventar una contraseña para hablar con tu propio ordenador no protege
-de nada. Sin cuentas exigidas, todo pertenece al usuario implícito `local`, que es
-el dueño de todo lo que existía antes de que hubiera cuentas — y por eso `local`
-es un nombre de usuario **reservado**: registrarlo daría acceso a esos datos.
+It isn't a whim. The desktop Morgan runs on your computer with your keys, and forcing you to invent
+a password to talk to your own computer protects against nothing. Without required accounts,
+everything belongs to the implicit user `local`, who owns everything that existed before there were
+accounts — and that's why `local` is a **reserved** username: registering it would give access to
+that data.
 
-`MORGAN_REGISTRO_ABIERTO` decide si cualquiera puede crearse una cuenta. Abierto
-por defecto —un Morgan en la web al que nadie puede registrarse no sirve de nada—,
-y cerrarlo devuelve **403** a los registros nuevos sin echar a quien ya estaba
-dentro.
+`MORGAN_REGISTRO_ABIERTO` decides whether anyone can create an account. Open by default —a Morgan on
+the web that nobody can sign up to is useless—, and closing it returns **403** to new sign-ups
+without throwing out whoever was already in.
 
-En la nube hay **dos formas válidas de cerrar el despliegue**, y basta con una:
-`MORGAN_API_TOKEN`, un secreto compartido para un Morgan privado, o
-`MORGAN_REQUIRE_AUTH`, para uno con cuentas. El arranque aborta si no hay ninguna.
+In the cloud there are **two valid ways to close the deployment**, and one is enough:
+`MORGAN_API_TOKEN`, a shared secret for a private Morgan, or `MORGAN_REQUIRE_AUTH`, for one with
+accounts. Startup aborts if there is neither.
 
-> Antes se exigía el token **siempre** en la nube, y eso hacía imposible abrir
-> Morgan a otra gente: para invitar a alguien había que darle el token, con lo que
-> esa persona obtenía acceso a la API entera al margen de su cuenta. Las cuentas
-> no son una protección más floja que el token: son más fuerte, porque además
-> separan los datos.
+> The token used to be required **always** in the cloud, and that made it impossible to open
+> Morgan to other people: to invite someone you had to give them the token, with which that person
+> got access to the whole API regardless of their account. Accounts aren't weaker protection than
+> the token: they're stronger, because they also keep the data apart.
 
-Rutas abiertas sin sesión: `/health`, `/status`, y las de `/auth` que sirven para
-conseguir una.
+Routes open without a session: `/health`, `/status`, and the `/auth` ones used to get one.
 
-> **`/status` está abierto a propósito.** Es lo que la interfaz consulta para
-> saber si el backend vive, y lo que despierta a Render cuando lleva un rato
-> dormido. Protegerlo hace que la **propia pantalla de acceso** diga «API
-> desconectada»: no puedes entrar porque no has entrado. No publica datos de
-> nadie, y si hay `MORGAN_API_TOKEN` configurado, ese sigue cubriéndolo. Hay una
-> prueba que lo fija, para que nadie lo «arregle» metiéndolo entre las
-> protegidas.
+> **`/status` is open on purpose.** It's what the interface checks to know whether the backend is
+> alive, and what wakes Render up when it has been asleep for a while. Protecting it makes **the
+> sign-in screen itself** say "API disconnected": you can't get in because you haven't got in. It
+> publishes nobody's data, and if `MORGAN_API_TOKEN` is configured, that one still covers it. There
+> is a test that pins it, so nobody "fixes" it by putting it among the protected ones.
 
-## Cómo se separan los datos
+## How the data is kept apart
 
-Dos barreras, y la segunda existe porque la primera puede fallar por descuido.
+Two barriers, and the second exists because the first can fail through carelessness.
 
-**1. El filtro por usuario, en el middleware.** Cada petición fija el usuario en
-un `ContextVar` y **toda** consulta de los repositorios filtra por él. Que esté
-ahí y no en cada consulta es lo que hace que una ruta nueva nazca aislada por
-defecto: olvidarse del filtro deja de ser posible, porque no hay filtro que
-escribir.
+**1. The filter by user, in the middleware.** Each request sets the user in a `ContextVar` and
+**every** repository query filters by it. Having it there and not in each query is what makes a new
+route born isolated by default: forgetting the filter stops being possible, because there is no
+filter to write.
 
-Es un `ContextVar` y no una variable global a propósito: FastAPI atiende las
-rutas síncronas en un *pool* de hilos, y una global mezclaría los datos de dos
-personas que pidan a la vez. Es la clase de fallo que no aparece probando a mano y
-sí en cuanto hay dos usuarios.
+It's a `ContextVar` and not a global variable on purpose: FastAPI serves synchronous routes in a
+thread *pool*, and a global would mix the data of two people asking at the same time. It's the kind
+of bug that doesn't show up testing by hand and does as soon as there are two users.
 
-**2. Row Level Security en Supabase.** Políticas por fila que valen aunque una
-consulta se olvide del filtro. `auth_sessions`, `password_reset_tokens` y
-`login_intentos` tienen RLS activo y **ninguna política**: guardan material con el
-que se suplanta a alguien y nunca se consultan desde el navegador, así que el
-efecto buscado es que nadie salvo el backend —que usa la clave de servicio— pueda
-leerlas.
+**2. Row Level Security in Supabase.** Per-row policies that hold even if a query forgets the
+filter. `auth_sessions`, `password_reset_tokens` and `login_intentos` have RLS on and **no policy**:
+they store material to impersonate someone and are never queried from the browser, so the intended
+effect is that nobody except the backend —which uses the service key— can read them.
 
-## Cupo por usuario
+## Quota per user
 
-Morgan usa las claves de su dueño. Con una sola persona da igual; con varias,
-**una sola podría agotar la cuota de todas** en una tarde. Por defecto: 50
-mensajes, 20 transcripciones y 20 análisis de imagen al día, contados por día
-natural. El usuario local está **exento**: es tu equipo y tus claves.
+Morgan uses its owner's keys. With one person it doesn't matter; with several, **one alone could use
+up everyone's quota** in an afternoon. By default: 50 messages, 20 transcriptions and 20 image
+analyses a day, counted per calendar day. The local user is **exempt**: it's your computer and your
+keys.
 
-Se apunta **al empezar, no al terminar**. Si se contara al final, un turno que
-falla a mitad saldría gratis y bastaría con provocar fallos para saltárselo.
-Comprobar y apuntar son una sola operación, porque separarlos dejaría una ventana
-por la que dos peticiones simultáneas pasarían las dos: en SQLite eso es un
-`UPDATE ... WHERE contador < límite` mirando `rowcount`, y en Supabase una función
-en el esquema privado `morgan_priv`, porque PostgREST no sabe escribir
-`columna = columna + 1`.
+It's recorded **at the start, not at the end**. If it were counted at the end, a turn that fails
+halfway would be free and causing failures would be enough to skip it. Checking and recording are a
+single operation, because separating them would leave a window through which two simultaneous
+requests would both get through: in SQLite that's an `UPDATE ... WHERE contador < límite` looking at
+`rowcount`, and in Supabase a function in the private schema `morgan_priv`, because PostgREST can't
+write `column = column + 1`.
 
-Al llegar al límite, `/chat` responde **429**, y las herramientas devuelven un
-`success: false` con el motivo — no una excepción, que abortaría el turno entero
-con un fallo genérico en vez de dejar que Morgan lo explique.
+When the limit is reached, `/chat` answers **429**, and the tools return a `success: false` with the
+reason — not an exception, which would abort the whole turn with a generic failure instead of
+letting Morgan explain it.
 
-> **Estuvo escrito y probado sin que lo llamara nadie.** El módulo existía, tenía
-> sus pruebas en verde y era una pieza muerta: ninguna ruta lo invocaba. Ahora hay
-> pruebas que comprueban que se aplica de verdad en los caminos que cuestan
-> dinero, que es distinto de comprobar que el módulo funciona.
+> **It was written and tested without anyone calling it.** The module existed, had its tests green
+> and was a dead piece: no route invoked it. Now there are tests that check it's really applied on
+> the paths that cost money, which is different from checking that the module works.
 
-### El cupo global (V2.0.24)
+### The global quota (V2.0.24)
 
-Con el registro abierto, **el cupo por persona no acota el total**: diez cuentas son
-diez cupos, y con OpenAI de pago al final de la cadena eso es dinero. La auditoría de
-la 2.3 lo planteó y delegué el número. Además del cupo de cada persona hay un tope
-diario para **la suma de todas las cuentas sujetas a cupo**:
+With open registration, **the per-person quota doesn't bound the total**: ten accounts are ten
+quotas, and with paid OpenAI at the end of the chain that's money. The 2.3 audit raised it and I
+delegated the number. Besides each person's quota there is a daily cap for **the sum of every
+account subject to quota**:
 
-| Concepto | Tope entre todos | Por qué ese número |
+| Concept | Cap across everyone | Why that number |
 |---|---|---|
-| Mensajes | **150** | La capacidad gratuita de modelos ronda los 210 turnos al día (tres cuentas de Groq y el relevo de modelo, estimado). Quedan unos 60 para el propietario antes de tocar el proveedor de pago |
-| Imágenes | **15** | Solo Gemini ve imágenes, y su cuenta gratuita da 20 peticiones al día |
-| Transcripciones | **60** | Holgado para un uso normal; acota un bucle |
+| Messages | **150** | The free model capacity is around 210 turns a day (three Groq accounts and the model relief, estimated). About 60 are left for the owner before touching the paid provider |
+| Images | **15** | Only Gemini sees images, and its free account gives 20 requests a day |
+| Transcriptions | **60** | Ample for normal use; it bounds a loop |
 
-- **El propietario y el usuario local ni cuentan ni se frenan**: son quienes pagan.
-  Un administrador sí cuenta: administrar no es pagar.
-- **Se comprueba antes del cupo de la persona**, así que un rechazo global no le gasta
-  nada a nadie.
-- **El mensaje dice que no es culpa de quien lo lee**: «Morgan ha llegado hoy a su
-  límite de mensajes para todas las cuentas. No es por tu uso: se renueva mañana». La
-  ruta responde el mismo 429 `CUOTA_AGOTADA`, que la web ya sabe enseñar.
-- **Configurable** con `MORGAN_CUPO_GLOBAL_MENSAJES`, `_TRANSCRIPCIONES` e `_IMAGENES`;
-  0 es sin tope.
-- **No es atómico entre personas**: dos turnos simultáneos de dos cuentas pueden pasar
-  los dos en el último hueco. El exceso posible son unas pocas llamadas; hacerlo
-  atómico exigiría un bloqueo compartido por todos los turnos del servidor.
-- En la nube se suma leyendo las filas del día (una por cuenta activa) sin llamar a la
-  función de Postgres. Un fallo al sumar deja pasar: el cupo por persona sigue.
+- **The owner and the local user neither count nor are throttled**: they're the ones who pay. An
+  administrator does count: administering isn't paying.
+- **It's checked before the person's quota**, so a global rejection spends nothing from anybody.
+- **The message says it isn't the reader's fault**: "Morgan has reached its message limit for all
+  accounts today. It isn't because of your use: it renews tomorrow". The route answers the same
+  429 `CUOTA_AGOTADA`, which the web already knows how to show.
+- **Configurable** with `MORGAN_CUPO_GLOBAL_MENSAJES`, `_TRANSCRIPCIONES` and `_IMAGENES`; 0 means no
+  cap.
+- **It isn't atomic across people**: two simultaneous turns from two accounts can both get through
+  in the last gap. The possible excess is a few calls; making it atomic would require a lock shared
+  by every turn on the server.
+- In the cloud it's summed by reading the day's rows (one per active account) without calling the
+  Postgres function. A failure when summing lets it through: the per-person quota still holds.
 
-**Y un defecto que apareció al construirlo.** Las herramientas de imagen y audio
-apuntaban el uso **sin el rol**, así que en la nube el propietario gastaba cupo de
-imágenes y transcripciones como cualquier cuenta. La prueba que lo fija falla con el
-código anterior. `tests/test_cupo_global.py`: 21 pruebas, 11 de 11 mutaciones.
+**And a defect that appeared while building it.** The image and audio tools recorded usage
+**without the role**, so in the cloud the owner spent image and transcription quota like any
+account. The test that pins it fails with the previous code. `tests/test_cupo_global.py`: 21
+tests, 11 of 11 mutations.
 
-Ver [`src/identidad/cuotas.py`](../src/identidad/cuotas.py).
+See [`src/identidad/cuotas.py`](../src/identidad/cuotas.py).
 
-## Esquema
+## Schema
 
-Migración **v11**, espejada en Supabase.
+Migration **v11**, mirrored in Supabase.
 
-| Tabla | Para qué |
+| Table | What for |
 |---|---|
-| `morgan_users` | Ahora con `username`, `password_hash`, `status`, `email_verificado` |
-| `auth_sessions` | Sesiones. El `id` es el **hash** del token |
-| `password_reset_tokens` | Recuperación. El token también **hasheado** |
-| `login_intentos` | Intentos fallidos, por identificador y origen |
-| `api_tokens` | Tokens personales de API (SQLite **v19**, Supabase **v23**). También el **hash**, nunca el valor. RLS activo y ninguna política, como `auth_sessions` |
+| `morgan_users` | Now with `username`, `password_hash`, `status`, `email_verificado` |
+| `auth_sessions` | Sessions. The `id` is the **hash** of the token |
+| `password_reset_tokens` | Recovery. The token also **hashed** |
+| `login_intentos` | Failed attempts, by identifier and origin |
+| `api_tokens` | Personal API tokens (SQLite **v19**, Supabase **v23**). Also the **hash**, never the value. RLS on and no policy, like `auth_sessions` |
 
-> Se llama `auth_sessions` y **no** `sessions` a propósito: esa tabla ya existe y
-> son las **conversaciones**. Reutilizar el nombre mezclaría dos cosas que no
-> tienen nada que ver y garantizaría confusión en cada consulta que alguien
-> escriba a partir de ahora.
+> It's called `auth_sessions` and **not** `sessions` on purpose: that table already exists and
+> it's the **conversations**. Reusing the name would mix two things that have nothing to do with
+> each other and guarantee confusion in every query anyone writes from now on.
 
-## Rutas
+## Routes
 
-| Método | Ruta | Sesión | Qué hace |
+| Method | Route | Session | What it does |
 |---|---|---|---|
-| `POST` | `/auth/registro` | no | Crea la cuenta y deja la sesión iniciada |
-| `POST` | `/auth/login` | no | Entra. 401 si falla, **429** si hay bloqueo |
-| `POST` | `/auth/logout` | no | Cierra la sesión en el servidor y borra cookies |
-| `GET` | `/auth/yo` | no | Quién eres. **Nunca da 401** |
-| `POST` | `/auth/recuperar` | no | Envía el enlace, si esa dirección tiene cuenta |
-| `POST` | `/auth/restablecer` | no | Cambia la contraseña con el token del correo |
-| `POST` | `/auth/password` | sí | Cambia la contraseña sabiendo la actual |
-| `GET` | `/auth/sesiones` | sí | Dónde tienes la sesión abierta |
-| `POST` | `/auth/sesiones/cerrar-otras` | sí | Cierra el resto |
-| `GET` | `/auth/tokens` | sí | Tus tokens de API vivos, sin su valor |
-| `POST` | `/auth/tokens` | sí | Crea uno (`nombre`, `alcances`, `dias`). Devuelve el valor **una vez** |
-| `DELETE` | `/auth/tokens/{id}` | sí | Revoca uno. 404 si no es tuyo |
-| `POST` | `/auth/tokens/revocar-todos` | sí | Revoca todos |
+| `POST` | `/auth/registro` | no | Creates the account and leaves the session signed in |
+| `POST` | `/auth/login` | no | Signs in. 401 if it fails, **429** if there is a lockout |
+| `POST` | `/auth/logout` | no | Closes the session on the server and deletes cookies |
+| `GET` | `/auth/yo` | no | Who you are. **Never gives 401** |
+| `POST` | `/auth/recuperar` | no | Sends the link, if that address has an account |
+| `POST` | `/auth/restablecer` | no | Changes the password with the token from the email |
+| `POST` | `/auth/password` | yes | Changes the password knowing the current one |
+| `GET` | `/auth/sesiones` | yes | Where you have open sessions |
+| `POST` | `/auth/sesiones/cerrar-otras` | yes | Closes the rest |
+| `GET` | `/auth/tokens` | yes | Your live API tokens, without their value |
+| `POST` | `/auth/tokens` | yes | Creates one (`nombre`, `alcances`, `dias`). Returns the value **once** |
+| `DELETE` | `/auth/tokens/{id}` | yes | Revokes one. 404 if it isn't yours |
+| `POST` | `/auth/tokens/revocar-todos` | yes | Revokes all |
 
-`/auth/yo` no da 401 a propósito: abrir la web sin haber entrado es el caso más
-corriente de todos, y tratarlo como error llenaría la consola de fallos que no lo
-son.
+`/auth/yo` doesn't give 401 on purpose: opening the web without having signed in is the most common
+case of all, and treating it as an error would fill the console with failures that aren't.
 
-El login devuelve **429** y no 401 cuando hay bloqueo porque el cliente tiene que
-poder distinguir «espera» de «prueba otra contraseña»: son consejos opuestos.
+Sign-in returns **429** and not 401 when there is a lockout because the client has to be able to
+tell "wait" from "try another password": they're opposite pieces of advice.
 
-## Pruebas
+## Tests
 
-| Fichero | Qué cubre |
+| File | What it covers |
 |---|---|
-| [`tests/test_cuentas.py`](../tests/test_cuentas.py) | La lógica: hasheo, registro, sesiones, fuerza bruta, recuperación, enumeración |
-| [`tests/test_api_cuentas.py`](../tests/test_api_cuentas.py) | La costura con HTTP: cookies, CSRF, protección de rutas, aislamiento entre usuarios |
-| [`tests/test_cuotas.py`](../tests/test_cuotas.py) | El cupo diario |
-| [`tests/test_frenos_de_acceso.py`](../tests/test_frenos_de_acceso.py) | Los dos ataques de la auditoría 2.3: origen falseado y altas en masa. 10 de 10 mutaciones |
-| [`tests/test_aislamiento.py`](../tests/test_aislamiento.py) | Que cada uno ve solo lo suyo |
-| [`tests/test_tokens_api.py`](../tests/test_tokens_api.py) | Tokens de API: la aceptación del plan (un script chatea y lista, no borra la cuenta ni crea tokens, el de A no ve nada de B, revocar corta al momento), alcances, CSRF con cookie, contraseña, interruptor y Supabase. 31 de 32 mutaciones; la que sobrevive es equivalente (la cascada de la tabla ya borra los tokens) |
+| [`tests/test_cuentas.py`](../tests/test_cuentas.py) | The logic: hashing, sign-up, sessions, brute force, recovery, enumeration |
+| [`tests/test_api_cuentas.py`](../tests/test_api_cuentas.py) | The seam with HTTP: cookies, CSRF, route protection, isolation between users |
+| [`tests/test_cuotas.py`](../tests/test_cuotas.py) | The daily quota |
+| [`tests/test_frenos_de_acceso.py`](../tests/test_frenos_de_acceso.py) | The two attacks from the 2.3 audit: faked origin and mass sign-ups. 10 of 10 mutations |
+| [`tests/test_aislamiento.py`](../tests/test_aislamiento.py) | That each one sees only their own |
+| [`tests/test_tokens_api.py`](../tests/test_tokens_api.py) | API tokens: the plan's acceptance (a script chats and lists, doesn't delete the account or create tokens, A's sees nothing of B's, revoking cuts at once), scopes, CSRF with a cookie, password, switch and Supabase. 31 of 32 mutations; the surviving one is equivalent (the table's cascade already deletes the tokens) |
 
-**Ninguna desactivada.** El número total de la suite no se escribe aquí: se
-queda desfasado el mismo día y no dice nada sobre la autenticación.
+**None disabled.** The suite's total isn't written here: it goes out of date the same day and says
+nothing about authentication.
 
-Las de HTTP existen porque hay fallos que no se ven leyendo el servicio: una
-cookie sin `HttpOnly`, un 401 sin cabeceras CORS, una ruta que se olvidó de exigir
-sesión. Y las de aislamiento comprueban dos cosas, no una: que Bruno no lee la
-conversación de Ana **y** que la respuesta es idéntica a la de una conversación
-inexistente. Si se distinguieran, el endpoint serviría para averiguar qué
-conversaciones existen aunque no dejara leerlas.
+The HTTP ones exist because there are failures you don't see by reading the service: a cookie
+without `HttpOnly`, a 401 without CORS headers, a route that forgot to require a session. And the
+isolation ones check two things, not one: that Bruno doesn't read Ana's conversation **and** that
+the answer is identical to the one for a conversation that doesn't exist. If they were told apart,
+the endpoint would serve to find out which conversations exist even if it didn't let you read them.
 
-## Poner esto en marcha
+## Putting this in place
 
-Para el despliegue de la nube, en Render:
-
-Guía completa paso a paso en
-despliegue.md. En resumen:
+For the cloud deployment, on Render (full step-by-step guide in despliegue.md, in
+Spanish). In short:
 
 ```
-MORGAN_ENVIRONMENT=cloud        # ya activa MORGAN_REQUIRE_AUTH
-MORGAN_EMAIL_API=brevo          # sin correo no hay recuperación; SMTP no sale de Render
+MORGAN_ENVIRONMENT=cloud        # already turns on MORGAN_REQUIRE_AUTH
+MORGAN_EMAIL_API=brevo          # without email there is no recovery; SMTP doesn't leave Render
 MORGAN_EMAIL_API_KEY=...
-MORGAN_EMAIL_FROM=...           # remitente verificado en Brevo
+MORGAN_EMAIL_FROM=...           # sender verified in Brevo
 MORGAN_WEB_URL=https://morgan-ia.vercel.app
 MORGAN_CORS_ORIGINS=https://morgan-ia.vercel.app
 ```
 
-`MORGAN_CORS_ORIGINS` tiene que ser exacto: con `allow_credentials`, el navegador
-**no acepta** el comodín `*` y las cookies no viajarían.
+`MORGAN_CORS_ORIGINS` has to be exact: with `allow_credentials`, the browser **doesn't accept** the
+`*` wildcard and the cookies wouldn't travel.
 
-## Lo que falta
+## What's missing
 
-> Esta sección decía que faltaban la verificación del correo, borrar la cuenta,
-> descargar los datos y las integraciones. **Las cuatro están hechas** y
-> descritas más arriba (y GitHub en [integraciones.md](integraciones.md)). Se
-> corrigió en la 2.0.12.
-
-- **Un cupo global**, además del de cada persona. El cupo por cuenta no acota el
-  gasto total: crear cuentas es gratis y no exige correo verificado. Hoy la
-  salida es cerrar el registro (`MORGAN_REGISTRO_ABIERTO=false`).
-- **El «login CSRF»**, aceptado a sabiendas: ver
-  [Lo que este diseño no cubre](#lo-que-este-diseño-no-cubre).
-- **Integraciones con Google** (correo, calendario): **aparcadas** desde la 2.0.18 y
-  las **descarté** el 2026-09-19. El código de Calendar sigue en el repositorio,
-  sin registrar sus herramientas.
+- **The "login CSRF"**, accepted knowingly: see
+  [What this design doesn't cover](#what-this-design-doesnt-cover).
+- **Integrations with Google** (email, calendar): **parked** since 2.0.18 and **ruled out** on
+  2026-09-19. The Calendar code is still in the repository, without registering its tools.

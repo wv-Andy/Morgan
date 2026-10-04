@@ -128,7 +128,7 @@ export function useCuenta(): EstadoCuenta {
 type Modo = 'entrar' | 'crear' | 'recuperar' | 'restablecer';
 
 /** Qué guarda Morgan, con quién lo comparte y las condiciones (4.20). */
-export const PRIVACIDAD = 'https://github.com/wv-Andy/Morgan/blob/main/docs/privacidad.md';
+export const PRIVACIDAD = 'https://github.com/wv-Andy/Morgan/blob/main/docs/privacidad.es.md';
 
 /** Lee el token del enlace de recuperación, si se llegó desde un correo. */
 function tokenDeLaUrl(): string {

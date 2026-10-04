@@ -1,13 +1,16 @@
-# Morgan — interfaz web
+# Morgan — web interface
 
-React 19 + TypeScript + Vite. Se publica en Vercel y habla con el backend por `/api`.
+**English** · [Español](README.es.md)
+
+React 19 + TypeScript + Vite. It's published on Vercel and talks to the backend through `/api`. The
+interface is in Spanish.
 
 ```bash
 npm ci
-npm run dev      # desarrollo, contra la API local en 127.0.0.1:8000
-npm run build    # lo que ejecuta Vercel (empieza por tsc -b)
+npm run dev      # development, against the local API at 127.0.0.1:8000
+npm run build    # what Vercel runs (it starts with tsc -b)
 npm test         # Vitest
 npm run lint     # oxlint
 ```
 
-Diseño, decisiones y pruebas: [docs/web.md](../docs/web.md).
+Design, decisions and tests: [docs/web.md](../docs/web.md).

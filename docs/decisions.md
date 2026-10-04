@@ -1,266 +1,258 @@
-# Registro de Decisiones Técnicas
+# Technical Decision Record
 
-## ADR-001: Python como lenguaje principal
-- **Fecha**: 2026-09-04
-- **Estado**: Aceptado
-- **Contexto**: Necesitamos un lenguaje para el backend del agente.
-- **Decisión**: Python, por su ecosistema de IA/ML, facilidad de scripting, y amplia disponibilidad de bibliotecas.
-- **Consecuencias**: Excelente soporte para APIs de LLM, psutil, y automatización de sistema.
+**English** · [Español](decisions.es.md)
 
-## ADR-002: Google Gemini como modelo inicial
-- **Fecha**: 2026-09-04
-- **Estado**: Aceptado
-- **Contexto**: Necesitamos un LLM con soporte para function calling.
-- **Decisión**: Google Gemini vía API (gratuita con límites generosos).
-- **Alternativas**: OpenAI GPT-4, Anthropic Claude, modelos locales.
-- **Consecuencias**: API key gratuita para desarrollo. Function calling nativo. Diseño modular permite cambiar de proveedor.
+## ADR-001: Python as the main language
+- **Date**: 2026-09-04
+- **Status**: Accepted
+- **Context**: We need a language for the agent's backend.
+- **Decision**: Python, for its AI/ML ecosystem, ease of scripting and wide availability of
+  libraries.
+- **Consequences**: Excellent support for LLM APIs, psutil and system automation.
 
-## ADR-003: Sistema de permisos por niveles
-- **Fecha**: 2026-09-04
-- **Estado**: Aceptado
-- **Contexto**: La IA no debe tener acceso ilimitado al computador.
-- **Decisión**: Tres niveles de permiso (🟢 safe, 🟡 moderate, 🔴 sensitive) con control independiente por herramienta.
-- **Consecuencias**: Seguridad controlada desde el inicio. Escalable para nuevas herramientas.
+## ADR-002: Google Gemini as the initial model
+- **Date**: 2026-09-04
+- **Status**: Accepted
+- **Context**: We need an LLM with function calling support.
+- **Decision**: Google Gemini through its API (free with generous limits).
+- **Alternatives**: OpenAI GPT-4, Anthropic Claude, local models.
+- **Consequences**: A free API key for development. Native function calling. The modular design
+  allows changing provider.
 
-## ADR-004: CLI con Rich antes de GUI
-- **Fecha**: 2026-09-04
-- **Estado**: Aceptado
-- **Contexto**: Necesitamos una interfaz para V0.1.
-- **Decisión**: CLI interactiva usando Rich para formato y colores.
-- **Alternativas**: GUI inmediata (React), Textual (TUI).
-- **Consecuencias**: Desarrollo rápido. Funcional desde el primer día. GUI vendrá en V0.7.
+## ADR-003: A permission system by levels
+- **Date**: 2026-09-04
+- **Status**: Accepted
+- **Context**: The AI mustn't have unlimited access to the computer.
+- **Decision**: Three permission levels (🟢 safe, 🟡 moderate, 🔴 sensitive) with independent
+  control per tool.
+- **Consequences**: Controlled security from the start. Scalable for new tools.
 
-## ADR-005: Principio "funcionalidad primero"
-- **Fecha**: 2026-09-04
-- **Estado**: Aceptado
-- **Contexto**: Riesgo de over-engineering con arquitecturas complejas.
-- **Decisión**: Cada versión debe agregar una capacidad real. No construir infraestructura sin funcionalidad que la justifique.
-- **Consecuencias**: Progreso medible. Un solo agente inicialmente, múltiples agentes solo si se demuestra la necesidad.
+## ADR-004: A CLI with Rich before a GUI
+- **Date**: 2026-09-04
+- **Status**: Accepted
+- **Context**: We need an interface for V0.1.
+- **Decision**: An interactive CLI using Rich for formatting and colors.
+- **Alternatives**: An immediate GUI (React), Textual (TUI).
+- **Consequences**: Fast development. Functional from day one. The GUI will come in V0.7.
 
-## ADR-006: SQLite se mantiene; se reescribe la capa de acceso
-- **Fecha**: 2026-09-05
-- **Estado**: Aceptado
-- **Contexto**: La auditoría técnica encontró fugas de conexiones, ausencia de manejo de
-  errores, sin migraciones y sin configuración de concurrencia. Se planteó si el motor
-  era el problema.
-- **Decisión**: Conservar SQLite y reescribir la capa de acceso (`src/memory/db.py`).
-  Morgan es un agente personal mono-usuario en local: PostgreSQL añadiría un servicio
-  que administrar sin ningún beneficio real.
-- **Consecuencias**: Conexiones que se cierran, WAL para el acceso multihilo de la API,
-  errores traducidos a `MemoryStorageError` y migraciones incrementales con
-  `schema_version`. Añadir tareas, configuración o historial es agregar una migración y
-  un repositorio, sin tocar lo existente.
+## ADR-005: The "functionality first" principle
+- **Date**: 2026-09-04
+- **Status**: Accepted
+- **Context**: Risk of over-engineering with complex architectures.
+- **Decision**: Every version must add a real capability. Don't build infrastructure without
+  functionality that justifies it.
+- **Consequences**: Measurable progress. A single agent at first, several agents only if the need
+  is demonstrated.
 
-## ADR-007: Los permisos deniegan, nunca bloquean, en contexto no interactivo
-- **Fecha**: 2026-09-05
-- **Estado**: Aceptado
-- **Contexto**: `Confirm.ask()` leía de stdin del proceso servidor. Al lanzar uvicorn
-  desde una terminal, `isatty()` era cierto y una petición HTTP a una herramienta de
-  nivel moderado dejaba el worker bloqueado esperando que alguien escribiera en la
-  consola del servidor.
-- **Decisión**: `PermissionManager` recibe un flag `interactive` explícito. Sin consola
-  la política es denegar de inmediato. El contenedor de la API lo construye con
-  `interactive=False`.
-- **Alternativas**: Auto-aprobar por HTTP (inaceptable), o un timeout en el prompt
-  (sigue bloqueando el hilo el tiempo del timeout).
-- **Consecuencias**: La API nunca se cuelga. Como contrapartida, las herramientas
-  `moderate`, `high_risk` y `critical` no se pueden ejecutar por HTTP hasta que exista
-  un flujo de aprobación en la interfaz. Es una limitación consciente y documentada.
+## ADR-006: SQLite stays; the access layer is rewritten
+- **Date**: 2026-09-05
+- **Status**: Accepted
+- **Context**: The technical audit found connection leaks, no error handling, no migrations and no
+  concurrency configuration. The question was whether the engine was the problem.
+- **Decision**: Keep SQLite and rewrite the access layer (`src/memory/db.py`). Morgan is a
+  single-user personal agent running locally: PostgreSQL would add a service to administer without
+  any real benefit.
+- **Consequences**: Connections that get closed, WAL for the API's multithreaded access, errors
+  translated into `MemoryStorageError` and incremental migrations with `schema_version`. Adding
+  tasks, configuration or history means adding a migration and a repository, without touching
+  what exists.
 
-## ADR-008: No se introduce C++ en esta fase
-- **Fecha**: 2026-09-05
-- **Estado**: Aceptado
-- **Contexto**: Se evaluó si alguna parte de Morgan se beneficiaría de código nativo.
-- **Decisión**: No introducir C++. No existe hoy ningún candidato justificado.
-- **Fundamento**: El perfil de Morgan es espera de red y E/S, no cómputo. El tiempo de
-  respuesta lo domina la llamada al LLM (segundos), seguida de los subprocesos de
-  PowerShell y git. Los recorridos de `os.walk` son E/S de disco, donde C++ no aporta
-  ventaja significativa, y `psutil` ya es nativo por debajo. Medido durante la auditoría:
-  `get_schemas()` cuesta 0,013 ms por llamada y `search_files` bajó de 79 ms a 1 ms
-  simplemente podando directorios, sin salir de Python.
-- **Consecuencias**: Se evita una toolchain de compilación, complejidad de empaquetado y
-  una superficie de fallos nueva a cambio de cero mejora medible.
-- **Criterios de reevaluación**: se reconsiderará si aparece indexación de código a gran
-  escala, hashing o diffing masivo de archivos, o integración profunda con la API Win32.
-  En ese caso el módulo debe quedar aislado tras una interfaz limpia, con sus pruebas y
-  su documentación.
+## ADR-007: Permissions deny, never block, in a non-interactive context
+- **Date**: 2026-09-05
+- **Status**: Accepted
+- **Context**: `Confirm.ask()` read from the server process's stdin. When uvicorn was launched from
+  a terminal, `isatty()` was true and an HTTP request to a moderate-level tool left the worker
+  blocked waiting for someone to type in the server's console.
+- **Decision**: `PermissionManager` receives an explicit `interactive` flag. Without a console the
+  policy is to deny right away. The API's container builds it with `interactive=False`.
+- **Alternatives**: Auto-approving over HTTP (unacceptable), or a timeout on the prompt (it still
+  blocks the thread for the length of the timeout).
+- **Consequences**: The API never hangs. In return, the `moderate`, `high_risk` and `critical`
+  tools can't run over HTTP until there is an approval flow in the interface. It's a conscious,
+  documented limitation. (That flow arrived later: plans approved in the web, V1.6 and V2.0.16.)
 
-## ADR-009: El log de auditoría no rota
-- **Fecha**: 2026-09-05
-- **Estado**: Aceptado
-- **Contexto**: `logs/audit.log` crece sin límite y su lectura completa degradaba
-  `/audit` y `/status` de forma lineal.
-- **Decisión**: Mantener el log sin rotación (es un registro de seguridad: rotar sería
-  descartar evidencia) y resolver el rendimiento leyendo sólo la cola del fichero.
-- **Consecuencias**: 50 entradas de un log de 3,34 MB se leen en 8,4 ms. El log de
-  aplicación (`logs/morgan.log`), que sí es prescindible, rota a 2 MB con 3 copias.
+## ADR-008: No C++ is introduced in this phase
+- **Date**: 2026-09-05
+- **Status**: Accepted
+- **Context**: Whether any part of Morgan would benefit from native code was evaluated.
+- **Decision**: Don't introduce C++. There is no justified candidate today.
+- **Rationale**: Morgan's profile is network waits and I/O, not computation. Response time is
+  dominated by the LLM call (seconds), followed by the PowerShell and git subprocesses. The
+  `os.walk` traversals are disk I/O, where C++ brings no significant advantage, and `psutil` is
+  already native underneath. Measured during the audit: `get_schemas()` costs 0.013 ms per call and
+  `search_files` went from 79 ms to 1 ms just by pruning directories, without leaving Python.
+- **Consequences**: A build toolchain, packaging complexity and a new failure surface are avoided in
+  exchange for zero measurable improvement.
+- **Re-evaluation criteria**: it will be reconsidered if large-scale code indexing, mass hashing or
+  diffing of files, or deep integration with the Win32 API appear. In that case the module must stay
+  isolated behind a clean interface, with its tests and its documentation. (When the desktop
+  program arrived in 5.0, Rust came in through Tauri, isolated in `escritorio/`, under exactly
+  these conditions.)
 
-## ADR-010: Capa de repositorios; SQLite por defecto, proveedor sustituible
-- **Fecha**: 2026-09-05
-- **Estado**: Aceptado
-- **Contexto**: La V1.2 pedía evaluar Supabase/PostgreSQL y, sobre todo, que el Core no
-  quedara acoplado a un proveedor concreto. Antes de la V1.2 el `MemoryManager` hablaba
-  directamente con el almacenamiento y no existía ninguna abstracción por entidad.
-- **Decisión**: Introducir `SessionRepository`, `MessageRepository` y `MemoryRepository`
-  como interfaces abstractas, más una `RepositoryFactory` que las reúne. Se envía una
-  única implementación, la de SQLite. El Core trabaja con dataclases (`Session`,
-  `Message`, `MemoryRecord`) y nunca ve SQL.
-- **Alternativas consideradas**:
-  1. *Implementar Supabase ya*: sincronizaría entre dispositivos, pero la memoria
-     personal pasaría a la nube, Morgan dejaría de funcionar sin conexión y cada lectura
-     sumaría latencia de red. Para un agente que actúa sobre la máquina local, el
-     beneficio no compensa.
-  2. *Ambos backends seleccionables por configuración*: más superficie que mantener y
-     probar sin una necesidad demostrada.
-  3. *Seguir sin abstracción*: incumple el requisito de proveedor sustituible.
-- **Consecuencias**: Añadir PostgreSQL o Supabase consiste en implementar tres clases y
-  cambiar qué fábrica se construye; nada por encima cambia. No existe ninguna llamada a
-  `sqlite3` fuera de `src/memory/`. A cambio, hay una capa más de indirección.
+## ADR-009: The audit log doesn't rotate
+- **Date**: 2026-09-05
+- **Status**: Accepted
+- **Context**: `logs/audit.log` grows without limit and reading it in full degraded `/audit` and
+  `/status` linearly.
+- **Decision**: Keep the log without rotation (it's a security record: rotating would be discarding
+  evidence) and solve performance by reading only the tail of the file.
+- **Consequences**: 50 entries from a 3.34 MB log are read in 8.4 ms. The application log
+  (`logs/morgan.log`), which is dispensable, rotates at 2 MB with 3 copies.
 
-## ADR-011: El historial se persiste entero, pero se recupera por ventana
-- **Fecha**: 2026-09-05
-- **Estado**: Aceptado
-- **Contexto**: Al persistir conversaciones aparece la pregunta de cuánto reinyectar al
-  reanudar. Cargarlo todo da continuidad, pero infla el contexto de cada petición al LLM.
-- **Decisión**: Guardar todos los mensajes, y al reanudar cargar solo los
-  `MORGAN_HISTORY_WINDOW` más recientes (20 por defecto), y únicamente los de rol `user`
-  y `assistant`.
-- **Razón de excluir los mensajes de herramienta**: un resultado de herramienta sin la
-  llamada que lo originó es un mensaje huérfano, y los proveedores rechazan el historial.
-- **Consecuencias**: El coste por petición queda acotado y no se repite el problema del
-  prompt creciente corregido en la V1.0. A cambio, en conversaciones muy largas Morgan
-  no recuerda lo dicho al principio; la solución futura es resumen o búsqueda semántica,
-  no ampliar la ventana.
+## ADR-010: A repository layer; SQLite by default, replaceable provider
+- **Date**: 2026-09-05
+- **Status**: Accepted
+- **Context**: V1.2 asked to evaluate Supabase/PostgreSQL and, above all, that the Core didn't stay
+  coupled to a specific provider. Before V1.2 the `MemoryManager` talked directly to storage and
+  there was no abstraction per entity.
+- **Decision**: Introduce `SessionRepository`, `MessageRepository` and `MemoryRepository` as
+  abstract interfaces, plus a `RepositoryFactory` that brings them together. A single
+  implementation is shipped, SQLite's. The Core works with dataclasses (`Session`, `Message`,
+  `MemoryRecord`) and never sees SQL.
+- **Alternatives considered**:
+  1. *Implement Supabase now*: it would sync across devices, but personal memory would move to the
+     cloud, Morgan would stop working offline and every read would add network latency. For an
+     agent that acts on the local machine, the benefit doesn't make up for it.
+  2. *Both backends selectable by configuration*: more surface to maintain and test without a
+     demonstrated need.
+  3. *Carry on without an abstraction*: it fails the replaceable-provider requirement.
+- **Consequences**: Adding PostgreSQL or Supabase consists of implementing three classes and
+  changing which factory is built; nothing above changes. There is no call to `sqlite3` outside
+  `src/memory/`. In exchange, there is one more layer of indirection.
 
-## ADR-012: Autenticación por token compartido, no por usuarios
-- **Fecha**: 2026-09-05
-- **Estado**: Aceptado
-- **Contexto**: Morgan ejecuta comandos sobre la máquina donde corre. Sin autenticación
-  solo puede escuchar de forma segura en `127.0.0.1`, lo que impide usarlo desde otro
-  dispositivo.
-- **Decisión**: Un token compartido opcional (`MORGAN_API_TOKEN`). Sin él, el
-  comportamiento no cambia y se registra un aviso. Con él, toda la API lo exige.
-- **Alternativas**: un sistema de usuarios y sesiones sería lo correcto para varios
-  usuarios, pero Morgan es un agente personal: sobra complejidad para un solo dueño.
-- **Consecuencias**: Permite exponer Morgan detrás de HTTPS con un secreto. No sustituye
-  a un control de acceso real: quien tenga el token tiene el equipo. `/health` queda
-  abierta para poder comprobar disponibilidad sin repartir el token.
+## ADR-011: The history is persisted whole, but retrieved by window
+- **Date**: 2026-09-05
+- **Status**: Accepted
+- **Context**: When persisting conversations, the question arises of how much to feed back when
+  resuming. Loading everything gives continuity, but inflates the context of every request to the
+  LLM.
+- **Decision**: Save every message, and when resuming load only the `MORGAN_HISTORY_WINDOW` most
+  recent ones (20 by default), and only those with the `user` and `assistant` roles.
+- **Reason for excluding tool messages**: a tool result without the call that produced it is an
+  orphan message, and providers reject the history.
+- **Consequences**: The cost per request stays bounded and the growing-prompt problem fixed in V1.0
+  doesn't come back. In return, in very long conversations Morgan doesn't remember what was said at
+  the beginning; the future solution is summarizing or semantic search, not widening the window.
 
-## ADR-013: Separación de capacidades por entorno de ejecución
-- **Fecha**: 2026-09-05
-- **Estado**: Aceptado
-- **Contexto**: Morgan debe poder funcionar como asistente web accesible desde un
-  navegador y, además, como agente local con acceso al sistema operativo. Sin una
-  separación explícita, un despliegue en la nube expondría `execute_command`,
-  `delete_file` y `kill_process` sobre el servidor, y cualquiera que alcanzara la API
-  tendría una consola.
-- **Decisión**: Cada herramienta declara `requires_local`. Con `MORGAN_ENVIRONMENT=cloud`,
-  las que lo tienen a `True` **se excluyen del registro**, no se limitan por permisos.
-- **Por qué excluir en lugar de bloquear**: lo que no está registrado no puede invocarse
-  ni aparece en el esquema que ve el modelo. Depender solo de la capa de permisos deja
-  la puerta cerrada pero puesta: un cambio de configuración o un fallo la abriría.
-- **Por qué `True` por defecto**: es fail-safe. Olvidarse de clasificar una herramienta
-  nueva la deja fuera del cloud, no dentro. Equivocarse por exceso cuesta una capacidad
-  sin exponer; equivocarse por defecto expondría el ordenador del usuario.
-- **Consecuencias**: en cloud quedan 5 herramientas de 25 (memoria y web). El acceso a
-  la máquina desde un Morgan remoto exigiría en el futuro un agente local explícito con
-  su propia autenticación; queda como dirección, no implementado.
+## ADR-012: Authentication by shared token, not by users
+- **Date**: 2026-09-05
+- **Status**: Accepted (superseded by own accounts in V2.0; the shared token remains for a private
+  Morgan, see [autenticacion.md](autenticacion.md))
+- **Context**: Morgan runs commands on the machine where it runs. Without authentication it can
+  only safely listen on `127.0.0.1`, which prevents using it from another device.
+- **Decision**: An optional shared token (`MORGAN_API_TOKEN`). Without it, behavior doesn't change
+  and a warning is logged. With it, the whole API requires it.
+- **Alternatives**: a system of users and sessions would be right for several users, but Morgan is
+  a personal agent: it's too much complexity for a single owner.
+- **Consequences**: It allows exposing Morgan behind HTTPS with a secret. It doesn't replace real
+  access control: whoever has the token has the computer. `/health` stays open so availability can
+  be checked without handing out the token.
 
-## ADR-014: Límites de tiempo explícitos en el razonamiento
-- **Fecha**: 2026-09-05
-- **Estado**: Aceptado
-- **Contexto**: Los clientes LLM se construían sin timeout propio y heredaban los del
-  SDK (`connect 5 s`, `read 60 s`, 2 reintentos). Con `max_iterations=6` y un
-  `FallbackProvider` que después intenta Gemini con sus propios reintentos, un solo
-  turno podía bloquearse más de 15 minutos con la red degradada.
-- **Decisión**: tres límites combinados: 30 s por llamada al modelo, 1 reintento del SDK
-  y un **tope de reloj de 120 s para el turno completo**.
-- **Cómo se eligieron los valores**: midiendo. La latencia normal de Groq es de 0,42 s
-  de media (5 llamadas: 0,37–0,48 s); bajo 6 peticiones concurrentes se observaron
-  hasta 44 s. 30 s deja ~70× el caso normal sin permitir que una llamada colgada consuma
-  minutos. Un solo reintento porque, con un proveedor de respaldo detrás, insistir más
-  solo alarga la espera antes de conmutar.
-- **Por qué hace falta el tope de turno**: acotar las iteraciones no acota el tiempo.
-  Seis iteraciones de duración indefinida siguen siendo indefinidas.
-- **Consecuencias**: una petición no puede bloquear Morgan más de ~2 minutos. Si se
-  alcanza el tope, el usuario recibe una explicación y una sugerencia, no un cuelgue.
+## ADR-013: Separating capabilities by execution environment
+- **Date**: 2026-09-05
+- **Status**: Accepted
+- **Context**: Morgan must be able to work as a web assistant reachable from a browser and, also, as
+  a local agent with access to the operating system. Without an explicit separation, a cloud
+  deployment would expose `execute_command`, `delete_file` and `kill_process` on the server, and
+  anyone who reached the API would have a console.
+- **Decision**: Each tool declares `requires_local`. With `MORGAN_ENVIRONMENT=cloud`, the ones that
+  have it as `True` **are excluded from the registry**, not limited by permissions.
+- **Why exclude instead of block**: what isn't registered can't be invoked and doesn't appear in the
+  schema the model sees. Relying only on the permission layer leaves the door closed but still in
+  place: a configuration change or a bug would open it.
+- **Why `True` by default**: it's fail-safe. Forgetting to classify a new tool leaves it out of the
+  cloud, not in. Erring on the side of excess costs a capability without exposing anything; erring
+  the other way would expose the user's computer.
+- **Consequences**: in the cloud 5 tools out of 25 remained (memory and web). Access to the machine
+  from a remote Morgan would require in the future an explicit local agent with its own
+  authentication; it stays as a direction, not implemented. (It was implemented in 3.0: the local
+  agent, with its own credential and policy.)
 
-## ADR-015: Estado por servicio, calculado y no bloqueante
-- **Fecha**: 2026-09-05
-- **Estado**: Aceptado
-- **Contexto**: Un indicador único `internet = sí/no` es engañoso: puede haber conexión
-  y estar caído Supabase, o responder Supabase y estar caído el proveedor LLM.
-- **Decisión**: un registro con una entrada por dependencia, cada una con su propia
-  comprobación, su TTL y su retroceso exponencial. El estado global se **calcula** a
-  partir de los individuales en lugar de almacenarse.
-- **Por qué calculado**: un estado global guardado aparte se desincroniza del real en
-  cuanto una dependencia cambia.
-- **Por qué no bloqueante**: quien consulta lee el último valor conocido. Si una petición
-  del usuario tuviera que esperar a un sondeo, la comprobación de salud se convertiría
-  en la causa de la lentitud que pretende detectar.
-- **Consecuencias**: el estado puede tener hasta 30 s de antigüedad, lo que se expone en
-  `age_seconds`. Es un intercambio deliberado: información ligeramente vieja a cambio de
-  no penalizar ninguna petición.
+## ADR-014: Explicit time limits on reasoning
+- **Date**: 2026-09-05
+- **Status**: Accepted
+- **Context**: The LLM clients were built without their own timeout and inherited the SDK's
+  (`connect 5 s`, `read 60 s`, 2 retries). With `max_iterations=6` and a `FallbackProvider` that then
+  tries Gemini with its own retries, a single turn could hang for more than 15 minutes with a
+  degraded network.
+- **Decision**: three combined limits: 30 s per model call, 1 SDK retry and a **120 s clock cap for
+  the whole turn**.
+- **How the values were chosen**: by measuring. Groq's normal latency averages 0.42 s (5 calls:
+  0.37–0.48 s); under 6 concurrent requests up to 44 s was observed. 30 s leaves ~70× the normal
+  case without letting a hung call eat minutes. A single retry because, with a fallback provider
+  behind, insisting more only lengthens the wait before failing over.
+- **Why the turn cap is needed**: capping iterations doesn't cap time. Six iterations of unbounded
+  duration are still unbounded.
+- **Consequences**: a request can't block Morgan for more than ~2 minutes. If the cap is reached,
+  the user gets an explanation and a suggestion, not a hang.
 
-## ADR-016: SQLite y Supabase coexisten; quién manda depende del entorno
-- **Fecha**: 2026-09-05
-- **Estado**: Aceptado
-- **Contexto**: La V1.3 pide que Morgan funcione online mediante web y también en local
-  con acceso al sistema, sin que una modalidad destruya la otra.
-- **Decisión**: no sustituir SQLite por Supabase. En el entorno `local`, SQLite es la
-  fuente de verdad y Supabase el destino de la sincronización. En el entorno `cloud`,
-  Supabase pasa a ser el almacén principal.
-- **Por qué cambia según el entorno**: en la nube no hay disco local que sobreviva a un
-  redespliegue, así que un SQLite allí sería memoria volátil disfrazada de persistencia.
-  En el equipo del usuario, en cambio, depender de la red para leer su propia memoria
-  contradice el principio de que Internet mejora Morgan pero no lo condiciona.
-- **Consecuencias**: ambas implementaciones cumplen las mismas interfaces, así que el
-  Core no distingue cuál está debajo. En cloud no hay cola de sincronización, porque no
-  hay nada local que subir.
+## ADR-015: Status per service, computed and non-blocking
+- **Date**: 2026-09-05
+- **Status**: Accepted
+- **Context**: A single `internet = yes/no` indicator is misleading: there can be a connection and
+  Supabase down, or Supabase answering and the LLM provider down.
+- **Decision**: a registry with one entry per dependency, each with its own check, its TTL and its
+  exponential backoff. The global status is **computed** from the individual ones instead of being
+  stored.
+- **Why computed**: a global status stored separately drifts from the real one as soon as a
+  dependency changes.
+- **Why non-blocking**: whoever checks reads the last known value. If a user's request had to wait
+  for a probe, the health check would become the cause of the slowness it's meant to detect.
+- **Consequences**: the status can be up to 30 s old, which is exposed in `age_seconds`. It's a
+  deliberate trade-off: slightly stale information in exchange for not penalizing any request.
 
-## ADR-017: Cliente PostgREST propio en lugar del SDK de Supabase
-- **Fecha**: 2026-09-05
-- **Estado**: Aceptado
-- **Contexto**: Hay que hablar con Supabase desde Python.
-- **Decisión**: implementar un cliente mínimo sobre `httpx` contra la API PostgREST,
-  en lugar de añadir `supabase-py`.
-- **Razón**: aquí solo hacen falta cuatro operaciones (select, insert, upsert, delete)
-  sobre tres tablas. El SDK arrastraría `gotrue`, `realtime` y `storage3`, que Morgan
-  no usa, más sus dependencias transitivas. La especificación pide explícitamente no
-  añadir dependencias innecesarias.
-- **Coste asumido**: hay que mantener el manejo de errores y las cabeceras a mano. Se
-  mitiga traduciendo todo fallo a `MemoryStorageError`, el mismo error que usa la capa
-  local, para que quien llama no tenga que saber con quién habló.
+## ADR-016: SQLite and Supabase coexist; which one rules depends on the environment
+- **Date**: 2026-09-05
+- **Status**: Accepted
+- **Context**: V1.3 asks that Morgan works online through the web and also locally with access to
+  the system, without one mode destroying the other.
+- **Decision**: don't replace SQLite with Supabase. In the `local` environment, SQLite is the source
+  of truth and Supabase the sync target. In the `cloud` environment, Supabase becomes the main store.
+- **Why it changes with the environment**: in the cloud there is no local disk that survives a
+  redeploy, so a SQLite there would be volatile memory disguised as persistence. On the user's
+  computer, instead, depending on the network to read your own memory contradicts the principle that
+  the internet improves Morgan but doesn't condition it.
+- **Consequences**: both implementations satisfy the same interfaces, so the Core doesn't tell which
+  one is underneath. In the cloud there is no sync queue, because there is nothing local to upload.
 
-## ADR-018: La sincronización sube, pero todavía no baja
-- **Fecha**: 2026-09-05
-- **Estado**: Aceptado
-- **Contexto**: El §11 de la especificación limita la V1.3 a preparar la
-  infraestructura, y el §12 advierte de no convertir la versión en un proyecto de
-  sincronización.
-- **Decisión**: implementar la cola outbox y la subida local → nube. Dejar la bajada y
-  la fusión para la V1.4.
-- **Razón**: bajar datos remotos y mezclarlos con los locales es donde vive la
-  corrupción de datos: exige resolver identidad entre equipos, orden de eventos,
-  borrados propagados y conflictos reales. Hacerlo deprisa en una versión cuya
-  prioridad declarada es la estabilidad sería contradecirse.
-- **Preparación dejada hecha**: `updated_at` en las tres tablas, `origin_device` para
-  saber qué equipo escribió cada fila, y `client_id` en `messages` como identidad
-  estable entre equipos (el id local es autoincremental y distinto en cada máquina,
-  así que no sirve para deduplicar).
-- **Nota del 2026-09-10 (V2.0)**: la V1.4 llegó y pasó, y la bajada no se hizo.
-  Tampoco está en el roadmap de la 2.0. El texto de arriba se deja como estaba
-  —un ADR registra lo que se decidió entonces, no lo que pasó después— pero la
-  fecha que prometía ya no vale y decirlo importa: el estado real es **aplazada
-  sin fecha**. Lo que cambió entretanto es que la nube pasó a ser el sitio
-  principal, así que la bajada solo hace falta para quien use los dos Morgan a
-  la vez. Retirarla del plan o programarla es decisión del creador; está
-  explicado en [datos.md](datos.md).
-- **Retirada el 2026-09-18 (V2.0.34)**, por decisión mía. La bajada no se va a
-  hacer: la nube es la fuente de verdad, y con el agente local de la 3.0 también lo
-  será para el equipo de la persona, que trabajará contra ella y no contra una copia
-  que haya que fusionar. Se quita de los planes y de los pendientes; el esquema
-  conserva `updated_at`, `origin_device` y `client_id` porque los usa la subida.
-- **Estrategia de conflictos elegida para V1.4**: last-write-wins por `updated_at`,
-  registrando el valor descartado. Con un solo usuario en varios dispositivos, los
-  conflictos reales son raros y un merge automático añadiría más riesgo que valor.
+## ADR-017: Its own PostgREST client instead of the Supabase SDK
+- **Date**: 2026-09-05
+- **Status**: Accepted
+- **Context**: Supabase has to be talked to from Python.
+- **Decision**: implement a minimal client on top of `httpx` against the PostgREST API, instead of
+  adding `supabase-py`.
+- **Reason**: only four operations (select, insert, upsert, delete) on three tables are needed here.
+  The SDK would drag in `gotrue`, `realtime` and `storage3`, which Morgan doesn't use, plus their
+  transitive dependencies. The specification explicitly asks not to add unnecessary dependencies.
+- **Cost taken on**: error handling and headers have to be maintained by hand. It's mitigated by
+  translating every failure into `MemoryStorageError`, the same error the local layer uses, so the
+  caller doesn't need to know who it talked to.
+
+## ADR-018: Sync uploads, but doesn't download yet
+- **Date**: 2026-09-05
+- **Status**: Accepted
+- **Context**: §11 of the specification limits V1.3 to preparing the infrastructure, and §12 warns
+  against turning the version into a sync project.
+- **Decision**: implement the outbox queue and the local → cloud upload. Leave the download and the
+  merge for V1.4.
+- **Reason**: downloading remote data and mixing it with the local data is where data corruption
+  lives: it requires resolving identity across computers, event ordering, propagated deletions and
+  real conflicts. Doing it in a hurry in a version whose declared priority is stability would be
+  contradicting itself.
+- **Groundwork left in place**: `updated_at` in the three tables, `origin_device` to know which
+  computer wrote each row, and `client_id` in `messages` as a stable identity across computers (the
+  local id is autoincremental and different on each machine, so it doesn't work for deduplicating).
+- **Note from 2026-09-10 (V2.0)**: V1.4 came and went, and the download wasn't done. It isn't in the
+  2.0 roadmap either. The text above is left as it was —an ADR records what was decided then, not
+  what happened afterwards— but the date it promised no longer holds and saying so matters: the real
+  status is **postponed with no date**. What changed meanwhile is that the cloud became the main
+  place, so the download is only needed for whoever uses both Morgans at once. Removing it from the
+  plan or scheduling it is the creator's decision; it's explained in [datos.md](datos.md).
+- **Removed on 2026-09-18 (V2.0.34)**, by my decision. The download isn't going to be done: the
+  cloud is the source of truth, and with the 3.0 local agent it will also be so for the person's
+  computer, which will work against it and not against a copy that has to be merged. It's taken out
+  of the plans and the pending lists; the schema keeps `updated_at`, `origin_device` and `client_id`
+  because the upload uses them.
+- **Conflict strategy chosen for V1.4**: last-write-wins by `updated_at`, recording the discarded
+  value. With a single user on several devices, real conflicts are rare and an automatic merge would
+  add more risk than value.

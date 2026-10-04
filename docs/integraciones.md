@@ -1,322 +1,294 @@
-# Servicios externos (V1.9)
+# External services (V1.9)
 
-> Conectar GitHub —y, más adelante, otros servicios— a la cuenta de cada
-> persona.
+**English** · [Español](integraciones.es.md)
 
-## Lo primero: esto no es el login de Morgan
+> Connecting GitHub —and, later, other services— to each person's account.
 
-Son dos sistemas distintos, y confundirlos es el error más caro que se puede
-cometer aquí:
+## First things first: this isn't Morgan's sign-in
 
-| | Qué significa |
+They're two different systems, and mixing them up is the most expensive mistake you can make
+here:
+
+| | What it means |
 |---|---|
-| **Login de Morgan** | Cuentas propias: usuario, contraseña, sesión. Dice **quién eres** |
-| **Integración** | *Tú* autorizas a Morgan a usar **tu cuenta de otro servicio** |
+| **Morgan's sign-in** | Its own accounts: username, password, session. It says **who you are** |
+| **Integration** | *You* authorize Morgan to use **your account on another service** |
 
-Hay una ironía que conviene nombrar: se descartó OAuth para *iniciar sesión* por
-complejidad, y aquí reaparece para *conectar servicios*. No es una
-contradicción. En el primer caso GitHub diría quién eres, y Morgan quedaría atado
-a que su servicio esté en pie para poder entrar; en el segundo ya se sabe quién
-eres, y lo único que se obtiene es permiso para actuar en tu nombre en un sitio
-concreto.
+There is an irony worth naming: OAuth was ruled out for *signing in* because of complexity, and it
+shows up again here for *connecting services*. It isn't a contradiction. In the first case GitHub
+would say who you are, and Morgan would depend on its service being up to let you in; in the second
+it's already known who you are, and all you get is permission to act on your behalf in a specific
+place.
 
-La consecuencia práctica: **una integración cuelga siempre de una cuenta de
-Morgan**. Sin sesión no hay a quién atribuir la autorización, y en un Morgan
-compartido la conectaría una persona y la usarían todas.
+The practical consequence: **an integration always hangs from a Morgan account**. Without a session
+there is nobody to attribute the authorization to, and in a shared Morgan one person would connect
+it and everyone would use it.
 
-## El intercambio, y dónde está cada protección
+## The exchange, and where each protection is
 
 ```
-1. La web pide conectar        ──►  Morgan emite un `state` y lo guarda
-2. El navegador va a GitHub    ──►  la persona autoriza (o no)
-3. GitHub devuelve al backend  ──►  con `code` y el mismo `state`
-4. Morgan valida el `state`    ──►  y solo entonces canjea el `code`
-5. El token se guarda cifrado  ──►  y el navegador vuelve a la web
+1. The web asks to connect       ──►  Morgan issues a `state` and stores it
+2. The browser goes to GitHub    ──►  the person authorizes (or not)
+3. GitHub returns to the backend ──►  with `code` and the same `state`
+4. Morgan validates the `state`  ──►  and only then exchanges the `code`
+5. The token is stored encrypted ──►  and the browser goes back to the web
 ```
 
-### El paso 4 es el que importa
+### Step 4 is the one that matters
 
-Sin comprobar que el `state` que vuelve es uno que se emitió, **una web ajena
-podría completar el flujo y dejar su cuenta de GitHub conectada a la sesión de
-otra persona**. Morgan actuaría después sobre los repositorios del atacante
-creyendo que son los tuyos, y todo lo que se le pidiera «sobre mi repo» pasaría
-por un repositorio ajeno.
+Without checking that the `state` coming back is one that was issued, **someone else's website could
+complete the flow and leave their GitHub account connected to another person's session**. Morgan
+would then act on the attacker's repositories believing they're yours, and everything asked "about my
+repo" would go through someone else's repository.
 
-El estado caduca en diez minutos —es el tiempo de autorizar en una pantalla, no
-el de una sesión— y **se borra al usarse**. Uno reutilizable deja de proteger de
-nada.
+The state expires in ten minutes —that's the time to authorize on a screen, not a session's— and
+**it's deleted when used**. A reusable one stops protecting anything.
 
-### De quién es la autorización lo dice el `state`, no la cookie
+### Whose authorization it is is said by the `state`, not the cookie
 
-La vuelta de GitHub es una **navegación del navegador**, no una petición de la
-web. Fiarse de la cookie de sesión sería preguntarle al mismo canal que se está
-intentando verificar. El `state` se emitió con una sesión válida y se guardó con
-su `user_id`; el callback lo consume y actúa como ese usuario, que puede no ser
-el de la cookie de esa petición.
+The return from GitHub is a **browser navigation**, not a request from the web. Trusting the session
+cookie would be asking the very channel you're trying to verify. The `state` was issued with a valid
+session and stored with its `user_id`; the callback consumes it and acts as that user, who may not be
+the one in that request's cookie.
 
-Por eso `/integraciones/{servicio}/callback` es **la única ruta pública** bajo
-ese prefijo. Exigir sesión ahí rompía el flujo justo al volver, después de
-autorizar — el peor momento posible para fallar.
+That's why `/integraciones/{servicio}/callback` is **the only public route** under that prefix.
+Requiring a session there broke the flow right on the way back, after authorizing — the worst
+possible moment to fail.
 
-### La URL de retorno apunta al backend
+### The return URL points to the backend
 
-A Render, no a Vercel. El secreto de la aplicación vive en el servidor y es allí
-donde se canjea el código: **el frontend nunca ve ni el secreto ni el token**.
-Poner la de la web da un `redirect_uri_mismatch` que no explica gran cosa.
+To Render, not to Vercel. The application's secret lives on the server and that's where the code is
+exchanged: **the frontend never sees either the secret or the token**. Putting the web's URL gives a
+`redirect_uri_mismatch` that doesn't explain much.
 
-## El token
+## The token
 
-### Se guarda cifrado
+### It's stored encrypted
 
-Con un token de GitHub se puede leer código privado y —según los permisos—
-escribir. En claro, una copia de seguridad extraviada deja de ser un problema de
-privacidad y pasa a ser uno de acceso.
+With a GitHub token you can read private code and —depending on the permissions— write. In plain
+text, a lost backup stops being a privacy problem and becomes an access one.
 
-Se usa **Fernet**, de `cryptography`: AES-128-CBC con HMAC-SHA256. No hay
-criptografía propia; [`secretos.py`](../src/integraciones/secretos.py) solo
-resuelve de dónde sale la clave.
+It uses **Fernet**, from `cryptography`: AES-128-CBC with HMAC-SHA256. There is no home-made
+cryptography; [`secretos.py`](../src/integraciones/secretos.py) only resolves where the key comes
+from.
 
-La clave es `MORGAN_SECRET_KEY`. **No se deriva de otra variable ni se genera al
-arrancar**, y las dos cosas son deliberadas:
+The key is `MORGAN_SECRET_KEY`. **It isn't derived from another variable or generated at startup**,
+and both things are deliberate:
 
-- Derivarla de la clave de Supabase ataría dos secretos que deben poder rotarse
-  por separado: rotar una dejaría ilegibles todos los tokens.
-- Generarla al arrancar haría que cada reinicio de Render inutilizara las
-  integraciones **sin ningún error**: simplemente dejarían de descifrarse.
+- Deriving it from the Supabase key would tie together two secrets that must be rotatable
+  separately: rotating one would make every token unreadable.
+- Generating it at startup would make each Render restart render the integrations useless
+  **without any error**: they would just stop decrypting.
 
-**Sin clave no se ofrecen las integraciones.** No se guardan tokens en claro
-«mientras tanto», que es la solución que parece pragmática y es la que acaba en
-producción: un token sin cifrar no se distingue de uno cifrado mirando la tabla,
-así que el día que alguien lo note llevará meses ahí.
+**Without a key, integrations aren't offered.** Tokens aren't stored in plain text "in the
+meantime", which is the solution that looks pragmatic and is the one that ends up in production: an
+unencrypted token can't be told apart from an encrypted one by looking at the table, so the day
+someone notices it'll have been there for months.
 
-Si la clave cambia, descifrar **lanza** en lugar de devolver una cadena vacía. Un
-token vacío se usaría como válido y daría un 401 de GitHub — un síntoma que no
-apunta a su causa.
+If the key changes, decrypting **raises** instead of returning an empty string. An empty token would
+be used as valid and would give a 401 from GitHub — a symptom that doesn't point to its cause.
 
-### Nunca sale del backend
+### It never leaves the backend
 
-Ni en la lista, ni en el detalle, ni en la auditoría. La interfaz no lo necesita:
-quien habla con GitHub es el servidor. Devolverlo lo pondría al alcance de
-cualquier script inyectado en la página, y el daño no sería de Morgan sino de los
-repositorios de esa persona.
+Not in the list, not in the detail, not in the audit. The interface doesn't need it: the server is
+the one that talks to GitHub. Returning it would put it within reach of any script injected into the
+page, and the harm wouldn't be Morgan's but that person's repositories'.
 
-`Integracion.to_dict()` —lo publicable— tiene exactamente siete campos, y hay una
-prueba que fija el conjunto para que añadir uno sea una decisión y no un
-descuido.
+`Integracion.to_dict()` —what is publishable— has exactly seven fields, and there is a test that pins
+the set so that adding one is a decision and not an oversight.
 
-## Los permisos
+## The permissions
 
-Mínimos y explícitos, que es lo que pide la especificación:
+Minimal and explicit, which is what the specification asks for:
 
-| Permiso | Para qué |
+| Permission | What for |
 |---|---|
-| `read:user` | Saber de quién es la cuenta conectada |
-| `repo` | Ver los repositorios privados |
+| `read:user` | Knowing whose account is connected |
+| `repo` | Seeing private repositories |
 
-`repo` incluye escritura, y conviene decir por qué: **GitHub no ofrece un permiso
-de solo lectura sobre repositorios privados** en las OAuth Apps clásicas. Es el
-mínimo que permite verlos. Por eso la interfaz enseña **qué habilita en lenguaje
-llano antes de conectar**, en lugar de dar el permiso por supuesto.
+`repo` includes writing, and it's worth saying why: **GitHub doesn't offer a read-only permission on
+private repositories** in classic OAuth Apps. It's the minimum that lets you see them. That's why the
+interface shows **what it enables in plain language before connecting**, instead of taking the
+permission for granted.
 
-Que el token permita escribir no significa que Morgan escriba. Las acciones
-siguen pasando por el sistema de permisos y de confirmación de siempre:
-**conectar GitHub no es una autorización en blanco**.
+The token allowing writes doesn't mean Morgan writes. The actions still go through the usual
+permission and confirmation system: **connecting GitHub isn't a blank authorization**.
 
-## Desconectar
+## Disconnecting
 
-Se le pide a GitHub que invalide el token, y **el borrado local ocurre pase lo
-que pase**. Si solo se borrara aquí, una copia filtrada del token seguiría
-funcionando y la persona creería haber revocado el acceso. Y si la llamada a
-GitHub falla, quedarse conectado sería el peor resultado: ha dicho que no quiere
-seguir conectada.
+GitHub is asked to invalidate the token, and **the local deletion happens no matter what**. If it
+were only deleted here, a leaked copy of the token would keep working and the person would believe
+they had revoked access. And if the call to GitHub fails, staying connected would be the worst
+outcome: they've said they don't want to stay connected.
 
-La respuesta dice si la revocación remota se confirmó, y la interfaz avisa cuando
-no, para que se revise en la web del servicio.
+The answer says whether the remote revocation was confirmed, and the interface warns when it wasn't,
+so it can be checked on the service's website.
 
-## Los cuatro estados
+## The four states
 
-La interfaz los distingue porque significan cosas distintas:
+The interface tells them apart because they mean different things:
 
-| Estado | Qué pasa |
+| State | What happens |
 |---|---|
-| **No configurado** | Al servidor le faltan credenciales. **No hay botón** |
-| **Sin conectar** | Se puede conectar |
-| **Conectado** | Con el nombre de la cuenta y los permisos concedidos |
-| **Con problemas** | Hay integración, pero la última operación falló |
+| **Not configured** | The server lacks credentials. **There is no button** |
+| **Not connected** | It can be connected |
+| **Connected** | With the account's name and the granted permissions |
+| **Having problems** | There is an integration, but the last operation failed |
 
-Los dos últimos son muy distintos y se confunden con facilidad. «Conectado y
-fallando» no se arregla volviendo a conectar si el problema es que GitHub está
-caído.
+The last two are very different and easily confused. "Connected and failing" isn't fixed by
+connecting again if the problem is that GitHub is down.
 
-`disponible` es del **servidor** (¿tiene credenciales?) y `conectado` es de la
-**persona** (¿ha autorizado?).
+`disponible` (available) belongs to the **server** (does it have credentials?) and `conectado`
+(connected) to the **person** (have they authorized?).
 
-## La regla que gobierna la interfaz
+## The rule that governs the interface
 
-**Si algo no puede funcionar, se dice; no se ofrece.** Sin credenciales, la
-sección explica qué falta y no pinta ningún botón. Un botón que siempre da error
-hace perder el tiempo y parece una avería de Morgan cuando es configuración que
-falta.
+**If something can't work, it's said; it isn't offered.** Without credentials, the section explains
+what's missing and paints no button. A button that always gives an error wastes time and looks like a
+Morgan breakdown when it's missing configuration.
 
-### El Morgan local no puede conectar servicios, y desde la V2.0 lo explica
+### The local Morgan can't connect services, and since V2.0 it explains it
 
-Una integración cuelga de una cuenta: es *alguien* autorizando a Morgan a usar
-su cuenta de otro sitio. En el Morgan local, con `MORGAN_REQUIRE_AUTH=false`, no
-hay cuentas y por tanto no hay a quién atribuir la autorización. Conectar y
-desconectar responden 401, y eso no cambia: en un Morgan compartido sin cuentas,
-la conectaría una persona y la usarían todas.
+An integration hangs from an account: it's *someone* authorizing Morgan to use their account
+somewhere else. In the local Morgan, with `MORGAN_REQUIRE_AUTH=false`, there are no accounts and so
+nobody to attribute the authorization to. Connecting and disconnecting answer 401, and that doesn't
+change: in a shared Morgan without accounts, one person would connect it and everyone would use it.
 
-Lo que sí cambió es que **preguntar qué servicios hay ya no exige cuenta**.
-Antes `GET /integraciones` también respondía 401, y el resultado era que el
-panel entero se pintaba como un error en rojo —el caso que esta misma regla
-dice que no debe pasar—. Ahora responde con GitHub apagado y su motivo:
+What did change is that **asking which services exist no longer requires an account**. Before,
+`GET /integraciones` also answered 401, and the result was that the whole panel was painted as a red
+error —the case this very rule says mustn't happen—. Now it answers with GitHub switched off and its
+reason:
 
-> Para conectar GitHub hace falta una cuenta de Morgan. Este Morgan no pide
-> cuentas, así que no habría a quién atribuir la autorización: una la
-> conectaría una persona y la usarían todas.
+> To connect GitHub you need a Morgan account. This Morgan doesn't require accounts, so there would
+> be nobody to attribute the authorization to: one person would connect it and everyone would use
+> it.
 
-Y el motivo de la cuenta manda sobre el de las variables que le falten al
-servidor. Con las credenciales puestas y sin cuentas, decir «faltan
-`GITHUB_CLIENT_ID` y `GITHUB_CLIENT_SECRET`» mandaría a quien administra a
-arreglar lo que no toca.
+And the account reason wins over the variables the server is missing. With the credentials set and
+without accounts, saying "`GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are missing" would send
+whoever administers it to fix the wrong thing.
 
-**Cómo apareció.** No leyendo el código: quitando cosas para ver qué se rompía.
-`_exigir_cuenta()` en `desconectar` parecía redundante —sin él no fallaba
-ninguna prueba, porque con cuentas exigidas el middleware ya devuelve 401 antes
-de llegar— y buscando dónde *sí* importa apareció el Morgan local, donde esa
-línea es la única defensa. Mirando ahí se vio que `listar` lo exigía también.
-Está contado en
-auditorias.md.
+**How it showed up.** Not by reading the code: by removing things to see what broke.
+`_exigir_cuenta()` in `desconectar` looked redundant —without it no test failed, because with
+accounts required the middleware already returns 401 before getting there— and looking for where it
+*does* matter, the local Morgan showed up, where that line is the only defense. Looking there, it was
+seen that `listar` required it too. The story is in auditorias.md (in Spanish).
 
-## Configuración
+## Configuration
 
-Hecha y en uso: hay una cuenta de GitHub conectada. Se deja escrito para el día que
-haya que rehacer el despliegue.
+Done and in use: there is a GitHub account connected. It's written down for the day the deployment
+has to be redone.
 
-Una aplicación OAuth en GitHub (*Settings → Developer settings → OAuth Apps → New*,
-unos diez minutos). En Render, tres variables:
+An OAuth application on GitHub (*Settings → Developer settings → OAuth Apps → New*, about ten
+minutes). On Render, three variables:
 
 ```
 GITHUB_CLIENT_ID=...
 GITHUB_CLIENT_SECRET=...
-MORGAN_SECRET_KEY=...        # cualquier cadena larga y aleatoria
+MORGAN_SECRET_KEY=...        # any long, random string
 ```
 
-Y la URL de retorno registrada en GitHub:
+And the return URL registered on GitHub:
 
 ```
 https://morgan-ia-2-0.onrender.com/integraciones/github/callback
 ```
 
-Tiene que coincidir **exactamente**, esquema incluido y sin barra final. Si el
-servicio de Render cambia de URL —pasó el 2026-09-12, al recrearlo en Virginia—,
-esta URL se cambia en el panel de GitHub o conectar de nuevo falla con un
-`redirect_uri_mismatch` que no explica nada. Lo ya conectado sigue funcionando,
-porque usa el token guardado y no el retorno.
+It has to match **exactly**, scheme included and without a trailing slash. If the Render service
+changes URL —it happened on 2026-09-12, when it was recreated in Virginia—, this URL is changed in
+GitHub's dashboard or connecting again fails with a `redirect_uri_mismatch` that explains nothing.
+What's already connected keeps working, because it uses the stored token and not the return.
 
-Morgan compone su lado de esa URL con `MORGAN_API_URL` y, si no existe, con
-`RENDER_EXTERNAL_URL`, que Render define solo. **Mejor no definir la primera**:
-copiada de un servicio viejo, apunta a un dominio que ya no existe.
+Morgan builds its side of that URL with `MORGAN_API_URL` and, if it doesn't exist, with
+`RENDER_EXTERNAL_URL`, which Render sets on its own. **Better not to set the first one**: copied from
+an old service, it points to a domain that no longer exists.
 
-Mientras falte alguna, la sección funciona igual: enseña GitHub apagado y dice
-exactamente qué falta, con **todas** las variables que falten y no la primera.
-Es lo mismo que hace hoy en el Morgan local, donde lo que falta no es una
-variable sino una cuenta.
+While any is missing, the section works the same: it shows GitHub switched off and says exactly
+what's missing, with **all** the missing variables and not just the first. It's the same thing it
+does today in the local Morgan, where what's missing isn't a variable but an account.
 
-## Las herramientas
+## The tools
 
-Cuatro, y **todas de solo lectura**:
+Four, and **all read-only**:
 
-| Herramienta | Qué hace |
+| Tool | What it does |
 |---|---|
-| `github_listar_repos` | Los repositorios, del más reciente al más antiguo |
-| `github_listar_issues` | Las issues, **sin** los pull requests que GitHub mezcla |
-| `github_listar_prs` | Los pull requests, con su rama de origen y destino |
-| `github_leer_archivo` | Un archivo o el índice de un directorio |
+| `github_listar_repos` | The repositories, from the most recent to the oldest |
+| `github_listar_issues` | The issues, **without** the pull requests GitHub mixes in |
+| `github_listar_prs` | The pull requests, with their source and target branch |
+| `github_leer_archivo` | A file or a directory's index |
 
-### Solo leen, y es una decisión
+### They only read, and it's a decision
 
-El token permite escribir. Estas no escriben. La especificación lo pedía con
-estas palabras: «no implementar automáticamente todas las capacidades de GitHub
-solo porque OAuth esté conectado».
+The token allows writing. These don't write. The specification asked for it in these words: "don't
+automatically implement every GitHub capability just because OAuth is connected".
 
-Añadir «crear issue» o «hacer commit» es fácil desde aquí, y por eso conviene
-decir qué haría falta antes: **pasar por el sistema de planes**, para que la
-persona vea qué se va a escribir y dónde antes de que ocurra. Escribir en el
-repositorio de alguien sin ese paso es justo lo que el sistema de permisos de
-Morgan existe para impedir.
+Adding "create an issue" or "make a commit" is easy from here, and that's why it's worth saying what
+would be needed first: **going through the plan system**, so the person sees what's going to be
+written and where before it happens. Writing to someone's repository without that step is exactly
+what Morgan's permission system exists to prevent.
 
-### El usuario sale del contexto, nunca del argumento
+### The user comes from the context, never from the argument
 
-Ninguna recibe un identificador de usuario. El token se busca en el repositorio
-de integraciones, que filtra por el usuario de la petición. Si fuera un
-parámetro, el modelo podría inventárselo — y un modelo que puede nombrar a otro
-usuario en una llamada a herramienta es un modelo que puede leer sus repos.
+None receives a user identifier. The token is looked up in the integrations repository, which
+filters by the request's user. If it were a parameter, the model could make it up — and a model that
+can name another user in a tool call is a model that can read their repos.
 
-### Se registran siempre, conectado o no
+### They're always registered, connected or not
 
-Al revés que las de conocimiento. Si solo aparecieran con GitHub ya conectado,
-el modelo no sabría que existen y **nunca sugeriría conectarlo**. Sin conexión
-responden diciendo dónde se conecta, que es más útil que no estar.
+Unlike the knowledge ones. If they only appeared with GitHub already connected, the model wouldn't
+know they exist and **would never suggest connecting it**. Without a connection they answer saying
+where to connect it, which is more useful than not being there.
 
-### Lo que el modelo escribe no puede cambiar a qué se llama
+### What the model writes can't change what gets called
 
-Esto empezó siendo una precaución y resultó ser un agujero abierto.
+This started as a precaution and turned out to be an open hole.
 
-`github_leer_archivo` metía la ruta del archivo en la URL de la API tal cual.
-`httpx` normaliza los `..` al construir la URL, así que:
+`github_leer_archivo` put the file's path into the API URL as is. `httpx` normalizes the `..` when
+building the URL, so:
 
 ```
 /repos/duenyo/nombre/contents/../../../../user/emails   →   /user/emails
 ```
 
-Las direcciones privadas de la persona, desde una herramienta que dice leer un
-archivo de un repositorio. Por el mismo camino se alcanzaban
-`/notifications`, `/user/keys` y `/gists`.
+The person's private addresses, from a tool that says it reads a file from a repository. Along the
+same path `/notifications`, `/user/keys` and `/gists` could be reached.
 
-**Y comprobar el repositorio no lo tapaba.** `_repo_valido` miraba la
-*forma*: `'../..'` tiene dos trozos y ninguna barra de más, así que pasaba, y
-`/repos/../../issues` se normaliza a `/issues`.
+**And checking the repository didn't cover it.** `_repo_valido` looked at the *shape*: `'../..'` has
+two pieces and no extra slash, so it passed, and `/repos/../../issues` is normalized to `/issues`.
 
-Importa aquí más que en otro sitio por lo que dice el apartado siguiente: el
-valor lo compone el modelo a partir de lo que le dicen, y lo que le dicen puede
-venir de un archivo que **acaba de leer**. Un README con la ruta adecuada
-bastaba.
+It matters here more than anywhere else because of what the next section says: the value is composed
+by the model from what it's told, and what it's told can come from a file it **has just read**. A
+README with the right path was enough.
 
-Tres cosas lo cierran, y las tres hacen falta:
+Three things close it, and all three are needed:
 
-1. **Se rechazan los trozos `.` y `..` por su nombre.** Codificar no
-   servía: `quote()` no toca los puntos, así que `..` sobrevive intacto.
-2. **Se codifica lo demás**, para que un `?` o un `#` no puedan partir la
-   URL en otra cosa.
-3. **`_pedir` comprueba que la URL que sale es la que se pidió**, letra por
-   letra. Es la red de seguridad: no depende de que una función nueva se acuerde
-   de validar, que es exactamente como apareció el fallo.
+1. **The `.` and `..` pieces are rejected by name.** Encoding didn't help: `quote()` doesn't touch
+   dots, so `..` survives intact.
+2. **Everything else is encoded**, so a `?` or a `#` can't split the URL into something else.
+3. **`_pedir` checks that the outgoing URL is the one that was asked for**, letter by letter. It's
+   the safety net: it doesn't depend on a new function remembering to validate, which is exactly how
+   the bug appeared.
 
-Lo fija [`test_github_rutas.py`](../tests/test_github_rutas.py), 17 casos.
+[`test_github_rutas.py`](../tests/test_github_rutas.py) pins it, 17 cases.
 
-### Lo que viene de un repositorio es dato, no instrucción
+### What comes from a repository is data, not instruction
 
-El contenido de un archivo llega marcado como `untrusted_file_data`, igual
-que una página web o un audio. Lo escribió alguien, y un comentario del código
-que diga «ignora lo anterior» no puede tratarse como una orden.
+A file's content arrives marked as `untrusted_file_data`, just like a web page or an audio. Someone
+wrote it, and a code comment that says "ignore the above" can't be treated as an order.
 
-## Pruebas
+## Tests
 
-[`test_integraciones.py`](../tests/test_integraciones.py), 37 casos, más
-[`test_github_rutas.py`](../tests/test_github_rutas.py), 17. Lo que fijan,
-por orden de lo que costaría equivocarse:
+[`test_integraciones.py`](../tests/test_integraciones.py), 37 cases, plus
+[`test_github_rutas.py`](../tests/test_github_rutas.py), 17. What they pin, in order of what a
+mistake would cost:
 
-0. Que lo que escribe el modelo no pueda cambiar a qué endpoint se llama. Estaba
-   mal y se alcanzaban las direcciones privadas de la persona.
-
-
-1. El `state` decide de quién es la autorización, no la cookie — incluida la
-   comprobación de que un estado emitido por Ana devuelve `usr-ana` aunque lo
-   consulte Bea.
-2. El token no aparece en ninguna respuesta.
-3. Se guarda cifrado, en las dos implementaciones.
-4. Aislamiento entre usuarios, en SQLite **y en Supabase**. La de Supabase se
-   escribió y se probó a la vez, que es justo lo que no se hizo con las
-   conversaciones — y costó [ocho defectos](web.md).
-5. Sin credenciales del servidor no hay botón de conectar.
+0. That what the model writes can't change which endpoint is called. It was wrong and the person's
+   private addresses could be reached.
+1. The `state` decides whose authorization it is, not the cookie — including the check that a state
+   issued by Ana returns `usr-ana` even when Bea looks it up.
+2. The token doesn't appear in any response.
+3. It's stored encrypted, in both implementations.
+4. Isolation between users, in SQLite **and in Supabase**. The Supabase one was written and tested
+   at the same time, which is exactly what wasn't done with conversations — and it cost
+   [eight defects](web.md).
+5. Without the server's credentials there is no connect button.

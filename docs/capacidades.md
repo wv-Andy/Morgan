@@ -1,138 +1,140 @@
-# Qué puede hacer Morgan: capacidades y herramientas
+# What Morgan can do: capabilities and tools
 
-> Junta lo que antes eran tres documentos: las capacidades en lenguaje llano, el
-> catálogo de herramientas y la entrada multimodal. Última revisión: 2026-09-25,
-> V3.5.0. **49 herramientas en `local` y 43 en `cloud`** (14 de ellas, en el PC de la
-> persona a través de su agente), en 8 dominios, contadas del registro real
-> (`tests/test_readme_al_dia.py` lo comprueba contra el README).
+**English** · [Español](capacidades.es.md)
 
-## 1. En una frase
+> Brings together what used to be three documents: the capabilities in plain language, the
+> tool catalog and the multimodal input. Last review: 2026-09-25, V3.5.0. **49 tools in
+> `local` and 43 in `cloud`** (14 of them on the person's PC through their agent), in 8
+> domains, counted from the real registry (`tests/test_readme_al_dia.py` checks it against
+> the README).
 
-Un agente que conversa, decide qué herramientas usar y las encadena hasta resolver lo
-que le pides. En tu equipo actúa sobre tus archivos, tu terminal y tus repositorios; en
-la web ([morgan-ia.vercel.app](https://morgan-ia.vercel.app)), con cuenta, hace todo lo
-que no toca una máquina, y desde la 3.0, con el agente local en tu PC,
-**lee** las carpetas que permitas allí; desde la 3.1 también puede **traerte una copia de
-un archivo para descargarla** en el móvil; desde la 3.3, si lo enciendes, **crear,
-editar, mover y borrar** en las carpetas que elijas, con un plan que apruebas tú; y desde
-la 3.5, **ejecutar programas de un catálogo cerrado** (git, ping, ipconfig…) y ver o
-terminar tus procesos.
+## 1. In one sentence
 
-| Vía | Cómo | Para qué |
+An agent that talks, decides which tools to use and chains them until it solves what you ask.
+On your computer it acts on your files, your terminal and your repositories; on the web
+([morgan-ia.vercel.app](https://morgan-ia.vercel.app)), with an account, it does everything
+that doesn't touch a machine, and since 3.0, with the local agent (in
+Spanish) on your PC, it **reads** the folders you allow there; since 3.1 it can also **bring you
+a copy of a file to download** on your phone; since 3.3, if you switch it on, **create, edit,
+move and delete** in the folders you choose, with a plan you approve; and since 3.5, **run
+programs from a closed catalog** (git, ping, ipconfig…) and see or end your processes.
+
+| Way in | How | What for |
 |---|---|---|
-| **Web en la nube** | `https://morgan-ia.vercel.app` | Con cuenta, siempre disponible, 43 herramientas (14 de ellas actúan en tu PC con el agente conectado: cuatro de lectura, la copia de un archivo para descargarlo, cinco de escritura y cuatro de terminal y procesos, estas nueve apagadas hasta que las enciendes) |
-| **Morgan para Windows** (5.0) | El instalador: «Descargar Morgan para Windows» en el menú lateral de la web (desde Windows) o en Ajustes → Tu equipo | Lleva el agente dentro: lo empareja desde una ventana, sin consola, y lo deja arrancando con Windows. Lo recomendado para conectar un PC. Desde la 5.1 vive en la bandeja (estado, pausar, lo último que hizo) y desde la 5.2 trae **la conversación en su propia ventana** (Ctrl+Alt+M) y los avisos como notificación si enciendes «Mandarte avisos a este PC» |
-| **CLI** | `.\venv\Scripts\python -m src.main` | El día a día en tu equipo, con las 49 |
-| **Web local** | `.\venv\Scripts\python -m src.api.server` → `http://127.0.0.1:8000` | La interfaz sobre tu equipo |
-| **API REST** | La misma que usa la web | [api.md](api.md) |
+| **Web in the cloud** | `https://morgan-ia.vercel.app` | With an account, always available, 43 tools (14 of them act on your PC with the agent connected: four for reading, the copy of a file to download, five for writing and four for terminal and processes, these nine off until you switch them on) |
+| **Morgan for Windows** (5.0) | The installer: «Descargar Morgan para Windows» (Download Morgan for Windows) in the web's side menu (from Windows) or in Settings → Your computer | Carries the agent inside: pairs it from a window, without a console, and leaves it starting with Windows. The recommended way to connect a PC. Since 5.1 it lives in the tray (status, pause, what it did last) and since 5.2 it brings **the conversation in its own window** (Ctrl+Alt+M) and notices as notifications if you switch on «Send you notices on this PC» |
+| **CLI** | `.\venv\Scripts\python -m src.main` | Day to day on your computer, with all 49 |
+| **Local web** | `.\venv\Scripts\python -m src.api.server` → `http://127.0.0.1:8000` | The interface over your computer |
+| **REST API** | The same one the web uses | [api.md](api.md) |
 
-## 2. Lo que puedes pedirle
+## 2. What you can ask it
 
-| Qué | Ejemplos | Dónde |
+| What | Examples | Where |
 |---|---|---|
-| **Archivos** | «¿Qué hay en Descargas?», «Crea un `notas.md` con el resumen» | Local. Desde la web, con el agente local: leer en las carpetas que permitas y, si lo enciendes, escribir en las que elijas para ello |
-| **Tu PC** | «¿Qué se está comiendo la CPU?», «Ejecuta `npm run build`» | Local. Desde la web, con el agente: un catálogo cerrado (`git status`, `git pull`, `ipconfig`, `ping`…) y ver o terminar tus procesos |
-| **Programar** | «Inspecciona este proyecto», «Cambia el timeout y corre los tests» | Local |
-| **Git** | «¿Qué tengo sin commitear?», «Haz un commit con este diff». **No hace push**, a propósito | Local |
-| **GitHub** | Repositorios, issues, pull requests y archivos, **solo lectura** | Los dos |
-| **Internet** | «Busca cómo se configura…», «Léete esta URL» | Los dos |
-| **Recordar** | «Recuerda que prefiero respuestas cortas», «¿Qué sabes de mí?» | Los dos |
-| **Documentos** | Guardarlos y consultarlos cuando vienen a cuento | Los dos |
-| **Archivos, imágenes y voz** | «Mira esta captura», «Resúmeme este PDF», grabar un audio | Los dos |
-| **Trabajos largos** | Tareas con progreso, planes que apruebas antes de que se ejecuten | Los dos |
-| **Proyectos** | Espacios de trabajo con conversaciones, archivos e instrucciones propias | Los dos |
+| **Files** | "What's in Downloads?", "Create a `notas.md` with the summary" | Local. From the web, with the local agent: read in the folders you allow and, if you switch it on, write in the ones you choose for that |
+| **Your PC** | "What's eating the CPU?", "Run `npm run build`" | Local. From the web, with the agent: a closed catalog (`git status`, `git pull`, `ipconfig`, `ping`…) and seeing or ending your processes |
+| **Programming** | "Inspect this project", "Change the timeout and run the tests" | Local |
+| **Git** | "What haven't I committed?", "Make a commit with this diff". **It doesn't push**, on purpose | Local |
+| **GitHub** | Repositories, issues, pull requests and files, **read-only** | Both |
+| **Internet** | "Search how to configure…", "Read this URL" | Both |
+| **Remembering** | "Remember I prefer short answers", "What do you know about me?" | Both |
+| **Documents** | Storing them and looking them up when they're relevant | Both |
+| **Files, images and voice** | "Look at this screenshot", "Summarize this PDF", recording audio | Both |
+| **Long jobs** | Tasks with progress, plans you approve before they run | Both |
+| **Projects** | Workspaces with their own conversations, files and instructions | Both |
 
-**Comprueba lo que hace y admite cuando no puede**: tras crear, borrar o cambiar algo,
-mira si de verdad pasó, y dice «no pude» en lugar de «listo» ([agente.md](agente.md)).
+**It checks what it does and admits when it can't**: after creating, deleting or changing
+something, it looks at whether it really happened, and says "I couldn't" instead of "done"
+([agente.md](agente.md)).
 
-## 3. Lo que NO hace
+## 3. What it does NOT do
 
-- **No hace push ni despliega nada.** No existe la herramienta.
-- **Desde la web, en tu PC no hace nada que no permitas allí.** Lee las carpetas que
-  permitas (ninguna al principio). Escribir viene **apagado**: se enciende en el PC, en
-  carpetas aparte, cada cambio necesita **un plan que apruebas** y borrar se confirma
-  además **en el PC** (a la Papelera). **No crea programas ni scripts.** Ejecutar, solo
-  programas de un **catálogo cerrado y sin shell** que enciendes uno a uno (3.5): nada de
-  PowerShell ni de scripts. El resto de herramientas locales ni se registran en la nube.
-- **No trabaja sin internet** salvo lo que no necesite modelo. Un modelo local está
-  **descartado**.
-- **No habla** (texto a voz). **No tiene tareas programadas.** **No aprende solo.**
-- **No se conecta a Google**: Calendar está aparcado (descartado el 2026-09-19).
+- **It doesn't push or deploy anything.** The tool doesn't exist.
+- **From the web, on your PC it does nothing you don't allow there.** It reads the folders you
+  allow (none at first). Writing comes **switched off**: it's switched on on the PC, in
+  separate folders, every change needs **a plan you approve** and deleting is also confirmed
+  **on the PC** (to the Recycle Bin). **It doesn't create programs or scripts.** Running, only
+  programs from a **closed catalog without a shell** that you switch on one by one (3.5): no
+  PowerShell and no scripts. The rest of the local tools aren't even registered in the cloud.
+- **It doesn't work without internet** except for what doesn't need a model. A local model is
+  **ruled out**.
+- **It doesn't speak** (text to speech). **It doesn't learn on its own.**
+- **It doesn't connect to Google**: Calendar is parked (ruled out on 2026-09-19).
 
-## 4. El catálogo
+## 4. The catalog
 
-🟢 `safe` · 🟡 `moderate` (pide confirmación) · 🔴 `critical` (siempre pide
-confirmación). **L** = solo local · **L+N** = local y nube.
+🟢 `safe` · 🟡 `moderate` (asks for confirmation) · 🔴 `critical` (always asks for
+confirmation). **L** = local only · **L+C** = local and cloud.
 
-### Equipo (solo local)
+### Computer (local only)
 
-| Herramienta | Nivel | Qué hace |
+| Tool | Level | What it does |
 |---|---|---|
-| `system_info` | 🟢 | CPU, RAM, disco y sistema en tiempo real |
-| `list_files`, `read_file`, `search_files` | 🟢 | Listar, leer (paginado) y buscar por nombre o patrón |
-| `create_file`, `copy_file`, `move_file`, `rename_file` | 🟡 | Crear (con carpetas intermedias), copiar, mover, renombrar |
-| `delete_file` | 🔴 | Borrado permanente con rutas del sistema protegidas |
-| `execute_command` | 🔴 | PowerShell con plazo y salida capturada |
-| `get_processes`, `get_environment` | 🟢 | Procesos por CPU o RAM; variables **con secretos enmascarados** |
-| `kill_process` | 🔴 | Terminar procesos, con los críticos protegidos |
-| `inspect_project`, `search_code` | 🟢 | Stack y dependencias; definiciones y patrones |
-| `patch_file`, `run_tests` | 🟡 | Sustitución exacta; ejecutar la suite y leer la traza |
-| `git_status`, `git_diff` | 🟢 | Estado y diferencias (la ruta va tras `--`) |
-| `git_commit` | 🟡 | Crear un commit |
+| `system_info` | 🟢 | CPU, RAM, disk and system in real time |
+| `list_files`, `read_file`, `search_files` | 🟢 | List, read (paged) and search by name or pattern |
+| `create_file`, `copy_file`, `move_file`, `rename_file` | 🟡 | Create (with intermediate folders), copy, move, rename |
+| `delete_file` | 🔴 | Permanent deletion with system paths protected |
+| `execute_command` | 🔴 | PowerShell with a timeout and captured output |
+| `get_processes`, `get_environment` | 🟢 | Processes by CPU or RAM; variables **with secrets masked** |
+| `kill_process` | 🔴 | End processes, with the critical ones protected |
+| `inspect_project`, `search_code` | 🟢 | Stack and dependencies; definitions and patterns |
+| `patch_file`, `run_tests` | 🟡 | Exact replacement; run the suite and read the traceback |
+| `git_status`, `git_diff` | 🟢 | Status and differences (the path goes after `--`) |
+| `git_commit` | 🟡 | Create a commit |
 
-### GitHub (L+N, solo lectura)
+### GitHub (L+C, read-only)
 
-`github_listar_repos`, `github_listar_issues` (sin los PR que GitHub mezcla),
+`github_listar_repos`, `github_listar_issues` (without the PRs GitHub mixes in),
 `github_listar_prs`, `github_leer_archivo` → [integraciones.md](integraciones.md).
 
-### Memoria, conocimiento y web (L+N)
+### Memory, knowledge and web (L+C)
 
-| Herramienta | Nivel | Qué hace |
+| Tool | Level | What it does |
 |---|---|---|
-| `remember_fact`, `recall_memory` | 🟢 | Guardar (por clave) y consultar hechos sobre ti |
-| `forget_fact` | 🟡 | Olvidar uno |
-| `search_knowledge`, `add_knowledge`, `list_knowledge_sources`, `index_document` | 🟢 | Documentos consultables → [datos.md](datos.md#4-conocimiento-v18) |
-| `remove_knowledge` | 🟡 | Borrar un documento |
-| `search_web`, `read_webpage` | 🟢 | Buscar con **Google** (vía Serper, `SERPER_API_KEY`, 4.8), Tavily, Brave y DuckDuckGo, en ese orden y cada uno solo con su clave; se puede pedir uno (`motor`) y cada resultado dice cuál contestó. **Varias búsquedas en una llamada** (`consultas`, hasta 4, a la vez; 4.21): una pregunta de varias partes ya no es una vuelta al modelo por cada parte. Un buscador que no responde descansa 10 min y, sin ninguno, se dice a la primera (4.5). Y leer páginas, aisladas en `<untrusted_web_data>`, sin alcanzar la red interna |
-| `list_uploads`, `read_upload`, `analyze_image`, `transcribe_audio` | 🟢 | Archivos subidos por la web (abajo) |
-| `copy_file` | 🟢 | **Solo con tu PC conectado** (3.1-E): trae una copia de un archivo tuyo y te da un enlace para descargarla en el móvil. Cualquier formato, hasta 20 MB; la copia se borra sola a las 24 h |
-| `delete_file` | 🔴 | Igual, y además **se confirma en el PC** con una notificación. Va a la Papelera; solo carpetas vacías |
-| `open_app` | 🟢 | **Solo con tu PC conectado y encendida allí** (4.8): abrir una aplicación instalada (nunca consolas ni herramientas del sistema), un archivo con su programa, una página en el navegador o una carpeta. Sin plan |
-| `close_app` | 🔴 | Cerrar un programa tuyo como su X, con plan y «Permitir» en el PC |
-| `pc_context` | 🟢 | **Solo con tu PC conectado** (4.13; encendida al nacer): tus proyectos de código dentro de las carpetas permitidas (tipo, rama de git) y los editores instalados. Para «abre el proyecto X» sin dar la ruta |
-| `ui_read` | 🟢 | **Solo con tu PC conectado y encendida allí** (4.12): los botones, campos y enlaces de una ventana, por su nombre |
-| `ui_control` | 🔴 | Igual: hacer clic, escribir o pulsar teclas en una ventana, con plan y «Permitir» al empezarlo. Nunca contraseñas, consolas, el Explorador ni la tecla Windows |
-| `windows` | 🟢 | **Solo con tu PC conectado y encendida allí** (4.11): ver tus ventanas, enfocar, minimizar, maximizar, mover o poner dos lado a lado. Sin plan |
-| `screenshot` | 🟢 | Igual (4.11), con **«Permitir» en el PC cada vez**: una captura de la pantalla, una ventana o una zona; queda 24 h en tus archivos y Morgan la mira con `analyze_image` |
-| `clipboard`, `notify` | 🟢 | **Solo con tu PC conectado y encendidas allí** (4.10): escribir en el portapapeles o leerlo (con «Permitir» en el PC cada vez, porque puede ser una contraseña); y una notificación en el PC. Sin plan |
-| `pc_diagnostics` | 🟢 | **Solo con tu PC conectado y encendida allí** (4.7): el rendimiento («¿por qué va lento?»), la red y la IP, qué programa escucha en qué puerto y los servicios de Windows. `system_info` da, además, discos y espacio, GPU y batería |
-| `copy_path`, `compress` | 🟡 | Igual que las de arriba (4.6): copiar un archivo o carpeta a un sitio nuevo del PC; comprimir en `.zip` o descomprimir. Nunca credenciales. Programas y scripts: comprimir **sí** los mete (4.16, decisión mía: si no, la copia de un proyecto salía sin el código); copiar y descomprimir, nunca. Un `.zip` peligroso no se saca |
-| `file_info` | 🟢 | **Solo con tu PC conectado** (4.6): tipo, tamaño, fechas y atributos de un archivo; de una carpeta, cuánto ocupa. `search_files`, además, por extensión, fecha, tamaño y texto de dentro |
-| `service_control` | 🔴 | **Solo con tu PC conectado y encendida allí** (4.9): iniciar, parar o reiniciar un servicio de Windows, con plan y «Permitir»; nunca los que sostienen Windows. Muchos piden administrador, y entonces no se puede |
-| `run_change_command`, `kill_process` | 🔴 | Lo que cambia (`git pull`, `git commit`) y terminar un proceso **tuyo**: plan y «Permitir» en el PC |
+| `remember_fact`, `recall_memory` | 🟢 | Store (by key) and look up facts about you |
+| `forget_fact` | 🟡 | Forget one |
+| `search_knowledge`, `add_knowledge`, `list_knowledge_sources`, `index_document` | 🟢 | Searchable documents → [datos.md](datos.md#4-knowledge-v18) |
+| `remove_knowledge` | 🟡 | Delete a document |
+| `search_web`, `read_webpage` | 🟢 | Search with **Google** (through Serper, `SERPER_API_KEY`, 4.8), Tavily, Brave and DuckDuckGo, in that order and each one only with its key; you can ask for one (`motor`) and each result says which one answered. **Several searches in one call** (`consultas`, up to 4, in parallel; 4.21): a question with several parts is no longer one round trip to the model per part. A search engine that doesn't answer rests for 10 min and, with none available, it's said straight away (4.5). And reading pages, isolated in `<untrusted_web_data>`, without reaching the internal network |
+| `list_uploads`, `read_upload`, `analyze_image`, `transcribe_audio` | 🟢 | Files uploaded through the web (below) |
+| `copy_file` | 🟢 | **Only with your PC connected** (3.1-E): brings a copy of one of your files and gives you a link to download it on your phone. Any format, up to 20 MB; the copy deletes itself after 24 h |
+| `delete_file` | 🔴 | The same, and it's also **confirmed on the PC** with a notification. Goes to the Recycle Bin; only empty folders |
+| `open_app` | 🟢 | **Only with your PC connected and switched on there** (4.8): open an installed app (never consoles or system tools), a file with its program, a page in the browser or a folder. No plan |
+| `close_app` | 🔴 | Close one of your programs like its X button, with a plan and «Allow» on the PC |
+| `pc_context` | 🟢 | **Only with your PC connected** (4.13; on by default): your code projects inside the allowed folders (type, git branch) and the installed editors. For "open project X" without giving the path |
+| `ui_read` | 🟢 | **Only with your PC connected and switched on there** (4.12): the buttons, fields and links of a window, by name |
+| `ui_control` | 🔴 | The same: click, type or press keys in a window, with a plan and «Allow» when it starts. Never passwords, consoles, File Explorer or the Windows key |
+| `windows` | 🟢 | **Only with your PC connected and switched on there** (4.11): see your windows, focus, minimize, maximize, move or put two side by side. No plan |
+| `screenshot` | 🟢 | The same (4.11), with **«Allow» on the PC every time**: a screenshot of the screen, a window or an area; it stays 24 h in your files and Morgan looks at it with `analyze_image` |
+| `clipboard`, `notify` | 🟢 | **Only with your PC connected and switched on there** (4.10): write to the clipboard or read it (with «Allow» on the PC every time, because it may be a password); and a notification on the PC. No plan. Since 5.2, the notices of your automations also arrive this way, if `notify` is on |
+| `pc_diagnostics` | 🟢 | **Only with your PC connected and switched on there** (4.7): performance ("why is it slow?"), the network and IP, which program listens on which port and the Windows services. `system_info` also gives disks and space, GPU and battery |
+| `copy_path`, `compress` | 🟡 | Like the ones above (4.6): copy a file or folder to a new place on the PC; compress into a `.zip` or extract. Never credentials. Programs and scripts: compressing **does** include them (4.16, my decision: otherwise the copy of a project came out without its code); copying and extracting, never. A dangerous `.zip` isn't extracted |
+| `file_info` | 🟢 | **Only with your PC connected** (4.6): type, size, dates and attributes of a file; for a folder, how much it takes up. `search_files` also by extension, date, size and text inside |
+| `service_control` | 🔴 | **Only with your PC connected and switched on there** (4.9): start, stop or restart a Windows service, with a plan and «Allow»; never the ones that hold Windows up. Many require administrator rights, and then it can't |
+| `run_change_command`, `kill_process` | 🔴 | What changes things (`git pull`, `git commit`) and ending **your** process: a plan and «Allow» on the PC |
 
-### Tareas, planes y verificación (L+N)
+### Tasks, plans and verification (L+C)
 
 `create_task`, `get_task`, `list_tasks`, `complete_task`, `fail_task`, `cancel_task`,
-`retry_task`, `create_plan`, `get_plan`, `list_plans`. Todas 🟢: planificar no ejecuta
-nada → [agente.md](agente.md). `verify_step` se retiró en la 4.1.5: la verificación ya es
-automática tras cada cambio, y ella daba por fallido lo hecho en el PC.
+`retry_task`, `create_plan`, `get_plan`, `list_plans`. All 🟢: planning doesn't run anything →
+[agente.md](agente.md). `verify_step` was retired in 4.1.5: verification is already automatic
+after every change, and it reported as failed what had been done on the PC.
 
-### Automatizaciones (4.14)
+### Automations (4.14)
 
-| Herramienta | Riesgo | Qué hace |
+| Tool | Risk | What it does |
 |---|---|---|
-| `create_automation` | 🔴 | Programa una orden para que Morgan la haga sola (diaria, ciertos días o cada N horas, como poco cada hora) y deje el resultado en la bandeja. **Siempre con un plan que apruebas**, también con el permiso automático. Dos tipos: una **consulta** (4.14), o **pasos fijos** que cambian algo (4.15): herramienta y argumentos exactos, solo verdes y amarillos, iguales cada vez salvo `{fecha}` y `{hora}`. Como mucho 10 activas |
-| `list_automations` | 🟢 | Las que tienes, cuándo tocan y cómo fue la última |
+| `create_automation` | 🔴 | Schedules an order for Morgan to do on its own (daily, on certain days or every N hours, at most every hour) and leave the result in the tray. **Always with a plan you approve**, also with the automatic permission. Two kinds: a **query** (4.14), or **fixed steps** that change something (4.15): exact tool and arguments, only green and yellow, the same every time except for `{fecha}` (date) and `{hora}` (time). At most 10 active |
+| `list_automations` | 🟢 | The ones you have, when they run and how the last one went |
 
-Pausar, reanudar y borrar van en la vista **Automatizaciones** de la web. Lo que puede
-usar una automatización mientras se ejecuta: buscar y leer en internet, tu conocimiento,
-tu memoria y, del PC, solo leer (archivos, buscar, sistema, proyectos, diagnóstico y los
-comandos de consulta) → [seguridad.md](seguridad.md#5-bis-las-automatizaciones-nadie-delante-414).
+Pausing, resuming and deleting are in the web's **Automations** view. What an automation can
+use while it runs: searching and reading the internet, your knowledge, your memory and, from
+the PC, reading only (files, searching, system, projects, diagnostics and the query commands)
+→ [seguridad.md](seguridad.md#5-bis-automations-nobody-in-front-414).
 
-### Recuento
+### Count
 
-| Dominio | Local | Nube |
+| Domain | Local | Cloud |
 |---|---|---|
 | filesystem | 8 | 0 |
 | terminal | 4 | 0 |
@@ -144,63 +146,62 @@ comandos de consulta) → [seguridad.md](seguridad.md#5-bis-las-automatizaciones
 | general | 10 | 10 |
 | **Total** | **48** | **28** |
 
-Del prompt de cada turno se recortan las herramientas que no pueden usarse en ese
-momento: las de una tarea abierta cuando no hay ninguna, las del PC si no está conectado y,
-desde la 4.1.5, las de GitHub si la persona no lo ha conectado; desde la 4.2, las de
-adjuntos si no ha subido nada y las de buscar, listar o borrar documentos si no tiene
-ninguno.
+The tools that can't be used at that moment are trimmed from each turn's prompt: the ones
+for an open task when there is none, the PC's if it isn't connected and, since 4.1.5, the
+GitHub ones if the person hasn't connected it; since 4.2, the attachment ones if nothing was
+uploaded and the ones to search, list or delete documents if there are none.
 
-### Añadir una herramienta
+### Adding a tool
 
-1. Heredar de `Tool` (`src/tools/base.py`): `name`, `description`, `parameters` (JSON
-   Schema), `permission_level`, `category`, `execute()` devolviendo
+1. Inherit from `Tool` (`src/tools/base.py`): `name`, `description`, `parameters` (JSON
+   Schema), `permission_level`, `category`, `execute()` returning
    `{"success", "data", "error"}`.
-2. Declarar `requires_local` (por defecto `True`: fuera de la nube salvo que se diga).
-3. Registrarla en `CoreContainer._build_tool_registry()`: **el único sitio**.
-4. Si recibe una lista, darle `items`: **Gemini rechaza el catálogo entero** sin él.
-5. Si actúa fuera de Morgan en nombre de alguien, `exige_plan = True`.
-6. Actualizar este catálogo y los recuentos del README.
+2. Declare `requires_local` (`True` by default: out of the cloud unless said otherwise).
+3. Register it in `CoreContainer._build_tool_registry()`: **the only place**.
+4. If it receives a list, give it `items`: **Gemini rejects the whole catalog** without it.
+5. If it acts outside Morgan on someone's behalf, `exige_plan = True`.
+6. Update this catalog and the README counts (both languages).
 
-## 5. Archivos, imágenes y voz
+## 5. Files, images and voice
 
-**Capacidades por proveedor.** Mandar una imagen a un modelo sin visión no da una
-respuesta peor: da un error. La cadena filtra por capacidad **antes** de conmutar, y si
-nadie sirve falla enseguida con `CapacidadNoDisponible`. Por defecto un proveedor solo
-hace texto. Hoy la visión la atiende Gemini; el audio, Whisper por el SDK de Groq con la
-misma clave.
+**Capabilities per provider.** Sending an image to a model without vision doesn't give a
+worse answer: it gives an error. The chain filters by capability **before** failing over, and
+if nobody can serve it, it fails right away with `CapacidadNoDisponible`. By default a
+provider only does text. Today vision is served by Gemini; audio, by Whisper through Groq's
+SDK with the same key.
 
-**Un archivo subido es dato no confiable:**
-- **El nombre del usuario nunca toca el disco**: se guarda con un id generado. La
-  defensa contra *path traversal* es no construir la ruta.
-- **El tipo se deduce de los bytes**, y si la extensión promete un formato con firma y
-  la firma no está, se rechaza (un ejecutable renombrado a `.png` se aceptaba).
-- **Lo extraído va en `<untrusted_file_data>`**, como las páginas web.
-- **Sin previsualización**: renderizar HTML o SVG subido es superficie de ataque. SVG
-  entra como texto.
-- Subidas, borrados **y rechazos** se auditan, nunca el contenido.
+**An uploaded file is untrusted data:**
+- **The user's file name never touches the disk**: it's stored with a generated id. The
+  defense against *path traversal* is not building the path.
+- **The type is deduced from the bytes**, and if the extension promises a format with a
+  signature and the signature isn't there, it's rejected (an executable renamed to `.png` used
+  to be accepted).
+- **What is extracted goes inside `<untrusted_file_data>`**, like web pages.
+- **No preview**: rendering uploaded HTML or SVG is attack surface. SVG comes in as text.
+- Uploads, deletions **and rejections** are audited, never the content.
 
-| Límite | Valor | Variable |
+| Limit | Value | Variable |
 |---|---|---|
-| Tamaño por archivo | 20 MB | `MORGAN_UPLOAD_MAX_MB` |
-| Archivos por persona | 50 | `MORGAN_UPLOAD_MAX_ARCHIVOS` |
-| Espacio por persona | 200 MB | `MORGAN_UPLOAD_MAX_TOTAL_MB` |
-| Vida | 24 h | `MORGAN_UPLOAD_TTL_HOURS` |
-| Extracción | 30 s, 30.000 caracteres, 100 páginas | — |
+| Size per file | 20 MB | `MORGAN_UPLOAD_MAX_MB` |
+| Files per person | 50 | `MORGAN_UPLOAD_MAX_ARCHIVOS` |
+| Space per person | 200 MB | `MORGAN_UPLOAD_MAX_TOTAL_MB` |
+| Lifetime | 24 h | `MORGAN_UPLOAD_TTL_HOURS` |
+| Extraction | 30 s, 30,000 characters, 100 pages | — |
 
-**Formatos** (73 extensiones): imágenes PNG, JPEG, GIF y WebP; PDF; texto y datos (TXT,
-Markdown, CSV, JSON, XML, YAML, TOML, INI, LOG); código de una veintena de lenguajes;
-audio MP3, WAV, WebM, M4A, OGG, FLAC, Opus y AAC. Un PDF escaneado se detecta y se dice.
+**Formats** (73 extensions): PNG, JPEG, GIF and WebP images; PDF; text and data (TXT,
+Markdown, CSV, JSON, XML, YAML, TOML, INI, LOG); code in some twenty languages; MP3, WAV,
+WebM, M4A, OGG, FLAC, Opus and AAC audio. A scanned PDF is detected and said so.
 
-**Dónde se guardan**: el índice en la base (SQLite o Supabase); los bytes en disco en
-local y en el bucket **privado** `morgan-uploads` de Supabase Storage en la nube. Antes
-el índice vivía en memoria y en la nube se perdía al dormirse Render.
+**Where they're stored**: the index in the database (SQLite or Supabase); the bytes on disk
+locally and in Supabase Storage's **private** `morgan-uploads` bucket in the cloud. The index
+used to live in memory and in the cloud it was lost when Render fell asleep.
 
-**El adjunto va ligado al mensaje** en sus metadatos, no pegado en el texto; uno que ya
-no existe se rechaza con 422 antes de gastar un turno. Hasta 10 por mensaje. Con un
-adjunto, un mensaje sin texto es legítimo. La voz se transcribe **para revisarla antes
-de enviarla** ([web.md](web.md#3-control-sobre-el-turno)).
+**The attachment is tied to the message** in its metadata, not pasted into the text; one that
+no longer exists is rejected with 422 before spending a turn. Up to 10 per message. With an
+attachment, a message with no text is legitimate. Voice is transcribed **so you can review it
+before sending** ([web.md](web.md#3-control-over-the-turn)).
 
-Verificado de extremo a extremo: un `.md` leído, y un PNG descrito por Gemini con el
-principal sin visión.
+Verified end to end: an `.md` read, and a PNG described by Gemini with the main model without
+vision.
 
-**Fuera**: OCR de PDF escaneados, DOCX y texto a voz.
+**Out**: OCR of scanned PDFs, DOCX and text to speech.

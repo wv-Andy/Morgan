@@ -20,7 +20,13 @@ import re
 
 import pytest
 
-DOC = pathlib.Path("docs/api.md")
+#: Las dos versiones (2026-10-04): la tabla de rutas tiene que estar completa en las dos.
+DOCS = [pathlib.Path("docs/api.md"), pathlib.Path("docs/api.es.md")]
+
+
+@pytest.fixture(scope="module", params=DOCS, ids=lambda p: p.name)
+def doc(request) -> pathlib.Path:
+    return request.param
 
 #: Rutas que no se documentan a propósito, con el motivo. Vacío hoy; existe para
 #: que añadir una excepción obligue a escribir por qué, en lugar de ampliar
@@ -71,8 +77,8 @@ class TestElMetodoTambienCoincide:
     rutas, así que pasaba: quien integrara siguiendo el documento recibía un 405.
     """
 
-    def test_cada_fila_de_la_tabla_existe_con_ese_metodo(self):
-        texto = DOC.read_text(encoding="utf-8")
+    def test_cada_fila_de_la_tabla_existe_con_ese_metodo(self, doc):
+        texto = doc.read_text(encoding="utf-8")
         documentadas = {
             (m, _normalizar(r))
             for m, r in re.findall(r"^\|\s*`([A-Z]+)`\s*\|\s*`(/[^`]*)`", texto, re.MULTILINE)
@@ -114,8 +120,8 @@ def rutas_reales() -> set[str]:
 
 
 @pytest.fixture(scope="module")
-def rutas_documentadas() -> set[str]:
-    texto = DOC.read_text(encoding="utf-8")
+def rutas_documentadas(doc) -> set[str]:
+    texto = doc.read_text(encoding="utf-8")
     # Solo las de la tabla: `| `GET` | `/ruta` | ...`, para no recoger de paso
     # cualquier ruta mencionada de pasada en la prosa.
     filas = re.findall(r"^\|\s*`[A-Z]+`\s*\|\s*`(/[^`]*)`", texto, re.MULTILINE)

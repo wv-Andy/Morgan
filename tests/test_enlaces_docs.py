@@ -26,7 +26,9 @@ RAIZ = Path(__file__).resolve().parent.parent
 # Solo los que existen: en el espejo público (4.19) no están pendientes.md, el CHANGELOG ni
 # los documentos internos, y sus enlaces a ellos ya se quitaron al publicarlo.
 DOCUMENTOS = sorted(
-    d for d in [*(RAIZ / "docs").glob("*.md"), RAIZ / "README.md", RAIZ / "pendientes.md", RAIZ / "CHANGELOG.md"]
+    d for d in [*(RAIZ / "docs").glob("*.md"), RAIZ / "README.md", RAIZ / "README.es.md", RAIZ / "pendientes.md",
+                RAIZ / "CHANGELOG.md", *(RAIZ / "web").glob("README*.md"),
+                *(RAIZ / "migraciones" / "supabase").glob("README*.md")]
     if d.exists()
 )
 

@@ -1,260 +1,263 @@
-# Datos: base, memoria, conocimiento, espacios y sincronización
+# Data: database, memory, knowledge, workspaces and sync
 
-> Junta lo que antes eran cinco documentos. Última revisión: 2026-09-30, V4.6.0-dev,
-> con 23 migraciones de SQLite y las de Supabase hasta la v27 (tokens de API,
-> agentes locales, el historial de sus órdenes, la rotación de sus credenciales y el
-> permiso automático). Lo que guarda el agente **en el PC de la persona**, en el §7.
+**English** · [Español](datos.es.md)
 
-## 1. Dónde viven los datos
+> Brings together what used to be five documents. Last review: 2026-09-30, V4.6.0-dev, with 23
+> SQLite migrations and the Supabase ones up to v27 (API tokens, local agents, their order
+> history, the rotation of their credentials and the automatic permission). What the agent
+> stores **on the person's PC** is in §7.
 
-| Entorno | Almacén principal | Por qué |
+## 1. Where the data lives
+
+| Environment | Main storage | Why |
 |---|---|---|
-| `local` (por defecto) | **SQLite**, un fichero en `data/` | Tu equipo: funciona sin conexión y los datos no salen de él |
-| `cloud` | **Supabase** | El disco de Render es efímero |
+| `local` (default) | **SQLite**, a file in `data/` | Your computer: it works offline and the data doesn't leave it |
+| `cloud` | **Supabase** | Render's disk is ephemeral |
 
-El Core **nunca** ve SQL ni el cliente de Supabase: habla con repositorios
-(`src/memory/repositories.py`) y recibe dataclases. Cambiar de proveedor es
-implementar las interfaces y construir la fábrica en `src/api/dependencies.py`,
-que desde la 2.0.11 es el único sitio.
+The Core **never** sees SQL or the Supabase client: it talks to repositories
+(`src/memory/repositories.py`) and receives dataclasses. Changing provider means implementing
+the interfaces and building the factory in `src/api/dependencies.py`, which since 2.0.11 is the
+only place.
 
-### El aislamiento hay que implementarlo en cada proveedor
+### Isolation has to be implemented in every provider
 
-La interfaz **no obliga** a filtrar por usuario. La versión de Supabase estuvo
-desde la V1.6 sin filtrar nada salvo los planes: en la nube, cada usuario veía lo
-de todos ([web.md](web.md#5-lo-que-rompía-la-web-en-producción)). Reglas al
-escribir un proveedor:
+The interface **doesn't force** filtering by user. The Supabase version went from V1.6 without
+filtering anything except plans: in the cloud, every user saw everyone's things
+([web.md](web.md#5-what-broke-the-web-in-production)). Rules when writing a provider:
 
-- **El usuario se lee del contexto, no se recibe por parámetro** (`usuario_actual()`,
-  `_mio()`): si fuera un argumento, un método nuevo podría olvidarlo y compilar.
-- Toda lectura, actualización y borrado lleva el filtro, **`get()` incluido**.
-- Toda escritura deja el `user_id` puesto.
-- Los `on_conflict` nombran restricciones que existen (las claves son compuestas con `user_id`).
+- **The user is read from the context, not received as a parameter** (`usuario_actual()`,
+  `_mio()`): if it were an argument, a new method could forget it and still compile.
+- Every read, update and delete carries the filter, **`get()` included**.
+- Every write sets the `user_id`.
+- The `on_conflict` clauses name constraints that exist (the keys are composite with `user_id`).
 
-`tests/test_supabase_aislamiento.py` recorre las 32 operaciones con un cliente de
-mentira y falla si aparece un método que no está en su lista.
+`tests/test_supabase_aislamiento.py` goes through the 32 operations with a fake client and fails
+if a method appears that isn't in its list.
 
 ## 2. SQLite
 
-Conexión en `src/memory/db.py`, con un context manager que **siempre cierra** (antes
-de la V1.0 no cerraba). Cada bloque es una transacción. PRAGMAs: `WAL` (la API es
-multihilo), `foreign_keys=ON`, `busy_timeout`. Todas las consultas son
-parametrizadas. Cada conversación tiene además su lock en memoria para que dos
-peticiones suyas se atiendan en orden.
+The connection is in `src/memory/db.py`, with a context manager that **always closes** (before
+V1.0 it didn't). Each block is a transaction. PRAGMAs: `WAL` (the API is multithreaded),
+`foreign_keys=ON`, `busy_timeout`. Every query is parameterized. Each conversation also has its
+lock in memory so two of its requests are served in order.
 
-### Tablas
+### Tables
 
-| Tabla | Qué guarda | Detalle que importa |
+| Table | What it stores | The detail that matters |
 |---|---|---|
-| `sessions` | Conversaciones | Clave `(user_id, id)` desde la v12. Archivar y renombrar **no** tocan `updated_at`. `espacio_id` NULL = General |
-| `messages` | Mensajes | `ON DELETE CASCADE`. Índice por sesión, que es el acceso dominante |
-| `memories` | Hechos que Morgan recuerda | `UNIQUE(user_id, key)` desde la v9: antes el recuerdo de una persona pisaba el de otra |
-| `uploads` | Metadatos de archivos subidos | El id lo genera Morgan, nunca el nombre del usuario; MIME por contenido; caducan a las 24 h |
-| `tasks`, `planes` | [Tareas y planes](agente.md) | Los pasos en una columna JSON: siempre se leen con su tarea |
-| `conocimiento`, `conocimiento_fragmentos` | Documentos consultables | Ver abajo |
-| `espacios` | Espacios de trabajo | Nombre único por usuario, instrucciones hasta 2.000 caracteres |
-| `integraciones`, `oauth_estados` | Servicios conectados | Token cifrado ([integraciones.md](integraciones.md)) |
-| `morgan_users`, `auth_sessions`, `password_reset_tokens`, `login_intentos`, `uso_diario` | Cuentas | Sesiones y tokens **hasheados**. Se llama `auth_sessions` porque `sessions` son las conversaciones ([autenticacion.md](autenticacion.md)) |
-| `api_tokens` | Tokens personales de API (v19; Supabase v23) | Solo su hash; caducan a los 90 días ([autenticacion.md](autenticacion.md#tokens-personales-de-api-v2040)) |
-| `ordenes_agente` | El historial de órdenes a cada PC (v21; Supabase v25, 3.7) | Qué, cuándo, cómo acabó y cuánto tardó: **nunca argumentos ni contenido**. 30 días |
-| `agentes.credencial_nueva_hash`, `credencial_rotada_en` | La rotación de la credencial de cada PC (v22; Supabase v26, 3.8) | La nueva, **pendiente** hasta que el agente se conecta con ella; solo su hash |
-| `automatizaciones` | Las órdenes con horario (v24; Supabase v28, 4.14) | Qué hacer (`instruccion`), cuándo (`horario` y `zona`, la del navegador al crearla), la próxima (`proxima`), si usa el PC, y cómo fue la última. `reclamo` sube con cada ejecución: solo la lanza quien lo sube. `pasos` (v25; Supabase v30, 4.15): los pasos fijos aprobados, si cambia algo |
-| `avisos` | La bandeja (v24; Supabase v28, 4.14) | Lo que contó cada ejecución: hecha, no salió o saltada, y qué herramientas usó. 30 días |
-| `morgan_users.permiso_automatico` | El permiso automático (v23; Supabase v27, 4.6) | Lo verde y amarillo se aprueba solo. En la cuenta y **no en la memoria**: el modelo escribe recuerdos y no puede escribir aquí. Solo lo cambia Ajustes → Permisos, con la sesión de la web |
-| `sync_queue` | Cola hacia la nube | Solo en local |
-| `schema_version` | Migraciones aplicadas | |
+| `sessions` | Conversations | Key `(user_id, id)` since v12. Archiving and renaming **don't** touch `updated_at`. `espacio_id` NULL = General |
+| `messages` | Messages | `ON DELETE CASCADE`. Index by session, which is the dominant access |
+| `memories` | Facts Morgan remembers | `UNIQUE(user_id, key)` since v9: before, one person's memory overwrote another's |
+| `uploads` | Metadata of uploaded files | The id is generated by Morgan, never the user's name; MIME by content; they expire after 24 h |
+| `tasks`, `planes` | [Tasks and plans](agente.md) | The steps in a JSON column: always read with their task |
+| `conocimiento`, `conocimiento_fragmentos` | Searchable documents (knowledge) | See below |
+| `espacios` | Workspaces | Unique name per user, instructions up to 2,000 characters |
+| `integraciones`, `oauth_estados` | Connected services | Encrypted token ([integraciones.md](integraciones.md)) |
+| `morgan_users`, `auth_sessions`, `password_reset_tokens`, `login_intentos`, `uso_diario` | Accounts | Sessions and tokens **hashed**. It's called `auth_sessions` because `sessions` are the conversations ([autenticacion.md](autenticacion.md)) |
+| `api_tokens` | Personal API tokens (v19; Supabase v23) | Only their hash; they expire after 90 days ([autenticacion.md](autenticacion.md#personal-api-tokens-v2040)) |
+| `ordenes_agente` | The history of orders to each PC (v21; Supabase v25, 3.7) | What, when, how it ended and how long it took: **never arguments or content**. 30 days |
+| `agentes.credencial_nueva_hash`, `credencial_rotada_en` | The rotation of each PC's credential (v22; Supabase v26, 3.8) | The new one, **pending** until the agent connects with it; only its hash |
+| `automatizaciones` | Scheduled orders (v24; Supabase v28, 4.14) | What to do (`instruccion`), when (`horario` and `zona`, the browser's time zone when created), the next run (`proxima`), whether it uses the PC, and how the last one went. `reclamo` goes up with each run: only whoever raises it launches it. `pasos` (v25; Supabase v30, 4.15): the approved fixed steps, if it changes something |
+| `avisos` | The tray (v24; Supabase v28, 4.14) | What each run reported: done, didn't work or skipped, and which tools it used. 30 days |
+| `morgan_users.permiso_automatico` | The automatic permission (v23; Supabase v27, 4.6) | Green and yellow are approved on their own. In the account and **not in memory**: the model writes memories and can't write here. Only Settings → Permissions changes it, with the web's session |
+| `sync_queue` | Queue towards the cloud | Local only |
+| `schema_version` | Applied migrations | |
 
-### Migraciones
+### Migrations
 
-En la lista `MIGRATIONS` de `db.py`; al abrir la base se aplican las que falten.
-**Se añaden al final y nunca se edita una publicada**: cada instalación quedaría
-distinta. Un `MORGAN_DATA_DIR` vacío crea el esquema entero al arrancar.
+In the `MIGRATIONS` list in `db.py`; when the database is opened, the missing ones are applied.
+**They're added at the end and a published one is never edited**: every installation would end
+up different. An empty `MORGAN_DATA_DIR` creates the whole schema on startup.
 
-| v | Contenido |
+| v | Content |
 |---|---|
-| 1–3 | Memoria, sesiones y mensajes |
-| 4–7 | Cola de sincronización, organización de conversaciones, archivos, tareas |
-| 8–13 | Cuentas: `user_id` en todo, claves por usuario, cupo, autenticación propia, un solo propietario |
-| 14–17 | Planes, conocimiento, integraciones, tipos de token |
-| 18 | Espacios; cada grupo se convirtió en un espacio (Supabase v22) |
+| 1–3 | Memory, sessions and messages |
+| 4–7 | Sync queue, organizing conversations, files, tasks |
+| 8–13 | Accounts: `user_id` everywhere, keys per user, quota, own authentication, a single owner |
+| 14–17 | Plans, knowledge, integrations, token types |
+| 18 | Workspaces; each group became a workspace (Supabase v22) |
 
-**Cada migración tiene su espejo en Supabase**, y desde la V1.8 se escribe también en
-[`migraciones/supabase/`](../migraciones/supabase/) **en el mismo commit**. Antes no
-dejaban rastro, y una función de cupo estuvo una versión entera rota sin aparecer en
-ningún diff. Ese README lleva las tres comprobaciones que han fallado: lo que llama
-PostgREST va en `public`, los tipos coinciden con las columnas, y se revoca el
-`EXECUTE` que `CREATE FUNCTION` concede a `PUBLIC`.
+**Every migration has its mirror in Supabase**, and since V1.8 it's also written in
+[`migraciones/supabase/`](../migraciones/supabase/) **in the same commit**. Before, they left
+no trace, and a quota function was broken for a whole version without showing up in any diff.
+That README carries the three checks that have failed: what PostgREST calls goes in `public`,
+the types match the columns, and the `EXECUTE` that `CREATE FUNCTION` grants to `PUBLIC` is
+revoked.
 
-### Errores y copias
+### Errors and backups
 
-Todo error se traduce a `MemoryStorageError`. **Un fallo de la base no tumba a
-Morgan**: si falla persistir un turno, la respuesta se entrega igual; si falla leer
-la memoria del prompt, va sin ella; si la base está corrupta, `/status` lo dice y el
-resto funciona.
+Every error is translated into `MemoryStorageError`. **A database failure doesn't bring Morgan
+down**: if persisting a turn fails, the answer is delivered anyway; if reading memory for the
+prompt fails, it goes without it; if the database is corrupt, `/status` says so and the rest
+works.
 
-Copia en caliente: `sqlite3 data/morgan_memory.db ".backup 'copia.db'"`. Borrar el
-fichero es seguro: se recrea vacío.
+Hot backup: `sqlite3 data/morgan_memory.db ".backup 'copy.db'"`. Deleting the file is safe:
+it's recreated empty.
 
-| Variable | Por defecto | Uso |
+| Variable | Default | Use |
 |---|---|---|
-| `MORGAN_DATA_DIR` | `data/` | Dónde vive el fichero |
-| `MORGAN_DB_TIMEOUT` | `10` | Segundos de espera ante bloqueo |
-| `MORGAN_PERSIST_HISTORY` | `true` | Guardar y recuperar conversaciones |
-| `MORGAN_HISTORY_WINDOW` | `20` | Mensajes recientes al reanudar |
+| `MORGAN_DATA_DIR` | `data/` | Where the file lives |
+| `MORGAN_DB_TIMEOUT` | `10` | Seconds of waiting when locked |
+| `MORGAN_PERSIST_HISTORY` | `true` | Save and restore conversations |
+| `MORGAN_HISTORY_WINDOW` | `20` | Recent messages when resuming |
 
-### La copia de seguridad de Supabase (4.20)
+### The Supabase backup (4.20)
 
-El plan gratuito de Supabase no da copias descargables, así que `scripts/copia_supabase.py`
-hace una **copia lógica**: las 22 tablas de `public`, enteras, en JSON, con la huella
-(SHA-256) de cada una en un manifiesto. Se guarda en `~/.morgan/copias/` (fuera de OneDrive
-y del repositorio: lleva correos, hashes de contraseñas y conversaciones).
+Supabase's free plan doesn't give downloadable backups, so `scripts/copia_supabase.py` makes a
+**logical copy**: the 22 tables in `public`, whole, in JSON, with the fingerprint (SHA-256) of
+each one in a manifest. It's kept in `~/.morgan/copias/` (outside OneDrive and the repository:
+it carries emails, password hashes and conversations).
 
 ```bash
-python scripts/copia_supabase.py copiar                        # producción
-python scripts/copia_supabase.py comprobar --desde <carpeta>   # ¿la base sigue igual?
-python scripts/copia_supabase.py restaurar --desde <carpeta> --proyecto carga
+python scripts/copia_supabase.py copiar                        # production
+python scripts/copia_supabase.py comprobar --desde <folder>    # is the database still the same?
+python scripts/copia_supabase.py restaurar --desde <folder> --proyecto carga
 ```
 
-**Rehacer la base desde cero**, si el proyecto se perdiera:
+**Rebuilding the database from scratch**, if the project were lost:
 
-1. Un proyecto nuevo, y las migraciones en orden: `migraciones/supabase/v01_v14_esquema_inicial.sql`
-   y después `v15` … `v30`. Las 14 primeras **no estaban en el repositorio** (se aplicaron
-   directamente en Supabase): las recuperé de su historial en la 4.20, comprobando el MD5 de
-   cada una contra el que guarda Postgres. Sin ellas, la copia no tenía dónde volver.
-2. Los secretos del Vault (`morgan_reloj`, `morgan_reloj_url`), de las variables de Render
-   (ver la cabecera de `v29_reloj.sql`).
-3. `restaurar`: escribe las tablas en orden (las de las que dependen otras, primero) y
-   comprueba antes que cada fichero es el que se copió; uno cambiado o roto no se restaura.
-4. **Ajustar los contadores** con el `secuencias.sql` que deja `restaurar`. Sin eso, el
-   primer mensaje nuevo chocaría con uno restaurado (mismo `id`).
-5. `comprobar`: la base y la copia, tabla a tabla.
+1. A new project, and the migrations in order: `migraciones/supabase/v01_v14_esquema_inicial.sql`
+   and then `v15` … `v31`. The first 14 **weren't in the repository** (they were applied
+   directly in Supabase): I recovered them from its history in 4.20, checking the MD5 of each
+   one against the one Postgres keeps. Without them, the backup had nowhere to go back to.
+2. The Vault secrets (`morgan_reloj`, `morgan_reloj_url`), from Render's variables (see the
+   header of `v29_reloj.sql`).
+3. `restaurar`: writes the tables in order (the ones others depend on, first) and checks
+   beforehand that each file is the one that was copied; a changed or broken one isn't
+   restored.
+4. **Adjust the counters** with the `secuencias.sql` that `restaurar` leaves. Without it, the
+   first new message would collide with a restored one (same `id`).
+5. `comprobar`: the database and the backup, table by table.
 
-Lo que **no** va en la copia: los bytes de los archivos subidos (el bucket `morgan-uploads`;
-su índice sí va, en `uploads`) y `auth.users`, que Morgan no usa (`auth_user_id` está vacío
-en todas las cuentas). Restaurar sobre producción pide `--si-produccion`.
+What **doesn't** go in the backup: the bytes of the uploaded files (the `morgan-uploads`
+bucket; its index does go, in `uploads`) and `auth.users`, which Morgan doesn't use
+(`auth_user_id` is empty in every account). Restoring over production asks for
+`--si-produccion`.
 
-## 3. Memoria: los cinco tipos
+## 3. Memory: the five types
 
-Mezclarlos es lo que hace que un asistente arrastre basura en el contexto.
+Mixing them is what makes an assistant drag garbage along in its context.
 
-| Tipo | Qué es | Dónde | Cuándo se usa |
+| Type | What it is | Where | When it's used |
 |---|---|---|---|
-| **Sesión** | El contexto vivo | RAM | Durante la conversación |
-| **Historial** | Los mensajes intercambiados | `messages` | Los 20 últimos al reanudar, sin los de herramienta |
-| **Memoria** | Hechos y preferencias sobre ti | `memories` | **Siempre**, hasta 15 en el prompt |
-| **Conocimiento** | Documentos | `conocimiento` | **Cuando se busca** |
-| **Contexto** | Archivos adjuntos | `uploads` | En ese mensaje |
+| **Session** | The live context | RAM | During the conversation |
+| **History** | The exchanged messages | `messages` | The last 20 when resuming, without the tool ones |
+| **Memory** | Facts and preferences about you | `memories` | **Always**, up to 15 in the prompt |
+| **Knowledge** | Documents | `conocimiento` | **When searched** |
+| **Context** | Attached files | `uploads` | In that message |
 
-> **Nada entra solo.** Morgan no convierte lo hablado en memoria: guarda cuando usa
-> `remember_fact` o cuando lo pides.
+> **Nothing gets in on its own.** Morgan doesn't turn what was said into memory: it stores
+> when it uses `remember_fact` or when you ask it to.
 
-- **Al reanudar no se cargan los mensajes de herramienta**: uno sin su llamada hace
-  que el proveedor rechace la petición. Y se carga una ventana, no todo, por coste.
-  **Desde la 4.1.5 pasa lo mismo sin reiniciar**: al empezar cada turno, los anteriores se
-  quedan en su texto (los últimos 20). Antes, en memoria, los resultados de herramientas
-  de todos los turnos se reenviaban en cada llamada.
-- **La memoria entra en el prompt en cada turno, para quien pregunta** (4.0): nunca en
-  el prompt del agente, que es uno para todas las cuentas. Hasta la 4.0 se escribía ahí al
-  guardar un recuerdo o los ajustes, y los turnos de todos llevaban la memoria de quien
-  guardó el último (ver `seguridad.md` §2). Tampoco se acumula: antes de la 2.x, cada
-  recuerdo añadía otra copia y el prompt crecía sin límite.
-- **El mismo código en local y en la nube** desde la 2.0.13 (`MemoriaSobreRepositorio`):
-  se olvida **solo por clave** (antes, en local, `forget('1')` borraba la fila 1) y
-  `recall` devuelve como mucho 100. En la nube la memoria **no persistía** hasta que
-  se contó filas en producción y la tabla estaba vacía.
-- `forget_fact` pide confirmación. También `DELETE /memory/{clave}` y la vista Memoria.
+- **When resuming, tool messages aren't loaded**: one without its call makes the provider
+  reject the request. And a window is loaded, not everything, for cost. **Since 4.1.5 the
+  same happens without restarting**: when each turn starts, the previous ones are kept as their
+  text (the last 20). Before, in memory, the tool results of every turn were sent again on
+  every call.
+- **Memory goes into the prompt on every turn, for whoever asks** (4.0): never into the
+  agent's prompt, which is one for every account. Until 4.0 it was written there when saving
+  a memory or the settings, and everyone's turns carried the memory of whoever saved last (see
+  `seguridad.md` §2). It doesn't pile up either: before 2.x, each memory added another copy
+  and the prompt grew without limit.
+- **The same code locally and in the cloud** since 2.0.13 (`MemoriaSobreRepositorio`):
+  forgetting is **only by key** (before, locally, `forget('1')` deleted row 1) and `recall`
+  returns at most 100. In the cloud memory **didn't persist** until rows were counted in
+  production and the table was empty.
+- `forget_fact` asks for confirmation. So do `DELETE /memory/{clave}` and the Memory view.
 
-Límites: se recupera por recencia, no por relevancia; sin resumen de conversaciones
-largas; los recuerdos no se puntúan.
+Limits: it's retrieved by recency, not relevance; no summary of long conversations; memories
+aren't scored.
 
-## 4. Conocimiento (V1.8)
+## 4. Knowledge (V1.8)
 
-Documentos que Morgan **consulta**, frente a los hechos que **recuerda**. Separarlos
-evita que el prompt engorde con material que casi nunca se usa.
+Documents that Morgan **looks up**, as opposed to the facts it **remembers**. Keeping them apart
+stops the prompt from bloating with material that is almost never used.
 
-- **Se busca por fragmentos** de ~1.200 caracteres, **con solape** (una frase en la
-  frontera no quedaría en ninguno) y cortando por párrafos.
-- **Por términos, no por significado.** Los embeddings exigirían un modelo de
-  vectores y una dependencia más que falla. Sin tildes, en minúsculas, por la raíz
-  («configuro» encuentra «configuración»), sin palabras vacías.
-- **Puntuación**: +2 en el título, +1 en el texto con rendimiento decreciente (repetir
-  una palabra no envenena el ranking), multiplicado por cobertura de términos.
-  Filtro y ranking tienen que mirar lo mismo: un documento titulado «Configurar el
-  correo» no salía al buscar «correo».
-- **Mismo título en la misma colección reemplaza**, y borra los fragmentos viejos.
-- **La puntuación es la misma función en SQLite y en Supabase**; solo cambia el filtro
-  grueso (en la nube, la función `buscar_conocimiento`, ejecutable solo por
-  `service_role` porque recibe el usuario por parámetro).
-- Sin resultados, se le dice al modelo que **no está en los documentos**, no que no
-  exista. Con resultados, que cite el documento.
+- **It's searched by fragments** of ~1,200 characters, **with overlap** (a sentence on the
+  boundary would end up in neither) and cutting at paragraphs.
+- **By terms, not by meaning.** Embeddings would require a vector model and one more
+  dependency that fails. Without accents, lowercase, by stem ("configuro" finds
+  "configuración"), without stop words.
+- **Scoring**: +2 in the title, +1 in the text with diminishing returns (repeating a word
+  doesn't poison the ranking), multiplied by term coverage. Filter and ranking have to look at
+  the same thing: a document titled "Configurar el correo" didn't come up when searching
+  "correo".
+- **The same title in the same collection replaces**, and deletes the old fragments.
+- **The scoring is the same function in SQLite and in Supabase**; only the coarse filter
+  changes (in the cloud, the `buscar_conocimiento` function, executable only by
+  `service_role` because it receives the user as a parameter).
+- With no results, the model is told **it isn't in the documents**, not that it doesn't
+  exist. With results, to cite the document.
 
-Herramientas: `search_knowledge`, `add_knowledge`, `list_knowledge_sources`,
-`index_document`, `remove_knowledge` (pide confirmación).
+Tools: `search_knowledge`, `add_knowledge`, `list_knowledge_sources`, `index_document`,
+`remove_knowledge` (asks for confirmation).
 
-## 5. Espacios de trabajo (V2.0.10)
+## 5. Workspaces (V2.0.10)
 
-Un proyecto: agrupa **conversaciones, archivos y documentos**, con **instrucciones
-propias**. «General» es lo que no está en ninguno.
+A project: it groups **conversations, files and documents**, with **its own instructions**.
+"General" is what isn't in any.
 
-| Del espacio | Común a todos |
+| Belongs to the workspace | Common to all |
 |---|---|
-| Conversaciones, archivos, documentos, instrucciones | **La memoria** (lo decidí así: lo que Morgan sabe de ti no cambia de proyecto), tareas, planes, ajustes, **el cupo de archivos** (si no, repartir entre espacios lo saltaría) |
+| Conversations, files, documents, instructions | **Memory** (I decided so: what Morgan knows about you doesn't change per project), tasks, plans, settings, **the file quota** (otherwise spreading across workspaces would bypass it) |
 
-- **La web manda `X-Morgan-Espacio`** desde `request()`, y el middleware comprueba
-  que existe **y es de quien pide**. Si no, `404 ESPACIO_ACTUAL_NO_ENCONTRADO`: nunca
-  cae a General en silencio.
-- **En el chat manda la conversación**: una existente se atiende en su espacio
-  aunque la web tenga otro seleccionado.
-- **Las instrucciones van en el prompt del turno, nunca en el del agente compartido**,
-  y se siguen salvo que contradigan la seguridad.
-- **Borrar un espacio no borra lo de dentro**: vuelve a General.
-- `NULL` es General, así que se filtra con `IS ?` (SQLite), `is.null` (PostgREST) e
+- **The web sends `X-Morgan-Espacio`** from `request()`, and the middleware checks that it
+  exists **and belongs to whoever asks**. Otherwise, `404 ESPACIO_ACTUAL_NO_ENCONTRADO`: it
+  never silently falls back to General.
+- **In the chat, the conversation rules**: an existing one is served in its workspace even if
+  the web has another one selected.
+- **The instructions go into the turn's prompt, never into the shared agent's**, and they're
+  followed unless they contradict security.
+- **Deleting a workspace doesn't delete what's inside**: it goes back to General.
+- `NULL` is General, so it's filtered with `IS ?` (SQLite), `is.null` (PostgREST) and
   `is not distinct from` (SQL).
 
-## 6. Sincronización local → nube
+## 6. Local → cloud sync
 
-> **La escritura local nunca espera al remoto.** Todo se guarda en SQLite y, si la
-> sincronización está activa (`MORGAN_CLOUD_ENABLED`, apagada por defecto), la
-> operación queda en `sync_queue`.
+> **Local writes never wait for the remote.** Everything is saved in SQLite and, if sync is
+> on (`MORGAN_CLOUD_ENABLED`, off by default), the operation stays in `sync_queue`.
 
-Cola *outbox* de hasta 5.000 entradas, 5 intentos por operación; si el remoto está
-caído no se gastan intentos. En la nube no hay cola: los repositorios **son** Supabase.
+An *outbox* queue of up to 5,000 entries, 5 attempts per operation; if the remote is down,
+attempts aren't spent. In the cloud there is no queue: the repositories **are** Supabase.
 
-**Estado real, dicho claro:**
+**The real status, said plainly:**
 
-- **Solo sube, y así se queda.** La bajada (traer a tu equipo lo que se escribió en
-  la nube y fusionarlo) **la retiré el 2026-09-18**. Se aplazó a
-  la V1.4 en su día y nunca se hizo; mientras tanto la nube pasó a ser donde Morgan
-  vive de verdad, y con el agente local de la 3.0 será también **la fuente de verdad
-  de tu equipo**: el agente trabaja contra la nube, no contra una copia local que
-  haya que reconciliar. Bajar y fusionar era, además, lo más propenso a corromper
-  datos de todo el diseño ([decisions.md](decisions.md)).
-- **Nada llama a `SyncWorker.run_once()`** fuera de las pruebas: la cola se llena y
-  nadie la vacía.
-- **La memoria no se encola**: solo el historial escribe en la cola.
-- **Antes de conectar un disparador**: la cola no guarda quién encoló cada entrada, y
-  en un hilo de fondo todo se escribiría como el usuario `local`. Hay que guardar
-  `user_id` en el payload y aplicar cada entrada dentro de `como_usuario(...)`.
+- **It only uploads, and it stays that way.** The download (bringing to your computer what was
+  written in the cloud and merging it) **I removed on 2026-09-18**. It was postponed to V1.4
+  back then and never done; meanwhile the cloud became where Morgan really lives, and with the
+  3.0 local agent it's also **the source of truth for your computer**: the agent works against
+  the cloud, not against a local copy that has to be reconciled. Downloading and merging was,
+  besides, the most corruption-prone part of the whole design ([decisions.md](decisions.md)).
+- **Nothing calls `SyncWorker.run_once()`** outside the tests: the queue fills up and nobody
+  empties it.
+- **Memory isn't queued**: only the history writes to the queue.
+- **Before connecting a trigger**: the queue doesn't store who queued each entry, and in a
+  background thread everything would be written as the `local` user. The `user_id` has to be
+  stored in the payload and each entry applied inside `como_usuario(...)`.
 
-El esquema conserva `updated_at`, `origin_device` y `client_id`, que se añadieron para
-la bajada. No estorban y los usa la subida; no se quitan para no migrar tablas por
-nada. Si algún día hiciera falta retomarla, la estrategia pensada era *last-write-wins*
-guardando lo descartado.
+The schema keeps `updated_at`, `origin_device` and `client_id`, which were added for the
+download. They don't get in the way and the upload uses them; they aren't removed so as not to
+migrate tables for nothing. If it ever needed to be picked up again, the planned strategy was
+*last-write-wins* keeping what was discarded.
 
-## 7. En el PC de la persona: lo que guarda el agente local
+## 7. On the person's PC: what the local agent stores
 
-Nada de esto sale del PC ni lo puede leer Morgan (la carpeta del agente es zona
-prohibida para leer y para escribir). Vive en `%LOCALAPPDATA%\Morgan\agente\`.
+None of this leaves the PC or can be read by Morgan (the agent's folder is a forbidden zone
+for reading and writing). It lives in `%LOCALAPPDATA%\Morgan\agente\`.
 
-| Fichero | Qué guarda | Cuánto |
+| File | What it stores | How much |
 |---|---|---|
-| `agente.json` y la credencial | Con quién está emparejado; la credencial `mga_`, **cifrada con DPAPI** (solo ese usuario de Windows la descifra) | Hasta desemparejar |
-| `politica.json` | Qué deja hacer este PC: carpetas, bloqueadas, de escritura, capacidades, programas, límites, confirmaciones | Lo cambia solo la persona, en el PC |
-| `diario.jsonl` | El diario de órdenes (3.4): estado y tiempos de cada una; el resultado solo de lo que cambia cosas, **nunca lo leído** | 24 h |
-| `hechas.json` | Lo hecho hace poco, para que repetir una orden no la haga dos veces (3.3.5) | 1 h |
-| `respaldos/` | La versión anterior de lo que Morgan editó (3.3) | 7 días |
-| `auditoria.jsonl` | Qué se recibió, rechazó o ejecutó, qué contestó la persona a una notificación y las huellas de antes y después | Crece; sin contenido de archivos |
-| `agente.log` | El registro del agente (y del vigilante) cuando corre sin ventana | Tope de 1 MB |
-| `salud.json` | Cómo está el agente: pulso cada 5 s, estado, último latido, cola (3.6) | Lo reescribe el agente |
-| `agente.lock`, `vigilante.lock`, `parar` | Que solo corra uno de cada; la señal de parar | Mientras corren |
-| `app\<versión>\`, `app\activa.json` | El agente instalado (3.8): cada versión con su entorno, y cuál es la activa, la anterior y si está por confirmar | La activa y la anterior |
-| `morgan-agente.cmd` | Los comandos del agente con la versión activa (3.8) | Lo reescribe el agente al cambiar de versión |
+| `agente.json` and the credential | Who it's paired with; the `mga_` credential, **encrypted with DPAPI** (only that Windows user can decrypt it) | Until unpaired |
+| `politica.json` | What this PC allows: folders, blocked ones, writable ones, capabilities, programs, limits, confirmations | Only the person changes it, on the PC |
+| `diario.jsonl` | The order journal (3.4): state and timings of each; the result only of what changes things, **never what was read** | 24 h |
+| `hechas.json` | What was done recently, so repeating an order doesn't do it twice (3.3.5) | 1 h |
+| `respaldos/` | The previous version of what Morgan edited (3.3) | 7 days |
+| `auditoria.jsonl` | What was received, rejected or run, what the person answered to a notification and the fingerprints before and after | Grows; no file contents |
+| `agente.log` | The agent's (and the watchdog's) log when it runs without a window | 1 MB cap |
+| `salud.json` | How the agent is: a pulse every 5 s, state, last heartbeat, queue (3.6) | Rewritten by the agent |
+| `agente.lock`, `vigilante.lock`, `parar` | That only one of each runs; the stop signal | While they run |
+| `vigilante.pid` | Who the watchdog is (pid and start time), so a pause cuts only it (5.1) | Rewritten by the watchdog |
+| `pausa.json` | Paused from the tray: the agent doesn't start until resumed (5.1) | Until resumed or paired again |
+| `programa.json` | The agent was paired by Morgan for Windows: only then does its uninstaller unpair it (5.0.1) | Until unpaired |
+| `app\<version>\`, `app\activa.json` | The installed agent (3.8): each version with its environment, and which one is active, the previous one and whether it's pending confirmation | The active and the previous one |
+| `morgan-agente.cmd` | The agent's commands with the active version (3.8) | Rewritten by the agent when changing version |

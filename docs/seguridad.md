@@ -1,222 +1,225 @@
-# Seguridad: permisos, validación, auditoría y roles
+# Security: permissions, validation, audit and roles
 
-> Junta lo que antes eran el documento de seguridad y el de roles. Las cuentas,
-> sesiones, CSRF y frenos de acceso están en [autenticacion.md](autenticacion.md).
-> Última revisión: 2026-09-25, V3.5.0 (el agente local, §5).
+**English** · [Español](seguridad.es.md)
 
-La IA **no tiene acceso ilimitado** al equipo. Cada herramienta declara su riesgo, y
-ninguna se ejecuta sin pasar por `PermissionManager`, que valida comandos y rutas y
-deja constancia en la auditoría.
+> Brings together what used to be the security document and the roles one. Accounts,
+> sessions, CSRF and access throttling are in [autenticacion.md](autenticacion.md). Last
+> review: 2026-09-25, V3.5.0 (the local agent, §5).
 
-## 1. Niveles de riesgo
+The AI **doesn't have unlimited access** to the computer. Every tool declares its risk, and
+none runs without going through `PermissionManager`, which validates commands and paths and
+leaves a record in the audit.
 
-| Nivel | Comportamiento | Herramientas |
+## 1. Risk levels
+
+| Level | Behavior | Tools |
 |---|---|---|
-| 🟢 `safe` | Automático | Lecturas: archivos, procesos, memoria, web, código, `git_status`, `git_diff`, tareas, planes |
-| 🟢 `low_risk` | Automático | Reservado |
-| 🟡 `moderate` | Pregunta (o automático con `MODERATE_PERMISSION_MODE=auto`) | Crear, copiar, mover y renombrar archivos, `patch_file`, `run_tests`, `git_commit`, `forget_fact`, `remove_knowledge` |
-| 🟠 `high_risk` | Siempre pregunta | Reservado |
-| 🔴 `critical` | Siempre pregunta | `delete_file`, `execute_command`, `kill_process` |
+| 🟢 `safe` | Automatic | Reads: files, processes, memory, web, code, `git_status`, `git_diff`, tasks, plans |
+| 🟢 `low_risk` | Automatic | Reserved |
+| 🟡 `moderate` | Asks (or automatic with `MODERATE_PERMISSION_MODE=auto`) | Create, copy, move and rename files, `patch_file`, `run_tests`, `git_commit`, `forget_fact`, `remove_knowledge` |
+| 🟠 `high_risk` | Always asks | Reserved |
+| 🔴 `critical` | Always asks | `delete_file`, `execute_command`, `kill_process` |
 
-### Orden de evaluación (la primera que decide, corta)
+### Evaluation order (the first one that decides, stops)
 
-1. Nivel desconocido → **denegada** (fail-safe).
-2. `CommandValidator` en `execute_command`: bloquea `format`, `diskpart`, `bcdedit`,
-   `reg delete hklm`, `shutdown`, borrados recursivos de raíz y fork-bombs **antes de
-   preguntar**.
-3. `PathValidator` en todo lo que escribe: deniega raíces de unidad, `C:\Windows` y
-   `Program Files`, con sus subdirectorios.
-4. Bloqueada explícitamente → denegada. Permitida explícitamente o en la sesión → aprobada.
-5. `safe` y `low_risk` → aprobadas; `moderate` según el modo; `high_risk` y `critical`
-   → siempre preguntan.
+1. Unknown level → **denied** (fail-safe).
+2. `CommandValidator` on `execute_command`: blocks `format`, `diskpart`, `bcdedit`,
+   `reg delete hklm`, `shutdown`, recursive deletions from the root and fork bombs **before
+   asking**.
+3. `PathValidator` on everything that writes: denies drive roots, `C:\Windows` and
+   `Program Files`, with their subfolders.
+4. Explicitly blocked → denied. Explicitly allowed or allowed in the session → approved.
+5. `safe` and `low_risk` → approved; `moderate` depending on the mode; `high_risk` and
+   `critical` → always ask.
 
-**Sin consola, se deniega de inmediato**, nunca se espera una respuesta que nadie va a
-dar ([ADR-007](decisions.md)). En la web, lo que actúa fuera de Morgan se autoriza con
-**un plan aprobado** ([agente.md](agente.md#3-planes-decir-qué-se-va-a-hacer-antes-de-hacerlo)).
+**Without a console, it's denied right away**, never waiting for an answer nobody is going to
+give ([ADR-007](decisions.md)). In the web, whatever acts outside Morgan is authorized with
+**an approved plan** ([agente.md](agente.md#3-plans-saying-what-will-be-done-before-doing-it)).
 
-## 2. Otras defensas
+## 2. Other defenses
 
-- **La memoria es de quien pregunta** (4.0): el resumen de recuerdos, nombre y
-  preferencias se lee en cada turno para la persona del turno y nunca se escribe en el
-  prompt del agente, que es uno para todas las cuentas. Hasta la 4.0 se escribía ahí, y los
-  turnos de todos llevaban la memoria de quien la guardó la última vez
-  (`tests/test_memoria_por_persona.py`).
-- **Procesos protegidos**: `kill_process` rechaza `lsass`, `csrss`, `winlogon`,
-  `services`, `svchost`, `explorer` y demás críticos.
-- **Secretos enmascarados** en `get_environment` y en la auditoría (`KEY`, `SECRET`,
-  `PASSWORD`, `TOKEN`, `CREDENTIAL`, `AUTH`, `APIKEY`, `PRIVATE`), y por patrón en el
-  registro de la aplicación (`gsk_`, `AIza`, `sk-`, `api_key=`, `token=`, `password=`).
-- **Inyección de instrucciones**: lo descargado va en `<untrusted_web_data>` y lo de
-  archivos subidos en `<untrusted_file_data>`; el prompt enseña a tratarlo como dato.
-  Descargas de hasta 250 KB y 12.000 caracteres.
-- **Páginas comprimidas** (2.0.15): gzip y deflate con el mismo tope de 250 KB; una
-  compresión desconocida se rechaza por su nombre, y un cuerpo con más de un 5 % de
-  caracteres de reemplazo no se entrega (python.org llegaba como basura comprimida).
-- **SSRF**: `read_webpage` se ejecuta sin confirmación, así que rechaza `localhost`,
-  redes privadas, link-local (`169.254.169.254`), multicast, reservadas y todo lo que
-  no sea http/https.
-- **Las cabeceras de la web** (`vercel.json`, completadas en la 5.2 desde la lista de la
-  4.22): HSTS, `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, y además una **CSP**
-  que solo deja scripts propios más el del tema por su hash (sin `unsafe-inline` ni
-  `unsafe-eval`), conexiones solo al propio dominio (la API va por `/api`) y que nadie
-  meta la web en un marco; **Permissions-Policy** (sin cámara, ubicación, pagos ni USB; el
-  micrófono, solo ella) y **COOP**. Probadas en un navegador de verdad antes de publicarlas
-  (`scripts/probar_cabeceras_web.py`: Edge sin ventana, la web compilada servida con esas
-  cabeceras, cero bloqueos; y caza un hash equivocado, las fuentes sin permitir y las
-  conexiones cortadas). `tests/test_cabeceras_web.py` vigila que el hash siga al script.
-- **Validación de argumentos** contra el JSON Schema antes de ejecutar, en el agente y
-  en `POST /tools/{nombre}`.
-- **Opciones inyectadas**: `git_diff` pone la ruta tras `--`. Sin él,
-  `file_path='--output=/donde/sea'` hacía que una herramienta de lectura **escribiera
-  un fichero**.
-- **Lo que el modelo escribe no cambia a qué se llama**: nombres con `.` o `..` se
-  rechazan, se codifican, y GitHub comprueba que la URL que sale es la pedida. Con
-  `ruta='../../../../user/emails'` una herramienta de «leer un archivo del repositorio»
-  devolvía los correos privados de la persona ([integraciones.md](integraciones.md)).
+- **Memory belongs to whoever asks** (4.0): the summary of memories, name and preferences is
+  read on every turn for the person of the turn and never written into the agent's prompt,
+  which is one for every account. Until 4.0 it was written there, and everyone's turns
+  carried the memory of whoever saved it last (`tests/test_memoria_por_persona.py`).
+- **Protected processes**: `kill_process` refuses `lsass`, `csrss`, `winlogon`, `services`,
+  `svchost`, `explorer` and the other critical ones.
+- **Masked secrets** in `get_environment` and in the audit (`KEY`, `SECRET`, `PASSWORD`,
+  `TOKEN`, `CREDENTIAL`, `AUTH`, `APIKEY`, `PRIVATE`), and by pattern in the application log
+  (`gsk_`, `AIza`, `sk-`, `api_key=`, `token=`, `password=`).
+- **Prompt injection**: what is downloaded goes inside `<untrusted_web_data>` and what comes
+  from uploaded files inside `<untrusted_file_data>`; the prompt teaches the model to treat it
+  as data. Downloads of up to 250 KB and 12,000 characters.
+- **Compressed pages** (2.0.15): gzip and deflate with the same 250 KB cap; an unknown
+  compression is rejected by name, and a body with more than 5 % replacement characters isn't
+  delivered (python.org arrived as compressed garbage).
+- **SSRF**: `read_webpage` runs without confirmation, so it refuses `localhost`, private
+  networks, link-local (`169.254.169.254`), multicast, reserved ranges and anything that isn't
+  http/https.
+- **The web's headers** (`vercel.json`, completed in 5.2 from the 4.22 list): HSTS, `nosniff`,
+  `X-Frame-Options: DENY`, `Referrer-Policy`, and also a **CSP** that only allows its own
+  scripts plus the theme one by its hash (no `unsafe-inline` or `unsafe-eval`), connections
+  only to its own domain (the API goes through `/api`) and nobody putting the web in a frame;
+  **Permissions-Policy** (no camera, location, payments or USB; the microphone, only the web
+  itself) and **COOP**. Tested in a real browser before publishing them
+  (`scripts/probar_cabeceras_web.py`: headless Edge, the built web served with those headers,
+  zero blocks; and it catches a wrong hash, fonts not allowed and connections cut).
+  `tests/test_cabeceras_web.py` checks that the hash follows the script.
+- **Argument validation** against the JSON Schema before running, in the agent and in
+  `POST /tools/{nombre}`.
+- **Injected options**: `git_diff` puts the path after `--`. Without it,
+  `file_path='--output=/wherever'` made a read tool **write a file**.
+- **What the model writes doesn't change what gets called**: names with `.` or `..` are
+  rejected, they're encoded, and GitHub checks that the outgoing URL is the requested one.
+  With `ruta='../../../../user/emails'` a "read a repository file" tool returned the person's
+  private emails ([integraciones.md](integraciones.md)).
 
-## 3. Auditoría
+## 3. Audit
 
-`logs/audit.log` registra **todo intento**, autorizado o no, en JSON Lines: fecha,
-herramienta, riesgo, argumentos saneados, autorización, resultado y error. También las
-acciones administrativas (quién, sobre quién, qué cambió), subidas y rechazos de
-archivos. **No rota**: es evidencia; se lee la cola del fichero ([ADR-009](decisions.md)).
-**No se borra al borrar una cuenta**: registra qué hizo Morgan, y borrarla sería una
-forma de tapar un rastro. Se consulta con `/audit` en la CLI, `GET /audit` o la vista
-Auditoría.
+`logs/audit.log` records **every attempt**, authorized or not, in JSON Lines: date, tool,
+risk, sanitized arguments, authorization, result and error. Also administrative actions (who,
+on whom, what changed), and file uploads and rejections. **It doesn't rotate**: it's evidence;
+the tail of the file is read ([ADR-009](decisions.md)). **It isn't deleted when an account is
+deleted**: it records what Morgan did, and deleting it would be a way of covering a trail.
+It's read with `/audit` in the CLI, `GET /audit` or the Audit view.
 
-**Qué significa `success`** (aclarado en la 4.1, tras leer la auditoría de la evaluación
-4.0.5): en la anotación de cada **permiso** repite la autorización (se escribe antes de
-ejecutar, cuando aún no hay resultado). El **resultado** real de lo que cambia algo va en
-una segunda anotación, la de la ejecución autorizada por un plan (`autorizado_por_plan` en
-los argumentos). Para saber si algo salió, se mira esa, o el veredicto de la verificación.
+**What `success` means** (clarified in 4.1, after reading the audit of the 4.0.5 evaluation):
+in the entry for each **permission** it repeats the authorization (it's written before
+running, when there is no result yet). The real **result** of what changes something goes in
+a second entry, the one for the execution authorized by a plan (`autorizado_por_plan` in the
+arguments). To know whether something worked, look at that one, or at the verification's
+verdict.
 
-## 4. Roles y propietario
+## 4. Roles and owner
 
 ```
 USER  →  ADMIN  →  OWNER
 ```
 
-> **La autorización se decide por permisos, nunca por quién eres.** Nada de
-> `if user.email == "..."`: la cadena es usuario → rol → permisos → autorización, y el
-> rol se resuelve **siempre en el servidor**.
+> **Authorization is decided by permissions, never by who you are.** No
+> `if user.email == "..."`: the chain is user → role → permissions → authorization, and the
+> role is resolved **always on the server**.
 
-| Permiso | Autoriza | USER | ADMIN | OWNER |
+| Permission | Authorizes | USER | ADMIN | OWNER |
 |---|---|:--:|:--:|:--:|
-| `users.read` | Ver cuentas | | ✅ | ✅ |
-| `users.manage` | Cambiar roles, suspender | | | ✅ |
-| `audit.read` | Leer la auditoría | | ✅ | ✅ |
-| `system.manage`, `integrations.manage`, `settings.manage` | La instalación | | | ✅ |
+| `users.read` | See accounts | | ✅ | ✅ |
+| `users.manage` | Change roles, suspend | | | ✅ |
+| `audit.read` | Read the audit | | ✅ | ✅ |
+| `system.manage`, `integrations.manage`, `settings.manage` | The installation | | | ✅ |
 
-Lo propio de cada uno (conversaciones, memoria, archivos) no necesita permiso: ya está
-aislado por usuario.
+Each person's own things (conversations, memory, files) don't need a permission: they're
+already isolated per user.
 
-### Qué se le levanta al propietario, y qué no
+### What is lifted for the owner, and what isn't
 
-| Se levanta | No se levanta |
+| Lifted | Not lifted |
 |---|---|
-| Cupo diario (paga las claves) | Validación de comandos y rutas: protege al dueño de lo que **el modelo** proponga |
-| Límites de archivos | Auditoría |
-| Confirmaciones en la web (sin consola, preguntar denegaría) | Herramientas bloqueadas a mano |
-| | Las que no existen en la nube: esa máquina es un contenedor de Render, no su PC |
-| | **El aislamiento**: ser dueño no da acceso a los datos de nadie |
-| | **`exige_plan`**: también el propietario necesita el plan aprobado |
+| Daily quota (they pay for the keys) | Validation of commands and paths: it protects the owner from what **the model** proposes |
+| File limits | Audit |
+| Confirmations in the web (without a console, asking would deny) | Tools blocked by hand |
+| | The ones that don't exist in the cloud: that machine is a Render container, not their PC |
+| | **Isolation**: being the owner gives no access to anyone's data |
+| | **`exige_plan`**: the owner also needs the approved plan |
 
-**El modo sin cuentas no es un propietario con privilegios.** El Morgan de tu equipo
-tiene rol de propietario, pero hay consola y las confirmaciones sirven. Las exenciones
-son solo para el dueño **que ha entrado con su cuenta** donde no hay a quién preguntar,
-y viven en una sola función (`propietario_con_cuenta`).
+**The mode without accounts isn't an owner with privileges.** The Morgan on your computer has
+the owner role, but there is a console and the confirmations work. The exemptions are only for
+the owner **who signed in with their account** where there is nobody to ask, and they live in
+a single function (`propietario_con_cuenta`).
 
-### Cómo se establece
+### How it's set
 
-`MORGAN_OWNER_EMAIL=tu@correo`. Al arrancar: si ya hay Owner, nada; si existe una cuenta
-con ese correo, se promociona y se audita; si no existe, **no se crea** (habría que
-inventar una contraseña). Te registras, reinicias y eres propietario; después la
-variable sobra. **No hay contraseña maestra, no traspasa la propiedad** si ya hay otro
-dueño, y un **índice único parcial** en la base impide dos propietarios aunque el código
-lo olvide.
+`MORGAN_OWNER_EMAIL=you@email`. On startup: if there is already an Owner, nothing; if an
+account with that email exists, it's promoted and audited; if it doesn't, **it isn't created**
+(a password would have to be invented). You sign up, restart and you're the owner; after that
+the variable is no longer needed. **There is no master password, ownership isn't transferred**
+if there is already another owner, and a **partial unique index** in the database prevents two
+owners even if the code forgets.
 
-### Rutas administrativas
+### Administrative routes
 
-`GET /admin/usuarios` (`users.read`), `GET /admin/yo/permisos` (para que la interfaz no
-ofrezca botones que darán 403: **no es seguridad**), `POST /admin/usuarios/{id}/rol` y
+`GET /admin/usuarios` (`users.read`), `GET /admin/yo/permisos` (so the interface doesn't offer
+buttons that will give 403: **it isn't security**), `POST /admin/usuarios/{id}/rol` and
 `POST /admin/usuarios/{id}/estado` (`users.manage`).
 
-Incluso al propietario: no puede cambiarse el rol ni suspenderse a sí mismo, crear un
-segundo propietario ni tocar el rol del propietario. Un rol inventado se **rechaza**
-(al leer de la base, uno desconocido cae a `user`). **Suspender revoca las sesiones en
-el momento.**
+Even for the owner: you can't change your own role or suspend yourself, create a second owner
+or touch the owner's role. A made-up role is **rejected** (when reading from the database, an
+unknown one falls back to `user`). **Suspending revokes the sessions at that moment.**
 
-## 5. El agente local: otra frontera
+## 5. The local agent: another boundary
 
-Desde la 3.0, Morgan en la nube actúa en el PC de la persona a través de un **agente
-local** que ella instala. Es la parte más delicada del proyecto, y **no se fía de la
-nube**: aunque la nube lo haya comprobado todo, el agente lo vuelve a comprobar con sus
-propias reglas, que solo se cambian en el PC. Resumen de las capas; el detalle, el modelo
-de amenazas y las evaluaciones en agente-local.md.
+Since 3.0, Morgan in the cloud acts on the person's PC through a **local agent** that they
+install. It's the most delicate part of the project, and **it doesn't trust the cloud**: even
+if the cloud checked everything, the agent checks it again with its own rules, which can only
+be changed on the PC. A summary of the layers; the detail, the threat model and the
+evaluations are in agente-local.md (in Spanish).
 
-| Capa | Qué para |
+| Layer | What it stops |
 |---|---|
-| Emparejamiento y credencial `mga_` (cifrada con DPAPI) | Que un PC ajeno se haga pasar por el tuyo, o la nube mande a quien no toca |
-| Política local (3.2): carpetas, bloqueadas, capacidades, límites | Todo nace cerrado; lo bloqueado gana sobre lo permitido; los límites solo bajan; la nube no puede cambiarla |
-| Frontera de salida (3.1) | Secretos tapados, nombres como datos, tope de lo que sale, y que una web no reciba lo leído del PC |
-| Plan aprobado (`exige_plan`) | Que se escriba, se ejecute o se termine algo sin que la persona apruebe esos argumentos exactos |
-| Confirmación en el PC (3.3) | Borrar, ejecutar lo que cambia y terminar procesos piden «Permitir» en una notificación de Windows |
-| Zonas donde no se escribe nunca | La carpeta del agente, Inicio, el sistema, los datos de las aplicaciones, `.git`; ni programas ni scripts |
-| Terminal de catálogo sin shell (3.5) | Que la nube ejecute cualquier cosa: no hay PowerShell, y git va sin *hooks* ni `fsmonitor` |
-| Motor de ejecución (3.4) | Hacer algo dos veces, o decir lo contrario de lo que hay en el disco |
-| Órdenes con su hora de salida (3.6) | Una orden fantasma: retenida en una conexión medio abierta, que llega cuando la nube ya dijo que no se hizo |
-| Actualizaciones firmadas por mí (3.8) | Que quien tome la nube (o se ponga en medio) haga que los PC ejecuten código que yo no publiqué, o los devuelva a una versión vieja con un fallo |
-| Credencial en dos pasos, cada 90 días (3.8) | Que una credencial robada sirva para siempre; y que rotarla deje un PC fuera por un corte a mitad |
-| Registro por PC y elegir el equipo (3.7) | Con varios PC, una orden (o su recuperación, o su cancelación) en el equivocado; y que Morgan elija uno sin decirlo, también mientras el otro se reconecta (3.7.5) |
+| Pairing and an `mga_` credential (encrypted with DPAPI) | Someone else's PC passing itself off as yours, or the cloud sending to the wrong one |
+| Local policy (3.2): folders, blocked ones, capabilities, limits | Everything starts closed; blocked wins over allowed; limits only go down; the cloud can't change it |
+| Output boundary (3.1) | Secrets covered, names as data, a cap on what goes out, and no website receiving what was read from the PC |
+| Approved plan (`exige_plan`) | Writing, running or ending something without the person approving those exact arguments |
+| Confirmation on the PC (3.3) | Deleting, running what changes things and ending processes ask for «Allow» in a Windows notification |
+| Zones where it never writes | The agent's folder, Startup, the system, the apps' data, `.git`; neither programs nor scripts |
+| Catalog terminal without a shell (3.5) | The cloud running anything: there is no PowerShell, and git runs without *hooks* or `fsmonitor` |
+| Execution engine (3.4) | Doing something twice, or saying the opposite of what's on the disk |
+| Orders with their send time (3.6) | A ghost order: held back in a half-open connection, arriving when the cloud already said it wasn't done |
+| Updates signed by me (3.8) | Whoever takes over the cloud (or gets in the middle) making the PCs run code I didn't publish, or rolling them back to an old version with a bug |
+| Two-step credential, every 90 days (3.8) | A stolen credential working forever; and rotating it leaving a PC out because of a drop halfway |
+| Registry per PC and choosing the computer (3.7) | With several PCs, an order (or its recovery, or its cancellation) on the wrong one; and Morgan picking one without saying so, also while the other reconnects (3.7.5) |
 
-**La terminal del Morgan local no es esta.** `execute_command` (§2) ejecuta PowerShell con
-una lista de patrones prohibidos: vale como red en tu equipo, con tu consola delante, pero
-una lista de lo prohibido se salta. Desde la nube solo existe la del agente.
+**The terminal of the local Morgan isn't this one.** `execute_command` (§2) runs PowerShell
+with a list of forbidden patterns: it works as a net on your computer, with your console in
+front of you, but a list of what's forbidden can be bypassed. From the cloud only the agent's
+exists.
 
-## 5 bis. Las automatizaciones: nadie delante (4.14)
+**Morgan for Windows (5.x)** adds two more: the conversation window loads the web **without any
+permission over the program** (it can't pause, pair or touch the PC from there) and only
+navigates within Morgan; and its uninstaller and installer only unpair the agent if it was the
+program that paired it, and never when upgrading.
 
-Una automatización actúa a una hora en la que nadie mira: la frontera de confianza más
-grande desde el agente local. Diseño y mis decisiones en plan-4.x.md.
+## 5 bis. Automations: nobody in front (4.14)
 
-| Capa | Qué para |
+An automation acts at a time when nobody is watching: the biggest trust boundary since the
+local agent. Design and my decisions in plan-4.x.md (in Spanish).
+
+| Layer | What it stops |
 |---|---|
-| Crearla es un **plan rojo** (`create_automation`, `exige_plan`) | Que un archivo con instrucciones escondidas deje algo programado: siempre la aprueba la persona, también con el permiso automático |
-| **Solo consultas** en la 4.14 (`src/automatizacion/contexto.py`, lista blanca) | Que cambie algo sin nadie delante. El núcleo lo comprueba al ofrecer el catálogo **y** al ejecutar; nada que pida «Permitir» en el PC |
-| Lo que cambia algo ni se propone (`prevalidar`) | Que la persona apruebe «borra cada noche…» creyendo que se hará |
-| Corre como su dueño, **con su rol y su cupo** | Que una automatización gaste sin límite o con más privilegio del que tiene quien la creó; una cuenta borrada o bloqueada no ejecuta nada |
-| El reloj llama con **su propio secreto** (`MORGAN_RELOJ_SECRETO`, en tiempo constante; sin él, la ruta no existe) | Que alguien de fuera lance ejecuciones. Aun con el secreto, solo se ejecuta lo que ya tocaba |
-| **Reclamo atómico** (un contador en la fila) | Que dos relojes cruzados la ejecuten dos veces |
-| Conversación temporal, sin permiso automático | Que lo que haga quede mezclado con el historial de la persona, o que se apruebe algo «porque estaba encendido» |
-| **Pasos fijos** (4.15): solo llamadas **idénticas** a un paso aprobado (`contexto.permitida`) | Que se haga algo distinto de lo aprobado: otra ruta, otra herramienta, o «otro camino» tras un fallo. Al modelo no se le ofrece ninguna herramienta |
-| Solo pasos verdes y amarillos, ni consultas, ni planes, tareas o memoria | Que se programe algo que pide «Permitir» (y no se haría) o que siembre algo en Morgan |
-| Solo `{fecha}` y `{hora}`; argumentos contra el esquema de cada herramienta | Que se apruebe un paso que nunca saldría, o que escriba marcas sin sustituir |
-| El aviso de un fallo es el informe real, sin modelo | Que la bandeja cuente lo que no pasó (medido: el modelo lo inventaba) |
+| Creating it is a **red plan** (`create_automation`, `exige_plan`) | A file with hidden instructions leaving something scheduled: the person always approves it, also with the automatic permission |
+| **Queries only** in 4.14 (`src/automatizacion/contexto.py`, allow list) | Changing something with nobody in front. The core checks it when offering the catalog **and** when running; nothing that asks for «Allow» on the PC |
+| What changes something isn't even proposed (`prevalidar`) | The person approving "delete every night…" thinking it will be done |
+| Runs as its owner, **with their role and their quota** | An automation spending without limit or with more privilege than whoever created it; a deleted or blocked account runs nothing |
+| The clock calls with **its own secret** (`MORGAN_RELOJ_SECRETO`, compared in constant time; without it, the route doesn't exist) | Someone outside launching runs. Even with the secret, only what was already due runs |
+| **Atomic claim** (a counter in the row) | Two crossed clocks running it twice |
+| Temporary conversation, without the automatic permission | What it does getting mixed with the person's history, or something being approved "because it was on" |
+| **Fixed steps** (4.15): only calls **identical** to an approved step (`contexto.permitida`) | Doing something different from what was approved: another path, another tool, or "another way" after a failure. The model is offered no tool |
+| Only green and yellow steps; no queries, plans, tasks or memory | Scheduling something that asks for «Allow» (and wouldn't be done) or that plants something in Morgan |
+| Only `{fecha}` and `{hora}`; arguments checked against each tool's schema | Approving a step that would never go out, or writing unreplaced placeholders |
+| The notice of a failure is the real report, without a model | The tray telling what didn't happen (measured: the model made it up) |
 
-## 6. Límites conocidos
+## 6. Known limits
 
-- **Sin `MORGAN_API_TOKEN` ni cuentas, la API no exige nada.** Aceptable solo
-  escuchando en `127.0.0.1`. En la nube el arranque **aborta** sin una de las dos.
-- **El «login CSRF» no está cubierto**, a sabiendas ([autenticacion.md](autenticacion.md)).
-- **El registro está abierto** (decisión mía). El total diario lo acota el **cupo
-  global** (2.0.24: 150 mensajes entre todas las cuentas que no son la del
-  propietario), y el dinero, el tope del panel de OpenAI.
-- `MODERATE_PERMISSION_MODE=auto` quita la confirmación de escrituras y commits; las
-  validaciones siguen.
-- **El plan que autoriza escribir en el PC lo exige la nube.** Una nube comprometida
-  podría pedir crear, editar o mover sin plan; con la decisión mía (solo borrar,
-  ejecutar y terminar se confirman en el PC), eso no se confirma allí. Lo para la
-  política del PC; quien quiera más, enciende `confirmar escribir si` (aceptado por mí
-  en la 3.3.5).
-- **El fichero de la política es del usuario de Windows**: un programa que ya corra con
-  sus permisos puede editarlo. Fuera del modelo de amenazas (un PC con malware con tus
-  permisos está fuera de alcance).
+- **Without `MORGAN_API_TOKEN` or accounts, the API requires nothing.** Acceptable only when
+  listening on `127.0.0.1`. In the cloud, startup **aborts** without one of the two.
+- **The "login CSRF" isn't covered**, knowingly ([autenticacion.md](autenticacion.md)).
+- **Sign-up is open** (my decision). The daily total is bounded by the **global quota**
+  (2.0.24: 150 messages across every account that isn't the owner's), and the money by the cap
+  in OpenAI's dashboard.
+- `MODERATE_PERMISSION_MODE=auto` removes the confirmation of writes and commits; the
+  validations remain.
+- **The plan that authorizes writing on the PC is required by the cloud.** A compromised cloud
+  could ask to create, edit or move without a plan; with my decision (only deleting, running
+  and ending are confirmed on the PC), that isn't confirmed there. The PC's policy stops it;
+  whoever wants more switches on `confirmar escribir si` (accepted by me in 3.3.5).
+- **The policy file belongs to the Windows user**: a program already running with their
+  permissions can edit it. Out of the threat model (a PC with malware running with your
+  permissions is out of reach).
 
-## Pruebas
+## Tests
 
 `test_permissions.py`, `test_permiso_confirmacion.py`, `test_security_advanced.py`,
-`test_regressions_audit.py`, `test_roles.py` (47),
-`test_privilegios_owner.py` (24), `test_web_comprimida.py`, y las de aislamiento y
-frenos listadas en [autenticacion.md](autenticacion.md). Del agente local:
-`test_agente_*.py`, `test_motor_politica.py`, `test_motor_ejecucion.py`,
-`test_canal_agente.py` y la batería de estrés (`test_estres_ejecucion.py`, con
-`MORGAN_ESTRES=1`).
+`test_regressions_audit.py`, `test_roles.py` (47), `test_privilegios_owner.py` (24),
+`test_web_comprimida.py`, and the isolation and throttling ones listed in
+[autenticacion.md](autenticacion.md). For the local agent: `test_agente_*.py`,
+`test_motor_politica.py`, `test_motor_ejecucion.py`, `test_canal_agente.py`, `test_bandeja.py`
+and the stress battery (`test_estres_ejecucion.py`, with `MORGAN_ESTRES=1`).

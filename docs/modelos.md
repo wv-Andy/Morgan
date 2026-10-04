@@ -1,210 +1,210 @@
-# Modelos: proveedores, cadena, cuota y router
+# Models: providers, chain, quota and router
 
-> Junta lo que antes eran el documento de proveedores LLM y el del router de
-> modelos. Última revisión: 2026-09-25, V3.5.0. Las mediciones que lo justifican
-> están resumidas en mediciones.md.
+**English** · [Español](modelos.es.md)
 
-## 1. La cadena
+> Brings together what used to be the LLM providers document and the model router one. Last
+> review: 2026-09-25, V3.5.0. The measurements behind it are summarized in
+> mediciones.md (in Spanish).
 
-El Core habla con la interfaz `LLMProvider` (`src/models/base.py`); cada proveedor
-traduce en su frontera. `FallbackProvider` prueba los eslabones en orden,
-**filtra por capacidad** (una imagen nunca va a un modelo sin visión) y **pospone
-al que se sabe agotado**.
+## 1. The chain
 
-| Eslabón | Papel | Modelo | Variable |
+The Core talks to the `LLMProvider` interface (`src/models/base.py`); each provider translates
+at its boundary. `FallbackProvider` tries the links in order, **filters by capability** (an
+image never goes to a model without vision) and **postpones the one known to be exhausted**.
+
+| Link | Role | Model | Variable |
 |---|---|---|---|
-| **Groq** | Principal, gratis | `openai/gpt-oss-120b` | `GROQ_API_KEY`, `_2`, `_3`… |
-| **Groq, relevo** | Si el principal se queda sin cuota (V2.0.20) | `openai/gpt-oss-20b` | `GROQ_MODELOS_RELEVO` |
-| **Gemini** | Respaldo gratis (20 peticiones/día **por proyecto**). El único con visión (Groq ya no sirve modelos con visión, medido 2026-09-27) | `gemini-3.6-flash` | `GEMINI_API_KEY`, `_2`, `_3`… (4.1.5): cada una de otro proyecto suma 20 |
-| **OpenAI** | **Último, y de pago** | `gpt-5.6-luna` | `OPENAI_API_KEY` |
-| NVIDIA | Existe, apagado | `deepseek-v4-pro-0813` | Añadir `nvidia` a `MORGAN_LLM_ORDER` |
+| **Groq** | Main, free | `openai/gpt-oss-120b` | `GROQ_API_KEY`, `_2`, `_3`… |
+| **Groq, relief** | If the main one runs out of quota (V2.0.20) | `openai/gpt-oss-20b` | `GROQ_MODELOS_RELEVO` |
+| **Gemini** | Free fallback (20 requests/day **per project**). The only one with vision (Groq no longer serves vision models, measured 2026-09-27) | `gemini-3.6-flash` | `GEMINI_API_KEY`, `_2`, `_3`… (4.1.5): each one from another project adds 20 |
+| **OpenAI** | **Last, and paid** | `gpt-5.6-luna` | `OPENAI_API_KEY` |
+| NVIDIA | Exists, switched off | `deepseek-v4-pro-0813` | Add `nvidia` to `MORGAN_LLM_ORDER` |
 
-Orden por defecto `MORGAN_LLM_ORDER=groq,gemini,openai`, definido en un solo sitio
-(`Settings.llm_order`). **La regla: el gratis más rápido primero y el de pago
-último.** OpenAI no va al final por ser peor —es el más fiable, 1,0 s de texto y
-1,7 s con herramientas— sino porque cobra: lo que compra es que no haya turnos sin
-respuesta cuando los gratuitos se agotan.
+Default order `MORGAN_LLM_ORDER=groq,gemini,openai`, defined in a single place
+(`Settings.llm_order`). **The rule: the fastest free one first and the paid one last.** OpenAI
+isn't last for being worse —it's the most reliable, 1.0 s for text and 1.7 s with tools— but
+because it charges: what it buys is that there are no turns without an answer when the free
+ones run out.
 
-Sin ninguna clave, Morgan arranca en **modo degradado**: `/chat` da 503 y todo lo
-que no depende del modelo sigue. **Un modelo local está descartado.**
+Without any key, Morgan starts in **degraded mode**: `/chat` gives 503 and everything that
+doesn't depend on the model keeps working. **A local model is ruled out.**
 
-`etapas` dice **quién contestó de verdad** (antes el campo `model` devolvía la
-cadena entera y afirmaba «Groq» mientras contestaba el respaldo). La web **no enseña
-el modelo** desde la 2.0.29 (decisión mía): si contestó el de reserva, solo lo
-explica el tiempo de la respuesta al pasar por encima, sin nombres
-([web.md](web.md#2-estructura)).
+`etapas` (stages) says **who really answered** (the `model` field used to return the whole
+chain and claimed "Groq" while the fallback answered). The web **doesn't show the model** since
+2.0.29 (my decision): if the backup answered, only the answer's time explains it when you hover,
+without names ([web.md](web.md#2-structure)).
 
-## 2. Plazos
+## 2. Time limits
 
-Antes de la V1.3 los clientes heredaban los plazos del SDK y un turno podía
-bloquearse **más de 15 minutos**. **Acotar iteraciones no acota tiempo**: el tope que
-lo garantiza es el del turno, por reloj.
+Before V1.3 the clients inherited the SDK's timeouts and a turn could hang **for more than 15
+minutes**. **Capping iterations doesn't cap time**: the cap that guarantees it is the turn's,
+by clock.
 
-| Variable | Por defecto | Acota |
+| Variable | Default | Caps |
 |---|---|---|
-| `MORGAN_LLM_TIMEOUT` | 30 s | Una llamada (la normal de Groq son 0,42 s) |
-| `MORGAN_LLM_MAX_RETRIES` | 1 | Reintentos del SDK. **Groq va con 0** (abajo) |
-| `MORGAN_TURN_TIMEOUT` | 180 s local, 85 s nube | El turno de `/chat` |
-| `MORGAN_HTTP_DEADLINE` | sin tope local, 100 s nube | Cuándo contesta la petición; el turno sigue |
-| `MORGAN_STREAM_TURN_TIMEOUT` | 180 s local, 170 s nube | El turno de `/chat/stream` (la web) |
-| `MORGAN_MAX_ITERATIONS` | 6 | Vueltas al modelo. Si se acaban, una última llamada **sin herramientas** contesta con lo encontrado (4.20) |
+| `MORGAN_LLM_TIMEOUT` | 30 s | One call (Groq's normal one is 0.42 s) |
+| `MORGAN_LLM_MAX_RETRIES` | 1 | SDK retries. **Groq goes with 0** (below) |
+| `MORGAN_TURN_TIMEOUT` | 180 s local, 85 s cloud | The turn of `/chat` |
+| `MORGAN_HTTP_DEADLINE` | no cap local, 100 s cloud | When the request answers; the turn continues |
+| `MORGAN_STREAM_TURN_TIMEOUT` | 180 s local, 170 s cloud | The turn of `/chat/stream` (the web) |
+| `MORGAN_MAX_ITERATIONS` | 6 | Rounds to the model. If they run out, a last call **without tools** answers with what was found (4.20) |
 
-Por qué 85 y 170 en la nube: [web.md](web.md#los-120-segundos-del-proxy) y
-[agente.md](agente.md#1-el-turno).
+Why 85 and 170 in the cloud: [web.md](web.md#the-proxys-120-seconds) and
+[agente.md](agente.md#1-the-turn).
 
-## 3. Cuota: contarla y no pagar dos veces por saberla
+## 3. Quota: counting it and not paying twice to know it
 
-`src/models/cuota.py`. Cuenta los tokens que ya venían en cada respuesta, **avisa al
-80 %** del tope conocido de Groq (200.000/día) y **pospone al agotado** leyendo el
-«vuelve en» del propio 429. De OpenAI no avisa: su límite lo pone su dueño en el panel.
+`src/models/cuota.py`. It counts the tokens that already came in each response, **warns at
+80 %** of Groq's known cap (200,000/day) and **postpones the exhausted one** by reading the
+"try again in" of the 429 itself. It doesn't warn for OpenAI: its owner sets its limit in the
+dashboard.
 
-**Se reordena, no se filtra.** La ventana de agotamiento es una estimación, y los
-errores no cuestan lo mismo: llamar a uno agotado cuesta 0,02 s; saltarse a uno que
-funcionaba deja a Morgan sin contestar. El agotado va al final, nunca fuera.
+**It reorders, it doesn't filter.** The exhaustion window is an estimate, and the mistakes
+don't cost the same: calling an exhausted one costs 0.02 s; skipping one that worked leaves
+Morgan without an answer. The exhausted one goes last, never out.
 
-**Groq tiene dos límites, y confundirlos costaba dinero.** Medido: un turno costó
-93 s y dinero de OpenAI por abandonar Groq ante una espera de décimas.
+**Groq has two limits, and mixing them up cost money.** Measured: a turn cost 93 s and OpenAI
+money for leaving Groq over a wait of tenths of a second.
 
-| Límite | Lo que dice el 429 | Qué se hace |
+| Limit | What the 429 says | What is done |
 |---|---|---|
-| 8.000 tokens por **minuto** | «try again in 112ms» … «9.25s» | **Esperar**, hasta 10 s de presupuesto de reloj |
-| 200.000 tokens por **día** | «try again in 10m53s» | Pasar al siguiente eslabón |
+| 8,000 tokens per **minute** | "try again in 112ms" … "9.25s" | **Wait**, up to a 10 s clock budget |
+| 200,000 tokens per **day** | "try again in 10m53s" | Move to the next link |
 
-El orden, de más barato a más caro: **otra clave** (gratis e instantáneo), **esperar**
-(si cabe en 10 s), **rendirse**. El umbral sale de medir los caminos: esperar 0,1–9,3 s
-gratis; el SDK reintentando, 13–26 s; Gemini, 29–36 s y un 504; OpenAI, 1–1,7 s pagando.
+The order, from cheapest to most expensive: **another key** (free and instant), **waiting** (if
+it fits in 10 s), **giving up**. The threshold comes from measuring the paths: waiting 0.1–9.3 s
+for free; the SDK retrying, 13–26 s; Gemini, 29–36 s and a 504; OpenAI, 1–1.7 s and paying.
 
-- **El SDK de Groq va con `max_retries=0`**: reintentando por su cuenta, 6 llamadas
-  tardaban 83,4 s en vez de 3,7, y además **se tragaba el 429** y la segunda clave
-  apenas se usaba.
-- **Un 401 no es un agotamiento**: una clave inválida no se arregla esperando.
-- **Una petición mínima no dice nada de la cuota diaria.** Las cabeceras son del
-  límite por minuto; 73 tokens cabían cuando un turno de 3.100 ya no.
-- **Vive en memoria a propósito**: persistirlo costaría 45 ms por llamada para
-  ahorrar 20.
+- **Groq's SDK runs with `max_retries=0`**: retrying on its own, 6 calls took 83.4 s instead of
+  3.7, and it also **swallowed the 429** and the second key was barely used.
+- **A 401 isn't exhaustion**: an invalid key isn't fixed by waiting.
+- **A minimal request says nothing about the daily quota.** The headers are for the per-minute
+  limit; 73 tokens fit when a 3,100-token turn no longer did.
+- **It lives in memory on purpose**: persisting it would cost 45 ms per call to save 20.
+- **A provider that is down rests** (4.20): a timeout or a connection error marks it as down
+  for 30 s, doubling up to 10 minutes, and it goes last meanwhile. Before, a dead provider paid
+  its 30 s on every request.
 
-## 4. Varias claves: el llavero (V2.0.4)
+## 4. Several keys: the keyring (V2.0.4)
 
-`src/models/llavero.py`. **La cuota de Groq es de la cuenta**: dos claves de dos
-cuentas son dos cupos. Se comprobó con el contador de **peticiones** diarias (el de
-tokens se rellena en 570 ms y no distingue nada): la clave nueva leyó 999, no 996.
-Hay **cuatro cuentas**: las cuatro claves están en el `.env` del Morgan de tu equipo
-(comprobado: cuatro cargadas), y **producción usa tres** hasta que la cuarta se añada
-en Render —`/status` dice `(3 claves)`— (pendientes.md, bloque 11).
+`src/models/llavero.py`. **Groq's quota belongs to the account**: two keys from two accounts are
+two quotas. It was checked with the daily **request** counter (the token one refills in 570 ms
+and tells nothing apart): the new key read 999, not 996. There are several accounts; each key
+in `.env` (`GROQ_API_KEY`, `_2`, `_3`…) is one more quota, and `/status` says how many are
+loaded.
 
-- **Se gastan en serie**, no repartidas: así la segunda es una reserva de verdad y
-  el aviso del 80 % llega a tiempo.
-- **Solo se rota por cuota.** Un 400 o 401 le pasaría igual a todas.
-- **La rotación vive en el proveedor, no en la cadena**: cambiar de clave no es
-  cambiar de modelo y no debe anunciarse como respaldo.
-- Se apunta por clave (`Groq#1`, `Groq#2`), **nunca con la clave dentro**.
-- `/status` dice **cuántas** claves hay activas, para que una mal copiada se note.
-- La transcripción de audio usa solo la primera clave (cuota de Whisper, sin medir).
+- **They're used in series**, not spread out: that way the second one is a real reserve and
+  the 80 % warning arrives in time.
+- **It only rotates because of quota.** A 400 or 401 would happen to all of them alike.
+- **Rotation lives in the provider, not in the chain**: changing key isn't changing model and
+  mustn't be announced as a fallback.
+- It's recorded per key (`Groq#1`, `Groq#2`), **never with the key inside**.
+- `/status` says **how many** keys are active, so a badly copied one is noticed.
+- Audio transcription uses only the first key (Whisper quota, not measured).
 
-## 5. Las claves se revisan al arrancar
+## 5. The keys are checked at startup
 
-`src/models/claves.py`. Al recrear producción se teclearon 18 secretos a mano y la
-clave de Gemini llevaba **un símbolo de libra dentro**. Síntoma: todo funcionaba…
-pagando OpenAI en cada turno, sin que nada lo dijera.
+`src/models/claves.py`. When production was recreated, 18 secrets were typed by hand and the
+Gemini key had **a pound sign inside**. Symptom: everything worked… paying OpenAI on every turn,
+without anything saying so.
 
-Se rechaza, sin salir a la red, lo que **no puede** funcionar: caracteres no ASCII,
-espacios o saltos dentro, caracteres de control, menos de 16 o más de 512
-caracteres. Cada clave mala cae sola, con el nombre de **su** variable y nivel ERROR,
-y el proveedor se monta con las buenas. **No promete que la clave sirva**: eso solo
-lo sabe el proveedor, al primer turno.
+What **can't** work is rejected, without going out to the network: non-ASCII characters, spaces
+or line breaks inside, control characters, fewer than 16 or more than 512 characters. Each bad
+key falls on its own, with the name of **its** variable and level ERROR, and the provider is
+built with the good ones. **It doesn't promise the key works**: only the provider knows that,
+on the first turn.
 
-## 6. El router de modelos (V2.X del roadmap maestro)
+## 6. The model router (V2.X of the master roadmap)
 
 ```
-Morgan → LLM Router → rápido | razonador | visión | audio | barato
+Morgan → LLM Router → fast | reasoner | vision | audio | cheap
 ```
 
-| Rama | Estado |
+| Branch | Status |
 |---|---|
-| **visión / audio** | ✅ La cadena filtra por capacidad |
-| **barato** | ✅ El orden de la cadena |
-| **Relevos por capacidad** | ✅ **V2.0.20**, medido |
+| **vision / audio** | ✅ The chain filters by capability |
+| **cheap** | ✅ The chain's order |
+| **Relief by capability** | ✅ **V2.0.20**, measured |
+| **fast / reasoner** (choosing per task) | ⏸ Waiting for the evaluation cases |
 
-### Por qué hay relevos
+### Why there is a relief
 
-El roadmap decía no adelantar el router hasta tener **perfiles de verdad distintos**.
-Se midió y los hay: **la cuota de Groq también es por modelo** (con la misma clave,
-120b bajó de 996 a 995 mientras 20b gastaba del suyo). Así que `gpt-oss-20b` es
-otro cupo diario y otro por minuto, gratis.
+The roadmap said not to bring the router forward until there were **really different
+profiles**. It was measured and there are: **Groq's quota is also per model** (with the same
+key, 120b went from 996 to 995 while 20b spent from its own). So `gpt-oss-20b` is another daily
+and per-minute quota, for free.
 
-| Candidato | Resultado |
+| Candidate | Result |
 |---|---|
-| `gpt-oss-20b` | ✅ 0,44 s, y **5 de 5 turnos reales de Morgan con herramientas** |
-| `qwen3.8-27b` | ❌ La cuenta gratuita le limita la salida a 1.000 tokens/min y Morgan pide 2.048: falla siempre |
-| `allam-2-7b` | ❌ Respondió mal una multiplicación |
-| `groq/compound` | Solo 250 peticiones/día |
+| `gpt-oss-20b` | ✅ 0.44 s, and **5 out of 5 real Morgan turns with tools** |
+| `qwen3.8-27b` | ❌ The free account limits its output to 1,000 tokens/min and Morgan asks for 2,048: it always fails |
+| `allam-2-7b` | ❌ Got a multiplication wrong |
+| `groq/compound` | Only 250 requests/day |
 
-### Cómo funciona
+### How it works
 
 ```
-groq (120b) ──cuota──▶ groq@20b ──cuota──▶ gemini ──▶ openai (pago)
-     └──caído u otro error──────────────▶ gemini
+groq (120b) ──quota──▶ groq@20b ──quota──▶ gemini ──▶ openai (paid)
+     └──down or another error─────────▶ gemini
 ```
 
-- **Solo tras un rechazo por cuota.** Con Groq caído, otro modelo suyo fallaría igual.
-  Con el principal ya sabido agotado, se empieza por el relevo.
-- **Las claves del relevo se apuntan con el modelo** (`Groq@openai/gpt-oss-20b#1`):
-  la clave agotada para 120b no lo está para 20b.
-- **Se anuncia como respaldo.** Eso destapó un defecto previo: con el principal
-  agotado la lista se reordenaba y el respaldo contestaba sin aviso.
-- `GROQ_MODELOS_RELEVO=` vacía lo desactiva.
-- **Un rechazo por tamaño no se prueba en otro modelo del mismo proveedor** (3.1,
-  `es_rechazo_por_tamano`). Groq manda igual «te pasaste de cuota» que «esta petición no
-  cabe», pero esperar no arregla una petición demasiado grande y el otro modelo de Groq
-  tiene el mismo tope de 8.000 tokens por minuto. Medido el 2026-09-19 con mi PC
-  conectado: una llamada de 8.459 tokens fallaba en 120b y en 20b antes de llegar a
-  Gemini. Ahora pasa directa a otro proveedor.
+- **Only after a quota rejection.** With Groq down, another of its models would fail the same
+  way. With the main one already known to be exhausted, it starts with the relief.
+- **The relief's keys are recorded with the model** (`Groq@openai/gpt-oss-20b#1`): the key
+  exhausted for 120b isn't for 20b.
+- **It's announced as a fallback.** That uncovered an earlier defect: with the main one
+  exhausted the list was reordered and the fallback answered without notice.
+- An empty `GROQ_MODELOS_RELEVO=` turns it off.
+- **A rejection for size isn't tried on another model of the same provider** (3.1,
+  `es_rechazo_por_tamano`). Groq says "you went over the quota" the same way as "this request
+  doesn't fit", but waiting doesn't fix a request that is too big and Groq's other model has
+  the same 8,000 tokens per minute cap. Measured on 2026-09-19 with my PC connected: a call of
+  8,459 tokens failed on 120b and on 20b before reaching Gemini. Now it goes straight to
+  another provider.
 
-**Estimación, no medición al agotarse:** el techo gratuito pasa de ~105 a ~210 turnos
-al día con tres cuentas, y el límite por minuto también se dobla. 20b solo es relevo
-porque su calidad en tareas largas no se ha medido.
+**An estimate, not a measurement at exhaustion:** the free ceiling goes from ~105 to ~210 turns
+a day with three accounts, and the per-minute limit doubles too. 20b is only a relief because
+its quality on long tasks hasn't been measured.
 
-### Lo que falta para elegir por tarea
+### What's missing to choose per task
 
-Casos de evaluación (decisión mía), medir 120b y 20b sobre ellos, y una regla
-**solo si la medición la justifica**. Adivinar qué turnos «son fáciles» sería degradar
-respuestas por un cupo que hoy no se agota.
+Evaluation cases (my decision), measuring 120b and 20b on them, and a rule **only if the
+measurement justifies it**. Guessing which turns "are easy" would degrade answers for a quota
+that doesn't run out today.
 
-## 7. Detalles de cada proveedor
+## 7. Details of each provider
 
-**Groq.** Resultados de herramienta correlacionados por `tool_call_id`. Sin
-herramientas hay que **omitir** `tools` y `tool_choice`, no mandarlos a `null` (400).
+**Groq.** Tool results correlated by `tool_call_id`. Without tools you have to **omit** `tools`
+and `tool_choice`, not send them as `null` (400).
 
-**Gemini.** Se preserva `raw_parts` para no perder el `thought_signature`; se recogen
-**todas** las llamadas a herramienta; una respuesta bloqueada se traduce a texto.
+**Gemini.** `raw_parts` is preserved so as not to lose the `thought_signature`; **every** tool
+call is collected; a blocked answer is translated into text. A tool call without its signature
+is sent back as a note to the person, not as a model turn (4.20).
 
-**OpenAI (V2.0.3).** `gpt-5.6-luna` rechaza `max_tokens` (usa
-`max_completion_tokens`), `temperature` distinta de 1, y herramientas sin
-`reasoning_effort: "none"`: sin eso, **no funcionan las herramientas**. Los tres
-rechazos son 400 y no costaron nada descubrirlos. Frenos de gasto:
-`MORGAN_OPENAI_MAX_SALIDA` (2.048 por llamada), `MORGAN_OPENAI_TOPE_TOKENS` (200.000
-por ventana, en memoria: es un freno contra bucles, no un límite de gasto) y **un plazo
-agotado no se reintenta**, porque la respuesta puede haberse facturado. El límite de
-verdad es el del panel de OpenAI. **Nunca se prueba contra OpenAI.**
+**OpenAI (V2.0.3).** `gpt-5.6-luna` rejects `max_tokens` (it uses `max_completion_tokens`),
+`temperature` other than 1, and tools without `reasoning_effort: "none"`: without it, **tools
+don't work**. The three rejections are 400s and cost nothing to find out. Spending brakes:
+`MORGAN_OPENAI_MAX_SALIDA` (2,048 per call), `MORGAN_OPENAI_TOPE_TOKENS` (200,000 per window,
+in memory: it's a brake against loops, not a spending limit) and **a timeout isn't retried**,
+because the answer may have been billed. The real limit is the one in OpenAI's dashboard.
+**It's never tested against OpenAI.**
 
-**NVIDIA (apagado desde la V2.0.3).** En producción, **15 llamadas, 15 plazos agotados**,
-aunque desde casa contesta en 3 s: se midió el efecto, no la causa. Latencia
-impredecible, así que si vuelve, va el último. Con `thinking: false` es usable; con
-`true`, `deepseek-v4-flash` agotó el plazo cinco de cinco veces. Si `content` llega
-vacío y hay razonamiento, se usa el razonamiento.
+**NVIDIA (off since V2.0.3).** In production, **15 calls, 15 timeouts**, even though from home it
+answers in 3 s: the effect was measured, not the cause. Unpredictable latency, so if it comes
+back, it goes last. With `thinking: false` it's usable; with `true`, `deepseek-v4-flash` timed
+out five times out of five. If `content` arrives empty and there is reasoning, the reasoning is
+used.
 
-## Seguridad y límites conocidos
+## Security and known limits
 
-- Las claves solo en `.env` y Render. `Settings.redacted()` dice si están, nunca su
-  valor. El registro redacta `gsk_`, `AIza`, `sk-`, `api_key=`, `token=`, `password=`.
-- El estado del modelo no se comprueba con una llamada real: `(3 claves)` dice que
-  tienen buena forma, no que les quede cuota.
-- No hay circuit breaker por caída, solo por cuota: un proveedor que no contesta paga
-  sus 30 s en cada petición.
+- Keys only in `.env` and Render. `Settings.redacted()` says whether they're there, never their
+  value. The log redacts `gsk_`, `AIza`, `sk-`, `api_key=`, `token=`, `password=`.
+- The model's status isn't checked with a real call: `(3 claves)` says they're well formed, not
+  that they have quota left.
 
-## Pruebas
+## Tests
 
 `test_llm_chain.py`, `test_fallback_provider.py`, `test_cuota_de_proveedores.py`,
 `test_cuotas.py`, `test_llavero_de_claves.py`, `test_claves_de_proveedor.py`,
-`test_router_de_modelos.py` (18, 8 de 8 mutaciones), `test_llm_errors.py`,
+`test_router_de_modelos.py` (18, 8 of 8 mutations), `test_llm_errors.py`,
 `test_llm_resilience.py`.
