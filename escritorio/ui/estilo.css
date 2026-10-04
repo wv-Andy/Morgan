@@ -22,6 +22,9 @@
   }
 }
 * { box-sizing: border-box; }
+/* `hidden` manda siempre: `#cargando { display: flex }` lo pisaba y se veían las dos secciones
+   (visto en la primera prueba del instalador, 5.0). */
+[hidden] { display: none !important; }
 body {
   margin: 0;
   background: var(--fondo);
