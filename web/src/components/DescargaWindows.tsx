@@ -15,8 +15,14 @@ export function esWindows(nav: Pick<Navigator, 'userAgent'> & { userAgentData?: 
   return /Windows/i.test(nav.userAgent);
 }
 
+/** Si esta web corre dentro de Morgan para Windows (5.2): el programa lo dice al cargarla. */
+export function dentroDelPrograma(w: { __MORGAN_PROGRAMA__?: string } = window as never): boolean {
+  return typeof w.__MORGAN_PROGRAMA__ === 'string';
+}
+
 export function DescargaWindows() {
-  if (!esWindows()) return null;
+  // Desde el programa, ofrecer descargarlo sería un botón inútil.
+  if (!esWindows() || dentroDelPrograma()) return null;
   return (
     <a
       className="descarga-windows"

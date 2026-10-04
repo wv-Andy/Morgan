@@ -6,7 +6,7 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DescargaWindows, esWindows } from './DescargaWindows';
+import { DescargaWindows, dentroDelPrograma, esWindows } from './DescargaWindows';
 import { DESCARGA_WINDOWS } from './PanelEquipos';
 
 const WINDOWS = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0 Safari/537.36';
@@ -31,6 +31,13 @@ describe('esWindows', () => {
   });
 });
 
+describe('dentroDelPrograma', () => {
+  it('solo si el programa lo dijo', () => {
+    expect(dentroDelPrograma({ __MORGAN_PROGRAMA__: '5.2.0' })).toBe(true);
+    expect(dentroDelPrograma({})).toBe(false);
+  });
+});
+
 describe('DescargaWindows', () => {
   it('desde Windows, enlaza con la última versión del programa', () => {
     vi.stubGlobal('navigator', { userAgent: WINDOWS });
@@ -38,6 +45,13 @@ describe('DescargaWindows', () => {
     const enlace = screen.getByRole('link', { name: /Descargar Morgan para Windows/ });
     expect(enlace.getAttribute('href')).toBe(DESCARGA_WINDOWS);
     expect(enlace.getAttribute('target')).toBe('_blank');
+  });
+
+  it('dentro de Morgan para Windows, no aparece', () => {
+    vi.stubGlobal('navigator', { userAgent: WINDOWS });
+    vi.stubGlobal('__MORGAN_PROGRAMA__', '5.2.0');
+    render(<DescargaWindows />);
+    expect(screen.queryByRole('link', { name: /Descargar Morgan para Windows/ })).toBeNull();
   });
 
   it('desde un móvil, no aparece', () => {

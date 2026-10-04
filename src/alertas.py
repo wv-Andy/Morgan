@@ -100,6 +100,14 @@ def _avisar_al_propietario(titulo: str, texto: str) -> None:
         "id": nuevo_id("av"), "user_id": propietario["id"], "automatizacion_id": None,
         "titulo": titulo, "texto": texto, "estado": "fallo", "herramientas": [],
         "leido": False, "creado_en": time.time()})
+    # Y en sus PC con «Mandarte avisos a este PC» encendido (5.2). Si falla, advertencia: un error
+    # volvería aquí.
+    try:
+        from src.canal import avisos_al_pc
+
+        avisos_al_pc.avisar(propietario["id"], titulo, texto)
+    except Exception:
+        logger.warning("No se pudo mandar una alerta al PC", exc_info=True)
 
 
 def instalar() -> AvisosDeErrores | None:

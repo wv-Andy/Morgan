@@ -55,6 +55,15 @@ dar ([ADR-007](decisions.md)). En la web, lo que actúa fuera de Morgan se autor
 - **SSRF**: `read_webpage` se ejecuta sin confirmación, así que rechaza `localhost`,
   redes privadas, link-local (`169.254.169.254`), multicast, reservadas y todo lo que
   no sea http/https.
+- **Las cabeceras de la web** (`vercel.json`, completadas en la 5.2 desde la lista de la
+  4.22): HSTS, `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, y además una **CSP**
+  que solo deja scripts propios más el del tema por su hash (sin `unsafe-inline` ni
+  `unsafe-eval`), conexiones solo al propio dominio (la API va por `/api`) y que nadie
+  meta la web en un marco; **Permissions-Policy** (sin cámara, ubicación, pagos ni USB; el
+  micrófono, solo ella) y **COOP**. Probadas en un navegador de verdad antes de publicarlas
+  (`scripts/probar_cabeceras_web.py`: Edge sin ventana, la web compilada servida con esas
+  cabeceras, cero bloqueos; y caza un hash equivocado, las fuentes sin permitir y las
+  conexiones cortadas). `tests/test_cabeceras_web.py` vigila que el hash siga al script.
 - **Validación de argumentos** contra el JSON Schema antes de ejecutar, en el agente y
   en `POST /tools/{nombre}`.
 - **Opciones inyectadas**: `git_diff` pone la ruta tras `--`. Sin él,

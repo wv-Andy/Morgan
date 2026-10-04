@@ -37,6 +37,9 @@ $mutaciones = [ordered]@{
     "cualquier estado es conectado"  = @("if l.estado == Some(""READY"") && reciente(l.pulso, ahora)", "if reciente(l.pulso, ahora)")
     "color siempre"                  = @("    c == Clave::Conectado`n", "    c != Clave::SinEmparejar`n")
     "reanudar en todo"               = @("        Clave::EnPausa => (false, true),", "        Clave::EnPausa => (true, true),")
+    "la ventana admite http"         = @("    esquema == ""https"" && anfitrion", "    anfitrion")
+    "la ventana admite cualquiera"   = @("&& anfitrion == Some(ANFITRION_DE_MORGAN)", "")
+    "la ventana admite parecidos"    = @("anfitrion == Some(ANFITRION_DE_MORGAN)", "anfitrion.map_or(false, |a| a.contains(""morgan-ia""))")
 }
 $vivas = 0
 foreach ($nombre in $mutaciones.Keys) {

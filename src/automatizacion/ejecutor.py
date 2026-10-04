@@ -240,6 +240,13 @@ class Reloj:
             "id": nuevo_id("av"), "user_id": auto["user_id"], "automatizacion_id": auto["id"],
             "titulo": auto["nombre"], "texto": texto[:MAX_TEXTO], "estado": estado,
             "herramientas": herramientas or [], "leido": False, "creado_en": ahora})
+        # Y en los PC que tengan encendido «Mandarte avisos a este PC» (5.2). Nunca rompe esto.
+        try:
+            from src.canal import avisos_al_pc
+
+            avisos_al_pc.avisar(auto["user_id"], auto["nombre"], texto)
+        except Exception:
+            logger.warning("No se pudo mandar el aviso de una automatización al PC", exc_info=True)
         auditor = getattr(self.container, "audit_logger", None)
         if auditor is not None:
             auditor.log("automatizacion", "safe", True, {"id": auto["id"], "user_id": auto["user_id"],
