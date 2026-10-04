@@ -7,6 +7,6 @@
 #: 1.9. No es cosmetico: `/health` es lo que se mira para saber que hay
 #: desplegado, y contestaba una version que no existia desde hacia ocho
 #: versiones. Una prueba la ata al ultimo apartado del CHANGELOG.
-__version__ = "4.21.0"
+__version__ = "5.0.0"
 
 # Morgan — Personal AI Agent

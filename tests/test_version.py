@@ -64,3 +64,19 @@ class TestLaVersionEsUnaSola:
             f"Estos ficheros vuelven a escribir la versión a mano: {culpables}. "
             "Tiene que salir de src.__version__"
         )
+
+
+class TestElProgramaDeWindowsDiceLaMisma:
+    """5.0: el programa de Windows declara su versión en tres sitios más (Tauri, Cargo y el
+    paquete de npm). El instalador se llama por ella; si no coincide con la de Morgan, la web
+    y el agente dirían una y el programa otra."""
+
+    def test_tauri_cargo_y_npm(self):
+        import json
+        import tomllib
+
+        escritorio = RAIZ / "escritorio"
+        tauri = json.loads((escritorio / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8"))["version"]
+        cargo = tomllib.loads((escritorio / "src-tauri" / "Cargo.toml").read_text(encoding="utf-8"))["package"]["version"]
+        npm = json.loads((escritorio / "package.json").read_text(encoding="utf-8"))["version"]
+        assert tauri == cargo == npm == __version__, (tauri, cargo, npm, __version__)
