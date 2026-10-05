@@ -355,6 +355,15 @@ export interface MessageListResponse {
   messages: StoredMessage[];
 }
 
+/**
+ * Lo que se dice cuando no hay un mensaje de Morgan que enseñar (4.23: los errores, en palabras
+ * que entiende cualquiera). El código (`HTTP_503`…) va en `code`, para quien lo necesite; en
+ * pantalla, qué pasó y qué hacer.
+ */
+export const SIN_RESPUESTA_CLARA = (status: number) =>
+  `Morgan no pudo contestar ahora mismo (código ${status}). Vuelve a intentarlo en un momento.`;
+export const SIN_CONEXION = 'No se pudo conectar con Morgan. Mira tu conexión a internet y vuelve a intentarlo.';
+
 export class MorganAPIError extends Error {
   constructor(public code: string, message: string, public details?: unknown) {
     super(message);
@@ -747,7 +756,7 @@ function interpretarRespuesta(res: Response, data: unknown): MorganAPIError | nu
       `HTTP_${res.status}`,
       res.status === 502 || res.status === 504
         ? 'La red cortó la espera antes de que Morgan terminara. Suele pasar con encargos muy largos: pídemelo por partes.'
-        : `Respuesta ilegible del servidor (${res.status}).`,
+        : SIN_RESPUESTA_CLARA(res.status),
     );
   }
 
@@ -780,7 +789,7 @@ function interpretarRespuesta(res: Response, data: unknown): MorganAPIError | nu
 
   return new MorganAPIError(
     err?.code || `HTTP_${res.status}`,
-    err?.message || `Error ${res.status}`,
+    err?.message || SIN_RESPUESTA_CLARA(res.status),
     err?.details as never,
   );
 }
@@ -846,7 +855,7 @@ function traducirFallo(err: unknown, path: string, timeoutMs: number, externa?: 
         : `La solicitud superó los ${Math.round(timeoutMs / 1000)} s. Morgan puede seguir trabajando: revisa la conversación en unos segundos.`,
     );
   }
-  return new MorganAPIError('NETWORK_ERROR', 'No se pudo conectar con Morgan API. ¿Está el servidor en ejecución?');
+  return new MorganAPIError('NETWORK_ERROR', SIN_CONEXION);
 }
 
 /** Un evento de progreso de `/chat/stream`. `fin` y `error` no llegan aquí: los resuelve `flujo`. */
@@ -918,7 +927,7 @@ async function flujo<T>(
     if (!res.ok || !tipo.includes('ndjson') || !res.body) {
       const data = await leerCuerpo(res);
       throw interpretarRespuesta(res, data) ?? new MorganAPIError(
-        `HTTP_${res.status}`, `Respuesta ilegible del servidor (${res.status}).`,
+        `HTTP_${res.status}`, SIN_RESPUESTA_CLARA(res.status),
       );
     }
 
@@ -943,7 +952,7 @@ async function flujo<T>(
         try {
           evento = JSON.parse(linea);
         } catch {
-          throw new MorganAPIError(`HTTP_${res.status}`, 'Respuesta ilegible del servidor a mitad del turno.');
+          throw new MorganAPIError(`HTTP_${res.status}`, 'La respuesta se cortó a mitad. Vuelve a intentarlo; si era un encargo largo, pídelo por partes.');
         }
         if (evento.tipo === 'fin') return evento as unknown as T;
         if (evento.tipo === 'error') {

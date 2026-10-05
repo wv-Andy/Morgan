@@ -20,6 +20,7 @@ from src.eventos_turno import CanalDelTurno, escuchando
 from src.observabilidad import medicion_actual, vigilar_turno
 from src.identidad import rol_actual, usuario_actual
 from src.identidad.cuotas import CuotaAgotada
+from src.api.errores_en_palabras import ERROR_EN_EL_TURNO
 
 logger = logging.getLogger(__name__)
 
@@ -423,8 +424,7 @@ def chat(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "code": "AGENT_EXECUTION_ERROR",
-                "message": "Error durante la ejecución del agente. "
-                           "Consulta logs/morgan.log para el detalle.",
+                "message": ERROR_EN_EL_TURNO,
                 "details": None,
             },
         )
@@ -523,8 +523,7 @@ async def _eventos_del_turno(
             yield _linea({
                 "tipo": "error",
                 "code": "AGENT_EXECUTION_ERROR",
-                "message": "Error durante la ejecución del agente. "
-                           "Consulta logs/morgan.log para el detalle.",
+                "message": ERROR_EN_EL_TURNO,
                 "t": canal.segundos(),
             })
         else:

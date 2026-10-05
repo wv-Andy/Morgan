@@ -227,7 +227,7 @@ describe('cuando el que responde no es Morgan', () => {
       expect.unreachable('tenía que fallar');
     } catch (err) {
       expect((err as MorganAPIError).code).toBe('HTTP_500');
-      expect((err as MorganAPIError).message).toContain('ilegible');
+      expect((err as MorganAPIError).message).toContain('no pudo contestar');
     }
   });
 });
@@ -293,5 +293,26 @@ describe('subir un archivo', () => {
 
     const cabeceras = (espia.mock.calls[0][1] as RequestInit).headers as Record<string, string>;
     expect(cabeceras['Content-Type']).toBe('application/json');
+  });
+});
+
+describe('los errores, en palabras que entiende cualquiera (4.23)', () => {
+  const JERGA = ['api', 'servidor en ejecución', 'ilegible', 'error 4', 'error 5', 'http'];
+  const limpio = (m: string) => !JERGA.some(j => m.toLowerCase().includes(j));
+
+  it('sin conexión dice qué mirar', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+    const err = (await morganAPI.status().then(() => null, e => e)) as MorganAPIError;
+    expect(err.code).toBe('NETWORK_ERROR');
+    expect(limpio(err.message)).toBe(true);
+    expect(err.message).toContain('conexión a internet');
+  });
+
+  it('un error sin mensaje no se queda en «Error 422»', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(respuesta({ detail: 'algo' }, false, 422));
+    const err = (await morganAPI.status().then(() => null, e => e)) as MorganAPIError;
+    expect(err.code).toBe('HTTP_422');
+    expect(limpio(err.message)).toBe(true);
+    expect(err.message).toContain('Vuelve a intentarlo');
   });
 });

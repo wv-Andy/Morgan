@@ -44,7 +44,12 @@ export class ErrorBoundary extends Component<Props, State> {
         <p>
           El resto de Morgan sigue funcionando. Puedes reintentar sin perder la sesión.
         </p>
-        <code className="render-error-detail">{error.message}</code>
+        {/* El detalle técnico, plegado (4.23): sirve para avisar de un fallo, pero a quien no
+            programa «Cannot read properties of undefined» no le dice nada. */}
+        <details className="render-error-detalles">
+          <summary>Detalles técnicos</summary>
+          <code className="render-error-detail">{error.message}</code>
+        </details>
         <div className="render-error-actions">
           <button className="btn-primary" onClick={this.reset}>Reintentar</button>
           <button className="header-action" onClick={() => window.location.reload()}>

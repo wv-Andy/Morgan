@@ -197,6 +197,11 @@ Common codes: `VALIDATION_ERROR` (422), `PERMISSION_DENIED` (403), `TOOL_NOT_FOU
 `AGENT_EXECUTION_ERROR` / `TOOL_EXECUTION_ERROR` / `STORAGE_ERROR` / `INTERNAL_SERVER_ERROR` (500),
 `UNAUTHORIZED` (401), `SESSION_NOT_FOUND` (404).
 
+**Program by the `code`, not the `message`.** The `message` is for a person and is shown as is in the
+web: since 4.23 it says what happened and what to do, in plain words (a 422 no longer says «según
+el esquema» and a 500 no longer points to a log file; the field details stay in `details`). The
+`code` doesn't change.
+
 With an API token: `TOKEN_INVALIDO` and `TOKENS_DESACTIVADOS` (401), `TOKEN_NO_PERMITIDO` and
 `ALCANCE_INSUFICIENTE` (403). What to do with each one, in
 [autenticacion.md](autenticacion.md#personal-api-tokens-v2040).

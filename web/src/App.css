@@ -1046,6 +1046,8 @@
 .render-error h2 { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
 .render-error p { font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; }
 
+.render-error-detalles { margin-bottom: 16px; }
+.render-error-detalles summary { font-size: 12.5px; color: var(--text-secondary); cursor: pointer; margin-bottom: 8px; }
 .render-error-detail {
   display: block;
   background: var(--bg-app);

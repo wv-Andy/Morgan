@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import logging
 from contextlib import asynccontextmanager
@@ -34,6 +35,7 @@ from src.api.auth import install_token_auth
 from src.api.observabilidad_middleware import CABECERA, install_observabilidad
 from src.api.identidad_middleware import install_identidad
 from src.api.static import mount_api_root, mount_web_ui
+from src.api.errores_en_palabras import ERROR_INESPERADO, en_palabras
 
 
 logger = logging.getLogger(__name__)
@@ -147,6 +149,7 @@ def create_app() -> FastAPI:
     # --- Manejadores globales de errores uniformes ---
 
     @app.exception_handler(HTTPException)
+    @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException):
         if isinstance(exc.detail, dict):
             code = exc.detail.get("code", "HTTP_ERROR")
@@ -154,7 +157,7 @@ def create_app() -> FastAPI:
             details = exc.detail.get("details", None)
         else:
             code = f"HTTP_{exc.status_code}"
-            message = str(exc.detail)
+            message = en_palabras(exc.status_code, str(exc.detail))
             details = None
 
         return JSONResponse(
@@ -177,7 +180,7 @@ def create_app() -> FastAPI:
                 "success": False,
                 "error": {
                     "code": "VALIDATION_ERROR",
-                    "message": "Datos de petición no válidos según el esquema.",
+                    "message": "Falta un dato o alguno no vale. Revísalo y vuelve a intentarlo.",
                     "details": [
                         {"loc": list(err.get("loc", [])), "msg": err.get("msg"), "type": err.get("type")}
                         for err in exc.errors()
@@ -197,8 +200,7 @@ def create_app() -> FastAPI:
                 "success": False,
                 "error": {
                     "code": "INTERNAL_SERVER_ERROR",
-                    "message": "Ocurrió un error inesperado en el servidor. "
-                               "Consulta logs/morgan.log para el detalle.",
+                    "message": ERROR_INESPERADO,
                     "details": None,
                 },
             },

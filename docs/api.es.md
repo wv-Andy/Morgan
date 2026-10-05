@@ -199,6 +199,11 @@ Códigos habituales: `VALIDATION_ERROR` (422), `PERMISSION_DENIED` (403), `TOOL_
 `AGENT_EXECUTION_ERROR` / `TOOL_EXECUTION_ERROR` / `STORAGE_ERROR` / `INTERNAL_SERVER_ERROR` (500),
 `UNAUTHORIZED` (401), `SESSION_NOT_FOUND` (404).
 
+**Se programa por el `code`, no por el `message`.** El `message` es para una persona y la web lo enseña
+tal cual: desde la 4.23 dice qué pasó y qué hacer, en palabras llanas (un 422 ya no dice «según el
+esquema» y un 500 ya no manda a un fichero de registro; el detalle de los campos sigue en
+`details`). El `code` no cambia.
+
 Con un token de API: `TOKEN_INVALIDO` y `TOKENS_DESACTIVADOS` (401),
 `TOKEN_NO_PERMITIDO` y `ALCANCE_INSUFICIENTE` (403). Qué hacer con cada uno, en
 [autenticacion.md](autenticacion.es.md#tokens-personales-de-api-v2040).
