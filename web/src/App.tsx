@@ -471,7 +471,8 @@ Esta acción no se puede deshacer. Si solo quieres quitarla de en medio, archív
             <span className="brand-mark"><LogoMorgan size={20} /></span>
             <span className="brand-texto">
               <span className="brand-nombre">Morgan</span>
-              <span className="brand-lema">Tu agente personal</span>
+              {/* El lema, el del nombre reservado en la Microsoft Store (2026-10-04). */}
+              <span className="brand-lema">More Than an Assistant</span>
             </span>
             {/* Dónde corre este Morgan. Dato real de /status, no un adorno: en
                 la nube no puede tocar tu equipo, y conviene saberlo de un vistazo. */}
