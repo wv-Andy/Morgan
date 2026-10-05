@@ -99,7 +99,7 @@ confirmation). **L** = local only · **L+C** = local and cloud.
 | `list_uploads`, `read_upload`, `analyze_image`, `transcribe_audio` | 🟢 | Files uploaded through the web (below) |
 | `copy_file` | 🟢 | **Only with your PC connected** (3.1-E): brings a copy of one of your files and gives you a link to download it on your phone. Any format, up to 20 MB; the copy deletes itself after 24 h |
 | `delete_file` | 🔴 | The same, and it's also **confirmed on the PC** with a notification. Goes to the Recycle Bin; only empty folders |
-| `open_app` | 🟢 | **Only with your PC connected and switched on there** (4.8): open an installed app (never consoles or system tools), a file with its program, a page in the browser or a folder. No plan |
+| `open_app` | 🟢 | **Only with your PC connected and switched on there** (4.8): open an installed app (since 5.3 also those from the Store and built into Windows, like Calculator, Photos or Spotify, and Steam and Epic games; never consoles, scripts or system tools), a file with its program, a page in the browser or a folder. No plan |
 | `close_app` | 🔴 | Close one of your programs like its X button, with a plan and «Allow» on the PC |
 | `pc_context` | 🟢 | **Only with your PC connected** (4.13; on by default): your code projects inside the allowed folders (type, git branch) and the installed editors. For "open project X" without giving the path |
 | `ui_read` | 🟢 | **Only with your PC connected and switched on there** (4.12): the buttons, fields and links of a window, by name |

@@ -432,8 +432,8 @@ DIAGNOSTICO_EN_EL_EQUIPO = {
 #: cerrar, 🔴, con plan y «Permitir». En el PC, las dos nacen apagadas.
 APLICACIONES_EN_EL_EQUIPO = {
     "open_app": (
-        "Abre en el PC. accion=aplicacion (nombre de una instalada; path opcional, p. ej. una "
-        "carpeta para VS Code), archivo (path, con su programa), url, carpeta (path, en el "
+        "Abre en el PC. accion=aplicacion (nombre de una instalada, también de la Store o un "
+        "juego; path opcional, p. ej. una carpeta para VS Code), archivo (path, con su programa), url, carpeta (path, en el "
         "Explorador) o listar (las instaladas). Nunca consolas ni scripts. Sin plan.",
         {"accion": {"type": "string", "enum": ["aplicacion", "archivo", "url", "carpeta", "listar"]},
          "nombre": _RUTA, "path": _RUTA, "url": _RUTA}, ["accion"], RiskLevel.SAFE, False, 30.0),

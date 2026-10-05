@@ -231,6 +231,33 @@ local agent. Design and my decisions in plan-4.x.md (in Spanish).
   permissions can edit it. Out of the threat model (a PC with malware running with your
   permissions is out of reach).
 
+## 7. Code signing policy
+
+This is the code signing policy of **Morgan for Windows** (the installer published in
+[releases](https://github.com/wv-Andy/Morgan/releases)).
+
+*Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by
+[SignPath Foundation](https://signpath.org).* (Once the application is approved; until then the
+installer isn't signed for Windows and SmartScreen shows a notice.)
+
+- **What gets signed**: only the installer and program built from this repository's source, by
+  GitHub Actions (`.github/workflows/escritorio.yml`), on clean Windows machines. Nothing is
+  signed from a personal PC.
+- **Roles**: the project has one maintainer, [@wv-Andy](https://github.com/wv-Andy), who is the
+  author, reviewer and approver of every change and of every signing request. Access to the
+  repository and to SignPath uses multi-factor authentication.
+- **Before signing**: every change goes through the automated tests (more than 4,000 in Python,
+  the web's, and the program's: installing, the tray, the single window, updates and rollback,
+  uninstalling), all green.
+- **Privacy**: what Morgan stores and with whom it's shared is in the
+  [privacy policy](privacidad.md). The program sends nothing of yours to anyone except the
+  Morgan cloud you connect it to, and one request a day to GitHub to check for a new version.
+- **Your PC**: the installer says what it installs, the program starts with Windows (in the
+  tray) and it's removed from «Installed apps» without leaving anything but your backups.
+
+Updates have their own signature, independent of this one (minisign, the Tauri updater's): the
+program installs only a version signed with the key it carries.
+
 ## Tests
 
 `test_permissions.py`, `test_permiso_confirmacion.py`, `test_security_advanced.py`,

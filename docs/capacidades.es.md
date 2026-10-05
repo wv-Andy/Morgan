@@ -99,7 +99,7 @@ confirmación). **L** = solo local · **L+N** = local y nube.
 | `list_uploads`, `read_upload`, `analyze_image`, `transcribe_audio` | 🟢 | Archivos subidos por la web (abajo) |
 | `copy_file` | 🟢 | **Solo con tu PC conectado** (3.1-E): trae una copia de un archivo tuyo y te da un enlace para descargarla en el móvil. Cualquier formato, hasta 20 MB; la copia se borra sola a las 24 h |
 | `delete_file` | 🔴 | Igual, y además **se confirma en el PC** con una notificación. Va a la Papelera; solo carpetas vacías |
-| `open_app` | 🟢 | **Solo con tu PC conectado y encendida allí** (4.8): abrir una aplicación instalada (nunca consolas ni herramientas del sistema), un archivo con su programa, una página en el navegador o una carpeta. Sin plan |
+| `open_app` | 🟢 | **Solo con tu PC conectado y encendida allí** (4.8): abrir una aplicación instalada (desde la 5.3 también las de la Store y las de Windows, como la Calculadora, Fotos o Spotify, y los juegos de Steam y Epic; nunca consolas, scripts ni herramientas del sistema), un archivo con su programa, una página en el navegador o una carpeta. Sin plan |
 | `close_app` | 🔴 | Cerrar un programa tuyo como su X, con plan y «Permitir» en el PC |
 | `pc_context` | 🟢 | **Solo con tu PC conectado** (4.13; encendida al nacer): tus proyectos de código dentro de las carpetas permitidas (tipo, rama de git) y los editores instalados. Para «abre el proyecto X» sin dar la ruta |
 | `ui_read` | 🟢 | **Solo con tu PC conectado y encendida allí** (4.12): los botones, campos y enlaces de una ventana, por su nombre |

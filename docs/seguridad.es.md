@@ -234,6 +234,35 @@ grande desde el agente local. Diseño y mis decisiones en plan-4.x.md.
   sus permisos puede editarlo. Fuera del modelo de amenazas (un PC con malware con tus
   permisos está fuera de alcance).
 
+## 7. Política de firma de código
+
+Esta es la política de firma de código de **Morgan para Windows** (el instalador que se publica
+en [versiones](https://github.com/wv-Andy/Morgan/releases)).
+
+*Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by
+[SignPath Foundation](https://signpath.org).* (Firma de código gratuita de SignPath.io, con
+certificado de SignPath Foundation, cuando se apruebe la solicitud; hasta entonces el instalador
+no va firmado para Windows y SmartScreen enseña un aviso.)
+
+- **Qué se firma**: solo el instalador y el programa compilados desde el código de este
+  repositorio, por GitHub Actions (`.github/workflows/escritorio.yml`), en máquinas Windows
+  limpias. Nada se firma desde un PC personal.
+- **Roles**: el proyecto tiene un mantenedor, [@wv-Andy](https://github.com/wv-Andy), que es
+  autor, revisor y aprobador de cada cambio y de cada petición de firma. El acceso al
+  repositorio y a SignPath lleva autenticación en dos pasos.
+- **Antes de firmar**: cada cambio pasa las pruebas automáticas (más de 4000 en Python, las de
+  la web y las del programa: instalar, la bandeja, la ventana única, actualizar y volver atrás,
+  desinstalar), todas en verde.
+- **Privacidad**: qué guarda Morgan y con quién lo comparte está en la
+  [política de privacidad](privacidad.es.md). El programa no manda nada tuyo a nadie salvo a la
+  nube de Morgan con la que lo conectas, y una consulta al día a GitHub para ver si hay versión
+  nueva.
+- **Tu PC**: el instalador dice qué instala, el programa arranca con Windows (en la bandeja) y
+  se quita desde «Aplicaciones instaladas» sin dejar nada más que tus respaldos.
+
+Las actualizaciones llevan su propia firma, aparte de esta (minisign, la del actualizador de
+Tauri): el programa solo instala una versión firmada con la clave que lleva dentro.
+
 ## Pruebas
 
 `test_permissions.py`, `test_permiso_confirmacion.py`, `test_security_advanced.py`,
