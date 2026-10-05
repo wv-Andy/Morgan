@@ -118,9 +118,11 @@ def test_la_depuracion_solo_en_la_copia_de_prueba():
     assert '#[cfg(feature = "depurar")]' in texto[i - 600:i]
     flujo = (RAIZ / ".github" / "workflows" / "escritorio.yml").read_text(encoding="utf-8")
     compilaciones = re.findall(r"npx tauri build.*", flujo)
-    # La que se publica, una y sin nada más; la 9.9.9 de la prueba de actualizar solo cambia el
+    # La que se publica (5.4: el programa con --no-bundle y luego `tauri bundle`, para firmar lo de
+    # dentro entre medias), una y sin nada más; la 9.9.9 de la prueba de actualizar solo cambia el
     # número; y la de depurar no da instalador (--no-bundle).
-    assert compilaciones.count("npx tauri build") == 1, compilaciones
+    assert compilaciones.count("npx tauri build --no-bundle") == 1, compilaciones
+    assert re.findall(r"run: npx tauri bundle.*", flujo) == ["run: npx tauri bundle"]
     con_depurar = [c for c in compilaciones if "depurar" in c]
     assert con_depurar and all("--no-bundle" in c for c in con_depurar), compilaciones
     assert not [c for c in compilaciones if "--features" in c and "depurar" not in c]

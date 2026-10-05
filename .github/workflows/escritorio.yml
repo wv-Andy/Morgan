@@ -13,7 +13,18 @@ on:
     branches: [main, "ci/**"]
     paths: ["escritorio/**", "empaquetado/**", "src/agente/**", "src/__init__.py",
             "requirements-agente.txt", ".github/workflows/escritorio.yml"]
+  # 5.4: también a mano («Run workflow»), y con «publicar» marcado, si todo pasa, publica la
+  # versión de `src/__init__.py` con su instalador, su firma y `latest.json` (pendientes.md, el 28).
   workflow_dispatch:
+    inputs:
+      publicar:
+        description: "Publicar esta versión en GitHub si todo pasa"
+        type: boolean
+        default: false
+      notas:
+        description: "Qué trae de nuevo (una línea; sale en la página de la versión)"
+        type: string
+        default: ""
 
 # Escribir: la prueba de las actualizaciones (5.3) publica una versión de prueba y la borra.
 permissions:
@@ -61,16 +72,143 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - name: El programa y su instalador
+      - name: El programa
         working-directory: escritorio
         # La clave que firma las actualizaciones (5.3): solo como secreto, nunca en el repositorio.
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        # 5.4: en dos pasos (el programa, y luego el instalador con `tauri bundle`), para poder
+        # firmar lo de dentro antes de empaquetarlo. Sin SignPath configurado, sale lo mismo que
+        # un `tauri build`.
         run: |
           npm install --no-audit --no-fund
           npx tauri icon ../web/public/logo-512.png
-          npx tauri build
+          npx tauri build --no-bundle
+
+      # El instalador. `tauri bundle` **cambia Morgan.exe** al empaquetar (le escribe el tipo de
+      # paquete: medido en el registro, «Patching Morgan.exe with bundle type information»), así que
+      # con SignPath se firma lo de dentro **después** de esta pasada y se empaqueta otra vez.
+      - name: El instalador
+        working-directory: escritorio
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npx tauri bundle
+
+      # --- La firma de Windows (5.4, SignPath) ------------------------------------------------
+      # Solo con las variables del repositorio SIGNPATH_ORGANIZATION_ID, SIGNPATH_PROJECT_SLUG y
+      # SIGNPATH_SIGNING_POLICY_SLUG y el secreto SIGNPATH_API_TOKEN (pendientes.md, el 28). La
+      # Store exige firmados el instalador **y todos los programas que lleva dentro**: primero
+      # Morgan.exe y los del agente que no vengan firmados ya (Python y algunas bibliotecas traen
+      # la firma de quien los hizo), luego el instalador, y al final se rehace la firma de las
+      # actualizaciones, que se calcula sobre el instalador ya firmado.
+      # Corre siempre: solo cuenta y copia a una carpeta temporal, y así cada compilación dice qué
+      # falta firmar (subirlo y firmarlo, solo con SignPath).
+      - name: Lo de dentro, sin firma
+        shell: powershell
+        run: |
+          $base = Resolve-Path escritorio/src-tauri
+          $destino = Join-Path $env:RUNNER_TEMP "dentro"
+          $ficheros = @(Get-Item "$base/target/release/Morgan.exe") + @(Get-ChildItem "$base/agente" -Recurse -Include *.exe, *.dll, *.pyd)
+          $sin = $ficheros | Where-Object { (Get-AuthenticodeSignature $_.FullName).Status -ne "Valid" }
+          # Los propios: Morgan.exe y los del agente. Los demás sin firma son bibliotecas de código
+          # abierto de otros: con SIGNPATH_SOLO_PROPIOS=si (si SignPath no deja firmarlas), fuera.
+          $propios = $sin | Where-Object { $_.Name -in "Morgan.exe", "morgan-agente.exe", "morgan-agente-fondo.exe" }
+          "Sin firma: $(@($sin).Count) de $(@($ficheros).Count). Propios: $(@($propios).Count). De otros:"
+          $sin | Where-Object { $_ -notin $propios } | ForEach-Object { "  $($_.Name)" }
+          if ("${{ vars.SIGNPATH_SOLO_PROPIOS }}" -eq "si") { $sin = $propios }
+          foreach ($f in $sin) {
+            $rel = $f.FullName.Substring($base.Path.Length + 1)
+            New-Item -ItemType Directory -Force (Split-Path (Join-Path $destino $rel)) | Out-Null
+            Copy-Item $f.FullName (Join-Path $destino $rel)
+          }
+          "Para firmar: $(@($sin).Count)"
+      - uses: actions/upload-artifact@v7
+        id: dentro
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        with:
+          name: sin-firmar-dentro
+          path: ${{ runner.temp }}/dentro
+          if-no-files-found: error
+      - uses: signpath/github-action-submit-signing-request@v2
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: dentro
+          github-artifact-id: ${{ steps.dentro.outputs.artifact-id }}
+          wait-for-completion: true
+          # Una hora: SignPath puede pedir que apruebes la firma a mano en su web.
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: ${{ runner.temp }}/dentro-firmado
+      - name: Lo de dentro, firmado, en su sitio
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        shell: powershell
+        run: |
+          $base = Resolve-Path escritorio/src-tauri
+          $firmados = Resolve-Path (Join-Path $env:RUNNER_TEMP "dentro-firmado")
+          $malos = 0
+          Get-ChildItem $firmados -Recurse -File | ForEach-Object {
+            $rel = $_.FullName.Substring($firmados.Path.Length + 1)
+            Copy-Item $_.FullName (Join-Path $base $rel) -Force
+            if ((Get-AuthenticodeSignature $_.FullName).Status -ne "Valid") { "Sin firma válida: $rel"; $malos++ }
+          }
+          if ($malos) { throw "$malos ficheros volvieron sin firma válida" }
+
+      - name: El instalador, otra vez, con lo de dentro firmado
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        working-directory: escritorio
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        shell: powershell
+        run: |
+          npx tauri bundle
+          # La segunda pasada escribe lo mismo que la primera: la firma tiene que seguir valiendo.
+          $estado = (Get-AuthenticodeSignature src-tauri/target/release/Morgan.exe).Status
+          if ($estado -ne "Valid") { throw "Empaquetar rompió la firma de Morgan.exe ($estado)" }
+
+      - uses: actions/upload-artifact@v7
+        id: instalador-sin-firmar
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        with:
+          name: instalador-sin-firmar
+          path: escritorio/src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+      - uses: signpath/github-action-submit-signing-request@v2
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: instalador
+          github-artifact-id: ${{ steps.instalador-sin-firmar.outputs.artifact-id }}
+          wait-for-completion: true
+          # Una hora: SignPath puede pedir que apruebes la firma a mano en su web.
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: ${{ runner.temp }}/instalador-firmado
+      - name: El instalador firmado, y su firma de actualizaciones rehecha
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        shell: powershell
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $nsis = Resolve-Path escritorio/src-tauri/target/release/bundle/nsis
+          $firmado = Get-ChildItem (Join-Path $env:RUNNER_TEMP "instalador-firmado") -Filter *.exe | Select-Object -First 1
+          Copy-Item $firmado.FullName (Join-Path $nsis $firmado.Name) -Force
+          $exe = Join-Path $nsis $firmado.Name
+          if ((Get-AuthenticodeSignature $exe).Status -ne "Valid") { throw "El instalador volvió sin firma válida" }
+          Remove-Item "$exe.sig" -ErrorAction SilentlyContinue
+          Push-Location escritorio
+          npx tauri signer sign $exe
+          Pop-Location
+          if (-not (Test-Path "$exe.sig")) { throw "No se rehízo la firma de las actualizaciones" }
+          "Firmado: $((Get-AuthenticodeSignature $exe).SignerCertificate.Subject)"
 
       # Instalar, abrir, cerrar a la bandeja, una sola instancia y desinstalar, en una máquina
       # limpia: en un PC con el programa de verdad, la prueba se llevaría el suyo (5.1).
@@ -142,3 +280,42 @@ jobs:
             escritorio/src-tauri/target/release/bundle/nsis/*.exe
             escritorio/src-tauri/target/release/bundle/nsis/*.exe.sig
           if-no-files-found: error
+
+      # 5.4: publicar, solo a mano y solo si todo lo anterior pasó (pendientes.md, el 28).
+      - name: Publicar la versión
+        if: ${{ success() && github.event_name == 'workflow_dispatch' && inputs.publicar }}
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Por variable y no pegado en el script: lo que se escriba ahí no puede ejecutarse.
+          NOTAS: ${{ inputs.notas }}
+        run: |
+          $notas = $env:NOTAS
+          if (-not $notas.Trim()) { $notas = "Morgan para Windows." }
+          python empaquetado/publicar_version.py --desde escritorio/src-tauri/target/release/bundle/nsis --notas-texto $notas
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      # 5.4: que la firma de Morgan.exe sobrevive a la segunda pasada de `tauri bundle`, medido sin
+      # SignPath: con un certificado de prueba, de confianza solo en esta máquina. Solo en las
+      # compilaciones por push (nunca en una que publica), y después de subir el instalador: lo que
+      # toca aquí no sale de esta máquina.
+      - name: La firma sobrevive a empaquetar (prueba)
+        if: ${{ github.event_name == 'push' }}
+        shell: powershell
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=Morgan prueba de firma" -CertStoreLocation Cert:\CurrentUser\My
+          # El almacén de la máquina: el del usuario pide confirmarlo en una ventana (se colgaría).
+          $raiz = Get-Item Cert:\LocalMachine\Root
+          $raiz.Open("ReadWrite"); $raiz.Add($cert); $raiz.Close()
+          $exe = Resolve-Path escritorio/src-tauri/target/release/Morgan.exe
+          # Como la primera pasada del instalador de verdad: Tauri ya marcó Morgan.exe.
+          Push-Location escritorio; npx tauri bundle | Out-Null; Pop-Location
+          Set-AuthenticodeSignature $exe -Certificate $cert -HashAlgorithm SHA256 | Out-Null
+          $antes = (Get-AuthenticodeSignature $exe).Status
+          Push-Location escritorio; npx tauri bundle | Out-Null; Pop-Location
+          $despues = (Get-AuthenticodeSignature $exe).Status
+          "firmado: $antes; tras empaquetar otra vez: $despues"
+          if ($antes -ne "Valid" -or $despues -ne "Valid") { throw "La firma no sobrevive a empaquetar" }
