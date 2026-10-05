@@ -167,7 +167,7 @@ Full catalog in [docs/capacidades.md](docs/capacidades.md).
 ## Structure
 
 ```
-proyectoAsistenteBeta/
+Morgan/
 ├── src/
 │   ├── agent/         # Central agent, prompt and events
 │   ├── models/        # LLM providers (Groq, Gemini, OpenAI, NVIDIA, Fallback, Mock)

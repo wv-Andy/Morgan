@@ -161,7 +161,7 @@ Catálogo completo en [docs/capacidades.es.md](docs/capacidades.es.md).
 ## Estructura
 
 ```
-proyectoAsistenteBeta/
+Morgan/
 ├── src/
 │   ├── agent/         # Agente central, prompt y eventos
 │   ├── models/        # Proveedores LLM (Groq, Gemini, OpenAI, NVIDIA, Fallback, Mock)
