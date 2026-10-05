@@ -276,6 +276,27 @@ working on it", not "error", so nobody repeats it and pays twice. Since 2.0.14 t
 `/chat/stream`, with heartbeats, and the cut stops affecting it: the ceiling is on silence, not
 duration.
 
+## 5 bis. Accessibility (4.23)
+
+The basics, measured with **axe-core** (the reference library, the one Chrome's and Edge's tools
+use) in a real browser, with the **WCAG 2.1 A and AA** rules: `scripts/auditar_accesibilidad.py`.
+
+| What | Result |
+|---|---|
+| The front page and the sign-in screen (the published web) | 0 rules broken |
+| Inside: the 9 views and the 9 Settings sections, in the three themes (local web, without an account) | **Before: only contrast** failed (the faint text, 3.3-4.6:1; in the light theme the «available» green at 2.9:1 and the slogan blue at 3.8:1). **Now: 0** |
+| The keyboard: Tab through the whole page | It reaches the 44 controls in a logical order; the focus **shows** on all of them (the conversation search had no style for it) |
+
+Names of buttons and fields, labels, the page language and the structure already passed. The
+contrast is fixed in each theme's colors (`web/src/index.css`), and
+`tests/test_web_contraste.py` checks without a browser that every text color reaches **4.5:1**
+on every background of its theme (it found one more that axe couldn't see, because nothing was
+in that state during the audit: the «degraded» orange of the light theme, at 4.0:1). 5 of 5
+mutations caught.
+
+What isn't measured yet: a real screen reader (NVDA or Narrator) going through a whole
+conversation.
+
 ## 6. Frontend tests
 
 They came because of a bug that only happened **when everything worked**: a `return` inside the

@@ -4,3 +4,6 @@ pytest==9.1.1
 pytest-cov==7.1.0
 # Para leer render.yaml y comprobar que no nombra variables que el código no lee.
 pyyaml==6.0.3
+# Para medir la accesibilidad de la web (scripts/auditar_accesibilidad.py, 4.23) y la ventana del
+# programa (empaquetado/probar_ventana.py): hablar con el navegador por su protocolo de depuración.
+websocket-client==1.8.0

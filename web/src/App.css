@@ -1274,6 +1274,8 @@
   font-family: inherit;
 }
 .session-search input::placeholder { color: var(--text-secondary); }
+/* Con el teclado se ve dónde está el foco (4.23): el campo no tiene contorno propio. */
+.session-search:focus-within { border-color: var(--accent-border); box-shadow: 0 0 0 2px var(--accent-border); }
 
 /* La fila es el ancla del menu desplegable. */
 .session-row { position: relative; display: flex; align-items: center; }
@@ -2340,7 +2342,6 @@
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--text-muted);
-  opacity: 0.7;
 }
 
 /* ── La barra de arriba ───────────────────────────────────────────────────── */
@@ -2879,7 +2880,8 @@
 }
 .servicio-estado.activo { color: var(--status-success); border-color: var(--status-success); }
 .servicio-estado.fallando { color: var(--status-degraded); border-color: var(--status-degraded); }
-.servicio-estado.apagado { opacity: 0.6; }
+/* Apagado se distingue por el borde, no bajando la opacidad: así el texto se leía a 2,6:1 (4.23). */
+.servicio-estado.apagado { border-style: dashed; }
 
 .servicio-descripcion { font-size: 13px; color: var(--text-secondary); margin: 0; }
 .servicio-cuenta { font-size: 12.5px; color: var(--text-secondary); margin: 0; }

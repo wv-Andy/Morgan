@@ -286,6 +286,28 @@ aviso dice «sigo trabajando en ello», no «error», para que nadie lo repita y
 dos veces. Desde la 2.0.14 la web usa `/chat/stream`, con latidos, y el corte deja
 de afectarle: el techo es de silencio, no de duración.
 
+## 5 bis. La accesibilidad (4.23)
+
+Lo básico, medido con **axe-core** (la biblioteca de referencia, la que usan las herramientas de
+Chrome y Edge) en un navegador de verdad, con las reglas de **WCAG 2.1 A y AA**:
+`scripts/auditar_accesibilidad.py`.
+
+| Qué | Resultado |
+|---|---|
+| La portada y la pantalla de entrar (la web publicada) | 0 reglas incumplidas |
+| Por dentro: las 9 vistas y las 9 secciones de Ajustes, en los tres temas (la web local, sin cuenta) | **Antes: solo el contraste** (el texto tenue, 3,3-4,6:1; en el claro, el verde de «disponible» en 2,9:1 y el azul del lema en 3,8:1). **Ahora: 0** |
+| El teclado: Tab por toda la página | Llega a los 44 controles en un orden lógico; el foco **se ve** en todos (la búsqueda de conversaciones no tenía estilo para eso) |
+
+Los nombres de botones y campos, las etiquetas, el idioma de la página y la estructura ya pasaban.
+El contraste se arregló en los colores de cada tema (`web/src/index.css`), y
+`tests/test_web_contraste.py` comprueba sin navegador que cada color de texto llega a **4,5:1**
+sobre cada fondo de su tema (encontró uno más que axe no podía ver, porque nada estaba en ese
+estado durante la auditoría: el naranja de «con fallos» del tema claro, en 4,0:1). 5 de 5
+mutaciones cazadas.
+
+Lo que aún no está medido: un lector de pantalla de verdad (NVDA o Narrador) recorriendo una
+conversación entera.
+
 ## 6. Pruebas del frontend
 
 Llegaron por un fallo que solo pasaba **cuando todo funcionaba**: un `return` dentro

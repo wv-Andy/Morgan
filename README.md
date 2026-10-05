@@ -258,7 +258,7 @@ The module and folder names are in Spanish, like the code: `identidad` is identi
 - [x] V4.19 — The foundation: continuous integration, pinned and audited dependencies, coverage with a floor, and the public code in [wv-Andy/Morgan](https://github.com/wv-Andy/Morgan)
 - [x] V4.20 — Holding up in production and precise when searching: bounded requests, a dead provider doesn't cost its timeout, a backup really restored, errors reach the tray
 - [x] V4.21 — Several searches in one round: the three-part question, from 29.7 s to 4.9 s
-- [ ] V4.22–4.24 — The rest of the hardening for production, **in parallel with 5.x** (the gate to start 5.0 was met with 4.21). Done: the web's security headers and no Supabase warning at WARN level. Also done: reviewing per-account limits (memories, workspaces and documents) and rotating the clock's secret. Left: a newcomer's walkthrough with the real model, basic accessibility and a week of real use
+- [ ] V4.22–4.24 — The rest of the hardening for production, **in parallel with 5.x** (the gate to start 5.0 was met with 4.21). Done: the web's security headers and no Supabase warning at WARN level. Also done: reviewing per-account limits (memories, workspaces and documents) rotating the clock's secret and basic accessibility (axe-core, 0 issues in the three themes). Left: a newcomer's walkthrough with the real model and a week of real use
 - [x] **V5.0 — Morgan for Windows**: a double-click installer, pairing without a console from a window ([download](https://github.com/wv-Andy/Morgan/releases/latest))
 - [x] V5.1 — Morgan in the tray: status, pause and resume instantly, what it did last, and upgrading without unpairing
 - [x] V5.2 — The conversation in its own window, Ctrl+Alt+M, and notices as Windows notifications
