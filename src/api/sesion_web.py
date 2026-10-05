@@ -131,6 +131,43 @@ def csrf_valido(request: Request) -> bool:
     return bool(cookie) and bool(cabecera) and secrets.compare_digest(cookie, cabecera)
 
 
+#: Las rutas de entrada: quedan fuera del doble envío (sin sesión no hay token que repetir), y
+#: por eso se protegen mirando de dónde viene la petición (`origen_propio`).
+RUTAS_DE_ENTRADA = ("/auth/login", "/auth/registro", "/auth/recuperar", "/auth/restablecer", "/auth/logout")
+
+
+def origen_propio(request: Request) -> bool:
+    """El «login CSRF» (4.22): que una web ajena no pueda hacerte entrar en SU cuenta.
+
+    Las rutas de entrada no pueden exigir el doble envío, y una web ajena podía mandar desde tu
+    navegador un formulario a `/auth/login` con las credenciales del atacante: entrabas en su
+    cuenta sin darte cuenta, y lo que escribieras quedaba allí. Un navegador **siempre** dice de
+    qué página sale una petición así (`Origin`), y la web ajena no puede cambiarlo: si no es la de
+    Morgan (la lista de CORS, o la misma dirección que la API), se rechaza.
+
+    Sin `Origin` no hay navegador de por medio (un programa, la línea de comandos): no hay a quién
+    engañar, y pasa. `Origin: null` sí se rechaza: es lo que manda un marco aislado, el truco para
+    esconder la página de origen.
+    """
+    if request.method in METODOS_SEGUROS:
+        return True
+    origen = request.headers.get("origin")
+    if origen is None:
+        return True
+    ajustes = get_settings()
+    if origen in ajustes.cors_origins:
+        return True
+    if ajustes.cors_origin_regex:
+        import re
+
+        if re.fullmatch(ajustes.cors_origin_regex, origen):
+            return True
+    from urllib.parse import urlsplit
+
+    anfitrion = urlsplit(origen).netloc
+    return bool(anfitrion) and anfitrion == request.headers.get("host")
+
+
 #: Las cabeceras de origen que pone un proxy **y que el cliente no puede
 #: imponer**, en orden de preferencia. Medido en producción con la sonda
 #: `/diagnostico/origen` (2.3, V2.0.33):

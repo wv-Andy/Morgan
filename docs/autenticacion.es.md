@@ -200,11 +200,17 @@ Las rutas de entrada —`/auth/login`, `/auth/registro`, `/auth/recuperar`,
 Tienen que estarlo: exigir un token que solo se obtiene teniendo sesión impediría
 iniciar sesión, y dejaba atrapado a quien volvía con una cookie caducada.
 
-El precio es el **«login CSRF»**: una web ajena puede forzar que entres en *la
-cuenta del atacante* sin que te des cuenta. Se acepta a sabiendas. Evitarlo exige
-emitir un token antes de que exista sesión, con su propio almacén y su propia
-caducidad, y el daño —trabajar sin querer en una cuenta ajena— es visible en
-cuanto se mira el nombre en pantalla, a diferencia de un robo de datos.
+Eso dejaba abierto el **«login CSRF»**: una web ajena podía mandar desde tu navegador un
+formulario a `/auth/login` con las credenciales del atacante, y entrabas en *su cuenta* sin
+darte cuenta (y lo que escribieras quedaba allí). Hasta la 4.22 se aceptaba a sabiendas.
+
+**Desde la 4.22 esas rutas miran `Origin`** (`sesion_web.origen_propio`). Un navegador dice
+siempre de qué página sale una petición, y esa página no puede cambiarlo: si no es la web de
+Morgan (la lista de CORS, su expresión de las vistas previas o la misma dirección que la API),
+**403 `ORIGEN_AJENO`**. Sin `Origin` no hay navegador de por medio (un programa, la línea de
+comandos) ni nadie a quien engañar, así que pasa; `Origin: null`, lo que manda un marco aislado
+para esconder la página, se rechaza. No hizo falta un token antes de la sesión.
+`tests/test_login_csrf.py`: 14 pruebas, 8 de 8 mutaciones.
 
 ## Fuerza bruta
 
@@ -787,8 +793,6 @@ MORGAN_CORS_ORIGINS=https://morgan-ia.vercel.app
 > descargar los datos, las integraciones y un cupo global. **Están hechas** y
 > descritas más arriba (y GitHub en [integraciones.md](integraciones.es.md)).
 
-- **El «login CSRF»**, aceptado a sabiendas: ver
-  [Lo que este diseño no cubre](#lo-que-este-diseño-no-cubre).
 - **Integraciones con Google** (correo, calendario): **aparcadas** desde la 2.0.18 y
   las **descarté** el 2026-09-19. El código de Calendar sigue en el repositorio,
   sin registrar sus herramientas.

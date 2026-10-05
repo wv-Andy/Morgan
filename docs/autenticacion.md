@@ -193,11 +193,16 @@ The entry routes —`/auth/login`, `/auth/registro`, `/auth/recuperar`, `/auth/r
 only be obtained with a session would make signing in impossible, and it trapped whoever came
 back with an expired cookie.
 
-The price is the **"login CSRF"**: someone else's website can force you to sign into *the
-attacker's account* without you noticing. It's accepted knowingly. Avoiding it requires issuing
-a token before a session exists, with its own storage and its own expiry, and the harm —working
-unknowingly in someone else's account— is visible as soon as you look at the name on the screen,
-unlike data theft.
+That left the **"login CSRF"** open: someone else's website could send a form from your browser
+to `/auth/login` with the attacker's credentials, and you'd be signed into *their account*
+without noticing (and what you wrote would stay there). Until 4.22 it was accepted knowingly.
+
+**Since 4.22 those routes look at `Origin`** (`sesion_web.origen_propio`). A browser always says
+which page a request comes from, and that page can't change it: if it isn't the Morgan web (the
+CORS list, its preview regex, or the API's own address), **403 `ORIGEN_AJENO`**. Without
+`Origin` there's no browser involved (a program, the command line) and nobody to trick, so it
+passes; `Origin: null`, what a sandboxed frame sends to hide the page, is rejected. No token
+before the session was needed. `tests/test_login_csrf.py`: 14 tests, 8 of 8 mutations.
 
 ## Brute force
 
@@ -736,7 +741,5 @@ MORGAN_CORS_ORIGINS=https://morgan-ia.vercel.app
 
 ## What's missing
 
-- **The "login CSRF"**, accepted knowingly: see
-  [What this design doesn't cover](#what-this-design-doesnt-cover).
 - **Integrations with Google** (email, calendar): **parked** since 2.0.18 and **ruled out** on
   2026-09-19. The Calendar code is still in the repository, without registering its tools.

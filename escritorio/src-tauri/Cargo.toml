@@ -1,6 +1,6 @@
 [package]
 name = "morgan"
-version = "5.3.3"
+version = "5.3.4"
 description = "Morgan para Windows"
 edition = "2021"
 publish = false

@@ -80,3 +80,15 @@ def test_el_fallo_de_un_turno_tampoco():
     assert _limpio(ERROR_EN_EL_TURNO)
     texto = open("src/api/routes/chat.py", encoding="utf-8").read()
     assert "logs/morgan.log" not in texto and texto.count("ERROR_EN_EL_TURNO") >= 3
+
+
+def test_morgan_se_presenta_para_cualquiera():
+    """El recorrido de alguien nuevo (4.23, con el modelo real): a «¿qué puedes hacer?» contestaba
+    «agente especializado en desarrollo de software» con Git, commits y PowerShell. La identidad
+    del prompt ahora es para cualquier persona, y técnica solo con quien programa."""
+    from src.agent.prompt import SYSTEM_PROMPT
+
+    inicio = SYSTEM_PROMPT[:600]
+    assert "cualquier persona" in inicio and "palabras llanas" in inicio
+    assert "especializado en desarrollo de software" not in SYSTEM_PROMPT
+    assert "Eres técnico" not in SYSTEM_PROMPT

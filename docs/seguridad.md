@@ -217,7 +217,6 @@ local agent. Design and my decisions in plan-4.x.md (in Spanish).
 
 - **Without `MORGAN_API_TOKEN` or accounts, the API requires nothing.** Acceptable only when
   listening on `127.0.0.1`. In the cloud, startup **aborts** without one of the two.
-- **The "login CSRF" isn't covered**, knowingly ([autenticacion.md](autenticacion.md)).
 - **Sign-up is open** (my decision). The daily total is bounded by the **global quota**
   (2.0.24: 150 messages across every account that isn't the owner's), and the money by the cap
   in OpenAI's dashboard.

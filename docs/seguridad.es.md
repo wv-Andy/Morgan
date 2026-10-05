@@ -219,7 +219,6 @@ grande desde el agente local. Diseño y mis decisiones en plan-4.x.md.
 
 - **Sin `MORGAN_API_TOKEN` ni cuentas, la API no exige nada.** Aceptable solo
   escuchando en `127.0.0.1`. En la nube el arranque **aborta** sin una de las dos.
-- **El «login CSRF» no está cubierto**, a sabiendas ([autenticacion.md](autenticacion.es.md)).
 - **El registro está abierto** (decisión mía). El total diario lo acota el **cupo
   global** (2.0.24: 150 mensajes entre todas las cuentas que no son la del
   propietario), y el dinero, el tope del panel de OpenAI.

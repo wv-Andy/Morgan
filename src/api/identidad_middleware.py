@@ -43,6 +43,8 @@ from src.identidad.tokens import (
 from src.api.sesion_web import (
     COOKIE_SESION,
     csrf_valido,
+    origen_propio,
+    RUTAS_DE_ENTRADA,
     quitar_cookies,
     resolver_usuario,
 )
@@ -230,11 +232,16 @@ def install_identidad(app: FastAPI) -> None:
         # atrapado a quien volvia con una sesion caducada —tenia cookie, pero no
         # el token que la acompanaba— y no podia ni entrar ni salir.
         #
-        # El precio conocido es el "login CSRF": una web ajena puede forzar que
-        # entres en LA CUENTA DEL ATACANTE sin que te des cuenta. Se acepta a
-        # sabiendas: evitarlo exige emitir un token antes de tener sesion, y el
-        # dano —trabajar sin querer en una cuenta ajena— es visible en cuanto se
-        # mira el nombre en pantalla, a diferencia de un robo de datos.
+        # El precio era el "login CSRF": una web ajena podia hacerte entrar en LA
+        # CUENTA DEL ATACANTE sin que te dieras cuenta. Desde la 4.22 esas rutas
+        # miran de que pagina sale la peticion (`origen_propio`).
+        if request.url.path in RUTAS_DE_ENTRADA and not origen_propio(request):
+            logger.warning("Entrada rechazada por su origen: %s %s (%s)", request.method, request.url.path,
+                           request.headers.get("origin"))
+            return _error(
+                403, "ORIGEN_AJENO",
+                "Esta petición no sale de la web de Morgan. Entra desde morgan-ia.vercel.app o desde el programa.",
+            )
         if not _es_publica(request.url.path) and not csrf_valido(request):
             logger.warning("Petición rechazada por CSRF: %s %s", request.method, request.url.path)
             return _error(

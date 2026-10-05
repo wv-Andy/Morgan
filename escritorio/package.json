@@ -1,7 +1,7 @@
 {
   "name": "morgan-escritorio",
   "private": true,
-  "version": "5.3.3",
+  "version": "5.3.4",
   "description": "Morgan para Windows (Tauri). Se compila en GitHub Actions: .github/workflows/escritorio.yml",
   "scripts": {
     "tauri": "tauri"
